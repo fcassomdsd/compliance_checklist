@@ -1,0 +1,6 @@
+node_modules/
+*~
+.~lock*
+*old
+*ods
+*txt
