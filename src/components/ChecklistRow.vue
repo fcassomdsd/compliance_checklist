@@ -1,8 +1,9 @@
 <template>
-  <tr v-if="row.subtitle" class="full-span">
-    <td colspan="8">{{ row.subtitle }}</td>
+  <tr v-if="row.sequence == '00010'" class="full-span">
+    <td colspan="8">{{ row.topic }}</td>
   </tr>
-  <tr v-else>
+  <tr>
+    <td hidden>{{ row.id }}</td>
     <td :id="`qnumber-${qnumber}`">{{ qnumber }}</td>
     <td>{{ row.reference }}</td>
     <td>{{ row.question }}</td>
@@ -76,21 +77,21 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits} from 'vue';
 
 const props = defineProps(['qnumber', 'row', 'session']);
 const emit = defineEmits(['update-session']);
 
 const checkboxChange = (event) => {
-  emit('update-session', props.qnumber, 'notapplicable', event.target.checked);
+  emit('update-session', props.qnumber, props.row.id, 'notapplicable', event.target.checked);
 };
 
 const radioChange = (event) => {
-  emit('update-session', props.qnumber, 'compliance', event.target.value);
+  emit('update-session', props.qnumber, props.row.id, 'compliance', event.target.value);
 };
 
 const textAreaChange = (event) => {
-  emit('update-session', props.qnumber, 'comments', event.target.value);
+  emit('update-session', props.qnumber, props.row.id, 'comments', event.target.value);
 };
 
 const evidenceChange = async (event) => {
@@ -117,7 +118,7 @@ const evidenceChange = async (event) => {
     }
   }
 
-  emit('update-session', props.qnumber, 'evidence', table.map((item) => item.path));
+  emit('update-session', props.qnumber, props.row.id, 'evidence', table.map((item) => item.path));
 };
 
 const removeEvidence = async (index, evidence) => {
@@ -130,7 +131,7 @@ const removeEvidence = async (index, evidence) => {
   }
 
   const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
-  emit('update-session', props.qnumber, 'evidence', updatedEvidence);
+  emit('update-session', props.qnumber, props.row.id, 'evidence', updatedEvidence);
 };
 </script>
 

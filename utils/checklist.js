@@ -16,9 +16,12 @@ const checklistSchema = {
             properties: {
               reference: { type: "string" },
               question: { type: "string" },
-              verification: { type: "string" }
+              verification: { type: "string" },
+              id : { type: "string" },
+              topic : { type : "string" },
+              sequence : { type : "string" }
             },
-            required: ["reference", "question", "verification"],
+            required: ["id", "topic", "reference", "question", "verification"],
             additionalProperties : false
           },
           { 

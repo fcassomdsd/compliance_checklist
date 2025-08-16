@@ -1,6 +1,12 @@
 <template>
   <div>
-    <h2>Compliance Table with Evidence (Desktop)</h2>
+    <div class="titulo">
+      <img src="../src/images/logo_idac.png"/>
+      <span>
+        <h2>Compliance Table with Evidence (Desktop)</h2>
+      </span>
+    </div>
+    <div>
     <label>Especialidad:</label>
     <select v-model="specialty" @change="loadChecklistAndSession">
       <option value="NONE">Select a specialty</option>
@@ -10,6 +16,7 @@
       <option value="EEM">Energia y Equipos MET</option>
     </select>
     <button id="exportBtn" :disabled="!checklistLoaded" @click="autosave">Export CSV</button>
+    </div>
     <p id="currentPath">{{ currentPath }}</p>
     <ChecklistTable v-if="checklistLoaded" :checklist="checklist" :session-data="sessionData" @update-session="updateSession" />
   </div>
@@ -56,9 +63,10 @@ const exportCSV = async () => {
   alert('CSV export not implemented in this example');
 };
 
-const updateSession = (rowId, field, value) => {
+const updateSession = (rowId, checklistId, field, value) => {
   if (!sessionData.value[rowId]) sessionData.value[rowId] = {};
   sessionData.value[rowId][field] = value;
+  sessionData.value[rowId]["id"] = checklistId;
   sessionElectron = JSON.stringify(sessionData.value);
   autoSave();
 };
@@ -71,9 +79,19 @@ const autoSave = () => {
   }, 1000);
 };
 </script>
-
 <style scoped>
 /* Scoped styles from style.css */
+div.titulo {
+  display: flex;
+  height: 150px;
+  align-items: center
+}
+div.logo img {
+  object-fit: contain;
+}
+div.titulo > span {
+  display: inline-block;
+}
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f4f8fb;

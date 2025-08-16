@@ -26,14 +26,13 @@
 </template>
 
 <script setup>
-//import { defineProps, defineEmits } from 'vue';
 import ChecklistRow from './ChecklistRow.vue';
 defineProps(['checklist', 'sessionData']);
 const emit = defineEmits(['update-session']);
 
-const updateSession = (rowId, field, value) => {
+const updateSession = (rowId, checklistId, field, value) => {
 
-  emit('update-session', rowId, field, value);
+  emit('update-session', rowId, checklistId, field, value);
 
 }
 

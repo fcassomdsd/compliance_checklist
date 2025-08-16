@@ -4,32 +4,36 @@ const Ajv = require('ajv');
 
 const ajv = new Ajv();
 const sessionSchema = {
-  "type": "object",
-  "patternProperties": {
+  type: "object",
+  patternProperties: {
     "^[0-9]+$": {
-      "type": "object",
-      "properties": {
-        "notapplicable": {
-          "type": "boolean"
+      type: "object",
+      properties: {
+        id: {
+           type : "string"
         },
-        "compliance": {
-          "type": "string",
-          "enum": ["Compliant", "Partial Compliance", "Non-compliant"]
+        notapplicable: {
+          type: "boolean"
         },
-        "comments": {
-          "type": "string"
+        compliance: {
+          type: "string",
+          enum: ["Compliant", "Partial Compliance", "Non-compliant"]
         },
-        "evidence": {
-          "type": "array",
-          "items": {
-            "type": "string",
+        comments: {
+          type: "string"
+        },
+        evidence: {
+          type: "array",
+          items: {
+            type: "string",
           }
         }
       },
-      "additionalProperties": false
+      additionalProperties: false,
+      required : ["id"]
     }
   },
-  "additionalProperties": false
+  additionalProperties: false
 }
 
 function loadSession(filePath) {
