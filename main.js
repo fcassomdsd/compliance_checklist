@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { loadChecklist } = require('./utils/checklist');
 const { loadSession, saveSession } = require('./utils/session');
-const { saveEvidenceFile, deleteFile, validateEvidence } = require('./utils/fileOps');
+const { saveEvidenceFile, deleteFile, validateEvidence, checkFileExists, readDir } = require('./utils/fileOps');
 
 let defaultSavePath = path.join(app.getPath('documents'), 'Current_inspection');
 let currentSavePath = defaultSavePath;
@@ -19,6 +19,19 @@ function createWindow() {
 }
 
 app.whenReady().then(createWindow);
+
+ipcMain.handle('check-file', (event, fileName, ruta) => {
+  const checkFilePath = path.join(defaultSavePath, ruta, fileName);
+  return checkFileExists(checkFilePath);
+});
+
+ipcMain.handle('read-evidence', () => {
+  return readDir(currentSavePath);
+});
+
+ipcMain.handle('get-full-path', (event, fileName) => {
+  return path.join(currentSavePath, fileName);
+});
 
 ipcMain.handle('set-save-path', (event, specialty) => {
   currentSavePath = path.join(defaultSavePath, specialty, "Evidence");
@@ -59,6 +72,12 @@ ipcMain.handle('save-session', (event, session) => {
 
 ipcMain.handle('save-evidence', async (event, bufferArray, fileName) => {
   const toFilePath = path.join(currentSavePath, fileName);
+  return saveEvidenceFile(Buffer.from(bufferArray), toFilePath);
+});
+
+ipcMain.handle('save-file', async (event, bufferArray, ruta, fileName) => {
+  const toFilePath = (ruta ? path.join(defaultSavePath, ruta, fileName) : path.join(defaultSavePath, fileName));
+  console.log(toFilePath);
   return saveEvidenceFile(Buffer.from(bufferArray), toFilePath);
 });
 

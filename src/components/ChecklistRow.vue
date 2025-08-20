@@ -7,21 +7,24 @@
     <td :id="`qnumber-${qnumber}`">{{ qnumber }}</td>
     <td>{{ row.reference }}</td>
     <td>{{ row.question }}</td>
-    <td>
-      <input
-        type="checkbox"
-        :name="`notapplicable-${qnumber}`"
-        :checked="session.notapplicable"
-        @change="checkboxChange($event)" 
-      />
-    </td>
     <td>{{ row.verification }}</td>
     <td class="compliance">
       <label>
         <input
           type="radio"
           :name="`compliance-${qnumber}`"
+          value="Not applicable"
+          :disabled="isDone"
+          :checked="session.compliance === 'Not applicable'"
+          @change="radioChange($event)"
+        /> Not applicable
+      </label><br>
+      <label>
+        <input
+          type="radio"
+          :name="`compliance-${qnumber}`"
           value="Compliant"
+          :disabled="isDone"
           :checked="session.compliance === 'Compliant'"
           @change="radioChange($event)"
         /> Compliant
@@ -31,6 +34,7 @@
           type="radio"
           :name="`compliance-${qnumber}`"
           value="Partial Compliance"
+          :disabled="isDone"
           :checked="session.compliance === 'Partial Compliance'"
           @change="radioChange($event)"
         /> Partial Compliance
@@ -40,6 +44,7 @@
           type="radio"
           :name="`compliance-${qnumber}`"
           value="Non-compliant"
+          :disabled="isDone"
           :checked="session.compliance === 'Non-compliant'"
           @change="radioChange($event)"
         /> Non-compliant
@@ -49,6 +54,7 @@
       <textarea
         :name="`comments-${qnumber}`"
         :value="session.comments"
+        :disabled="isDone"
         @input="textAreaChange($event)"
       ></textarea>
     </td>
@@ -57,17 +63,18 @@
         type="file"
         class="evidence-upload"
         :name="`evidence-${qnumber}`"
+        :disabled="isDone"
         multiple
         @change="evidenceChange($event)"
       />
       <table class="preview" :id="`evidencetable-${qnumber}`">
         <tr v-for="(evidence, index) in session.evidence" :key="index">
           <td>
-            <button type="button" @click="removeEvidence(index, evidence)">❌</button>
+            <button type="button" :disabled="isDone" @click="removeEvidence(index, evidence)">❌</button>
           </td>
           <td>
-            <a :href="evidence" :download="evidence.split(/[\\/]/).pop()" target="_blank">{{
-              evidence.split(/[\\/]/).pop()
+            <a :href="getEvidenceURL(evidence)" :download="evidence" target="_blank">{{
+              evidence
             }}</a>
           </td>
         </tr>
@@ -79,12 +86,8 @@
 <script setup>
 import { defineProps, defineEmits} from 'vue';
 
-const props = defineProps(['qnumber', 'row', 'session']);
+const props = defineProps(['qnumber', 'row', 'session', 'isDone', 'evidenceFiles']);
 const emit = defineEmits(['update-session']);
-
-const checkboxChange = (event) => {
-  emit('update-session', props.qnumber, props.row.id, 'notapplicable', event.target.checked);
-};
 
 const radioChange = (event) => {
   emit('update-session', props.qnumber, props.row.id, 'compliance', event.target.value);
@@ -96,10 +99,12 @@ const textAreaChange = (event) => {
 
 const evidenceChange = async (event) => {
   const files = event.target.files;
-  const table = [];
+  const table = props.session.evidence ? props.session.evidence : [];
+  alert(table);
+  
   for (const file of files) {
     const fileInfo = await window.electronAPI.validateEvidence({ name: file.name, size: file.size });
-    const isInTable = table.some((item) => item.name === file.name);
+    const isInTable = table.some((item) => item === file.name);
     let savedPath = null;
 
     if (!fileInfo.fileExists || !fileInfo.fileIsSame) {
@@ -108,21 +113,19 @@ const evidenceChange = async (event) => {
         Array.from(new Uint8Array(buffer)),
         file.name
       );
+      if (!props.evidenceFiles.find((x) => x.name == file.name)) props.evidenceFiles.push({"name": file.name, "URL": savedPath});
     }
 
     if (!isInTable) {
-      const path = fileInfo.fileExists
-        ? table.find((item) => item.name === file.name)?.path || savedPath
-        : savedPath;
-      table.push({ name: file.name, path });
+      table.push(file.name);
     }
   }
 
-  emit('update-session', props.qnumber, props.row.id, 'evidence', table.map((item) => item.path));
+  emit('update-session', props.qnumber, props.row.id, 'evidence', table);
 };
 
 const removeEvidence = async (index, evidence) => {
-  const fileName = evidence.split(/[\\/]/).pop();
+  const fileName = evidence;
   const anchors = document.querySelectorAll('a');
   const linkCount = Array.from(anchors).filter((a) => a.textContent === fileName).length;
 
@@ -133,6 +136,14 @@ const removeEvidence = async (index, evidence) => {
   const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
   emit('update-session', props.qnumber, props.row.id, 'evidence', updatedEvidence);
 };
+
+const getEvidenceURL = (fileName) => {
+
+    const found = props.evidenceFiles.find((x) => x.name == fileName);
+    
+    return found ? found.URL : found;  
+ };
+
 </script>
 
 <style scoped>

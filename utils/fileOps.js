@@ -13,6 +13,18 @@ function ensureDir(dirPath) {
   }
 }
 
+function checkFileExists (ruta) {
+
+return fs.existsSync(ruta);
+   
+}
+
+function readDir(ruta) {
+
+  return fs.existsSync(ruta) ? fs.readdirSync(ruta).map( (x) => ( { "name": x, "URL" : path.join(ruta, x) } ) ) : null;
+
+}
+
 function saveEvidenceFile(buffer, toFilePath) {
  
   if (!ensureDir(path.dirname(toFilePath))) {
@@ -30,6 +42,19 @@ function deleteFile(filePath) {
 
 }
 
+function saveEvidenceFile(buffer, toFilePath) {
+ 
+  if (!ensureDir(path.dirname(toFilePath))) {
+    throw new Error("Could not create directory: " + path.dirname(toFilePath));
+  }
+
+  fs.writeFileSync(toFilePath, buffer);
+  
+  return toFilePath;
+}
+
+
+
 function validateEvidence(dirPath, archivo) {
 
   const filePath = path.join(dirPath, archivo.name);
@@ -42,4 +67,4 @@ function validateEvidence(dirPath, archivo) {
   
   };
 
-module.exports = { saveEvidenceFile, deleteFile, validateEvidence };
+module.exports = { saveEvidenceFile, deleteFile, validateEvidence, checkFileExists, readDir };

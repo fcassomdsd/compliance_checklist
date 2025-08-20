@@ -1,11 +1,10 @@
 <template>
-  <table id="csvTable">
+  <table id="csvTable" disabled>
     <thead>
       <tr>
         <th>#</th>
         <th>Reference</th>
         <th>Question</th>
-        <th>N/A</th>
         <th>Verification</th>
         <th>Compliance</th>
         <th>Comments</th>
@@ -19,6 +18,8 @@
         :qnumber="'subtitle' in row ? 0 : index + 1"
         :row="row"
         :session="sessionData[index + 1] || {}"
+        :evidenceFiles="evidenceFiles" 
+        :isDone="isDone"
         @update-session="updateSession"
       />
     </tbody>
@@ -27,7 +28,7 @@
 
 <script setup>
 import ChecklistRow from './ChecklistRow.vue';
-defineProps(['checklist', 'sessionData']);
+defineProps(['checklist', 'sessionData', 'isDone', 'evidenceFiles']);
 const emit = defineEmits(['update-session']);
 
 const updateSession = (rowId, checklistId, field, value) => {

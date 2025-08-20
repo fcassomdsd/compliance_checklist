@@ -16,23 +16,60 @@
       <option value="EEM">Energia y Equipos MET</option>
     </select>
     <button id="exportBtn" :disabled="!checklistLoaded" @click="autosave">Export CSV</button>
+    <button id="finalizeBtn" :disabled="isDone" @click="showConfirm('Finalize inspection', 'finalize the inspection')">Finalize inspection</button>
+    <ModalWindow
+      :show="showModal"
+      :titulo="tituloModal"
+      :accion="accionModal" 
+      @cancel="showModal = false" 
+      @confirm="confirmModal"
+    />
     </div>
     <p id="currentPath">{{ currentPath }}</p>
-    <ChecklistTable v-if="checklistLoaded" :checklist="checklist" :session-data="sessionData" @update-session="updateSession" />
+    <ChecklistTable v-if="checklistLoaded"
+          :checklist="checklist" 
+          :session-data="sessionData"
+          :evidenceFiles="evidenceFiles" 
+          :isDone="isDone" 
+          @update-session="updateSession"
+    />
   </div>
 </template>
 
 <script setup>
+
 import { ref, watch } from 'vue';
 import ChecklistTable from './components/ChecklistTable.vue';
+import ModalWindow from './components/ModalWindow.vue';
 
-const specialty = ref('NONE');
 const checklist = ref(null);
 const checklistLoaded = ref(false);
-const sessionData = ref({});
-let sessionElectron = {};
 const currentPath = ref('');
+const evidenceFiles = ref([]);
+const isDone = ref(true);
+const sessionData = ref({});
+const showModal = ref(false);
+const specialty = ref('NONE');
+const tituloModal = ref('');
+const accionModal = ref('');
+
+let sessionElectron = {};
 let saveTimer = null;
+
+const showConfirm = (titulo, accion) => {
+
+  tituloModal.value = titulo;
+  accionModal.value = accion;
+  showModal.value = true;
+
+}
+
+const confirmModal = () => {
+
+  showModal.value = false;
+  if (tituloModal.value == 'Finalize inspection') { finalize() };
+
+}
 
 const showSavePath = (path) => {
   currentPath.value = `Saving to: ${path}`;
@@ -42,7 +79,9 @@ const loadChecklistAndSession = async () => {
   if (specialty.value === 'NONE') {
     checklist.value = null;
     checklistLoaded.value = false;
+    evidenceFiles.value = [];
     sessionData.value = {};
+    isDone.value = true;
     return;
   }
 
@@ -52,6 +91,9 @@ const loadChecklistAndSession = async () => {
     sessionData.value = await window.electronAPI.loadSession(specialty.value);
     checklist.value = await window.electronAPI.loadChecklist(specialty.value);
     checklistLoaded.value = true;
+    isDone.value = await window.electronAPI.checkFile('Done', specialty.value);
+    evidenceFiles.value = await window.electronAPI.readEvidence();
+    console.log(evidenceFiles.value.toString());
   } catch (error) {
     alert(error.message);
     checklistLoaded.value = false;
@@ -61,6 +103,11 @@ const loadChecklistAndSession = async () => {
 const exportCSV = async () => {
   // Implement CSV export logic (similar to index.js)
   alert('CSV export not implemented in this example');
+};
+
+const finalize = () => {
+  window.electronAPI.saveFile(new Date().toString(), specialty.value, "Done");
+  isDone.value = true;
 };
 
 const updateSession = (rowId, checklistId, field, value) => {
@@ -79,6 +126,7 @@ const autoSave = () => {
   }, 1000);
 };
 </script>
+
 <style scoped>
 /* Scoped styles from style.css */
 div.titulo {

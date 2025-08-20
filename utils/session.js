@@ -12,12 +12,9 @@ const sessionSchema = {
         id: {
            type : "string"
         },
-        notapplicable: {
-          type: "boolean"
-        },
         compliance: {
           type: "string",
-          enum: ["Compliant", "Partial Compliance", "Non-compliant"]
+          enum: ["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]
         },
         comments: {
           type: "string"
