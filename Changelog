@@ -1,0 +1,2 @@
+- Eliminated the N/A column, instead including a "Not applicable" option as a radio button.
+- Created fill_inspection_table.py script, for generating a PDF document based on a libreoffice template, the checklist.json and session.json files.
