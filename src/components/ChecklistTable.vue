@@ -4,23 +4,21 @@
       <tr>
         <th>#</th>
         <th>Reference</th>
-        <th>Question</th>
-        <th>Verification</th>
-        <th>Compliance</th>
-        <th>Comments</th>
-        <th>Evidence</th>
+        <th class="question">Question</th>
+        <th class="verification">Verification</th>
+        <th class="compliance">Compliance</th>
+        <th class="comments">Comments</th>
+        <th class="evidence">Evidence</th>
       </tr>
     </thead>
     <tbody>
       <ChecklistRow
         v-for="(row, index) in checklist.questions"
         :key="index"
-        :qnumber="'subtitle' in row ? 0 : index + 1"
+        :newTopic="topicChange(row.topic)"
+        :qnumber="index + 1"
         :row="row"
         :session="sessionData[index + 1] || {}"
-        :evidenceFiles="evidenceFiles" 
-        :isDone="isDone"
-        @update-session="updateSession"
       />
     </tbody>
   </table>
@@ -28,12 +26,15 @@
 
 <script setup>
 import ChecklistRow from './ChecklistRow.vue';
-defineProps(['checklist', 'sessionData', 'isDone', 'evidenceFiles']);
-const emit = defineEmits(['update-session']);
+defineProps(['checklist', 'sessionData']);
 
-const updateSession = (rowId, checklistId, field, value) => {
+let previousTopic = ""
 
-  emit('update-session', rowId, checklistId, field, value);
+const topicChange = (t) => {
+
+  const isNew = previousTopic != t;
+  previousTopic = t;
+  return isNew;
 
 }
 
@@ -61,4 +62,5 @@ th, td {
 th {
   text-align: center;
 }
+
 </style>
