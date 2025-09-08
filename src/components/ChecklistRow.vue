@@ -1,60 +1,30 @@
 <template>
-  <tr v-if="row.sequence == '00010'" class="full-span">
+  <tr v-if="newTopic" class="full-span">
     <td colspan="8">{{ row.topic }}</td>
   </tr>
   <tr>
     <td hidden>{{ row.id }}</td>
     <td :id="`qnumber-${qnumber}`">{{ qnumber }}</td>
     <td>{{ row.reference }}</td>
-    <td>{{ row.question }}</td>
-    <td>{{ row.verification }}</td>
+    <td class="question">{{ row.question }}</td>
+    <td class="verification">{{ row.verification }}</td>
     <td class="compliance">
-      <label>
+      <label v-for="(radioBtn, index) in radioButtons" :key="index">
         <input
           type="radio"
           :name="`compliance-${qnumber}`"
-          value="Not applicable"
-          :disabled="isDone"
-          :checked="session.compliance === 'Not applicable'"
+          :value="radioBtn"
+          :disabled="store.sessionSummary.finalized"
+          :checked="session.compliance === radioBtn"
           @change="radioChange($event)"
-        /> Not applicable
-      </label><br>
-      <label>
-        <input
-          type="radio"
-          :name="`compliance-${qnumber}`"
-          value="Compliant"
-          :disabled="isDone"
-          :checked="session.compliance === 'Compliant'"
-          @change="radioChange($event)"
-        /> Compliant
-      </label><br>
-      <label>
-        <input
-          type="radio"
-          :name="`compliance-${qnumber}`"
-          value="Partial Compliance"
-          :disabled="isDone"
-          :checked="session.compliance === 'Partial Compliance'"
-          @change="radioChange($event)"
-        /> Partial Compliance
-      </label><br>
-      <label>
-        <input
-          type="radio"
-          :name="`compliance-${qnumber}`"
-          value="Non-compliant"
-          :disabled="isDone"
-          :checked="session.compliance === 'Non-compliant'"
-          @change="radioChange($event)"
-        /> Non-compliant
+        /> {{ radioBtn }}<br>
       </label>
     </td>
     <td class="comments">
       <textarea
         :name="`comments-${qnumber}`"
         :value="session.comments"
-        :disabled="isDone"
+        :disabled="store.sessionSummary.finalized"
         @input="textAreaChange($event)"
       ></textarea>
     </td>
@@ -63,18 +33,18 @@
         type="file"
         class="evidence-upload"
         :name="`evidence-${qnumber}`"
-        :disabled="isDone"
+        :disabled="store.sessionSummary.finalized"
         multiple
         @change="evidenceChange($event)"
       />
       <table class="preview" :id="`evidencetable-${qnumber}`">
         <tr v-for="(evidence, index) in session.evidence" :key="index">
           <td>
-            <button type="button" :disabled="isDone" @click="removeEvidence(index, evidence)">❌</button>
+            <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
           </td>
-          <td>
-            <a :href="getEvidenceURL(evidence)" :download="evidence" target="_blank">{{
-              evidence
+          <td :class="{ 'missing' : (store.evidenceFiles[evidence]['URL'] == '') }" >
+            <a :href="store.evidenceFiles[evidence]['URL']" target="_blank">{{ store.evidenceFiles[evidence]['count'] }}{{
+               evidence
             }}</a>
           </td>
         </tr>
@@ -84,65 +54,89 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits} from 'vue';
+import { defineProps, ref, computed} from 'vue';
+import { useChecklistStore } from '../stores/checklistStore';
+import { useToast } from 'vue-toastification';
+import trash from '../images/trash.png'
 
-const props = defineProps(['qnumber', 'row', 'session', 'isDone', 'evidenceFiles']);
-const emit = defineEmits(['update-session']);
+const toast = useToast();
+
+const radioButtons = ref(["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]);
+
+// Access the Pinia store
+const store = useChecklistStore();
+
+
+const props = defineProps(['newTopic', 'qnumber', 'row', 'session']);
 
 const radioChange = (event) => {
-  emit('update-session', props.qnumber, props.row.id, 'compliance', event.target.value);
+  store.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value);
 };
 
 const textAreaChange = (event) => {
-  emit('update-session', props.qnumber, props.row.id, 'comments', event.target.value);
+  store.updateSession(props.qnumber, props.row.id, 'comments', event.target.value);
 };
 
 const evidenceChange = async (event) => {
+
   const files = event.target.files;
-  const table = props.session.evidence ? props.session.evidence : [];
-  alert(table);
-  
+  const table = props.session.evidence || [];
+
   for (const file of files) {
-    const fileInfo = await window.electronAPI.validateEvidence({ name: file.name, size: file.size });
-    const isInTable = table.some((item) => item === file.name);
-    let savedPath = null;
 
-    if (!fileInfo.fileExists || !fileInfo.fileIsSame) {
+    try {
+
       const buffer = await file.arrayBuffer();
-      savedPath = await window.electronAPI.saveEvidence(
-        Array.from(new Uint8Array(buffer)),
-        file.name
-      );
-      if (!props.evidenceFiles.find((x) => x.name == file.name)) props.evidenceFiles.push({"name": file.name, "URL": savedPath});
+      const savedPath = await window.electronAPI.saveEvidence({
+          "name" : file.name,
+          "size" : file.size,
+          "bufferArray" : Array.from(new Uint8Array(buffer))
+      })
+      
+      if (savedPath) {      
+        if (!store.evidenceFiles[file.name]) {
+          store.evidenceFiles[file.name] = { "count" : 0, "URL" : "" };
+        }
+        store.evidenceFiles[file.name]["URL"] = savedPath;
+      }
+      
+      if (!table.some((item) => item === file.name)) {
+        table.push(file.name);
+        store.evidenceFiles[file.name]["count"]++; 
+      }
+ 
+    } catch (error) {
+      console.log("evidenceChanged failed: " + error);
+      toast.error(error);
     }
-
-    if (!isInTable) {
-      table.push(file.name);
-    }
+      
   }
-
-  emit('update-session', props.qnumber, props.row.id, 'evidence', table);
+  
+  store.updateSession(props.qnumber, props.row.id, 'evidence', table);
+  toast.success("Evidence updated");
 };
 
 const removeEvidence = async (index, evidence) => {
-  const fileName = evidence;
-  const anchors = document.querySelectorAll('a');
-  const linkCount = Array.from(anchors).filter((a) => a.textContent === fileName).length;
 
-  if (linkCount === 1) {
-    await window.electronAPI.deleteEvidence(fileName);
+  if (store.evidenceFiles[evidence]["count"] === 1) {
+    await window.electronAPI.deleteEvidence(evidence);
+    delete store.evidenceFiles[evidence];
+  }
+  else {
+    store.evidenceFiles[evidence]["count"]--;  
   }
 
   const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
-  emit('update-session', props.qnumber, props.row.id, 'evidence', updatedEvidence);
+  store.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence);
 };
 
-const getEvidenceURL = (fileName) => {
+const EvidenceURL = computed( (index) => {
 
-    const found = props.evidenceFiles.find((x) => x.name == fileName);
+    const fileName = props.session.evidence[index];
+    if (!fileName) return "";
     
-    return found ? found.URL : found;  
- };
+    return store.evidenceFiles[fileName] ? store.evidenceFiles[fileName].URL : "";  
+ });
 
 </script>
 
@@ -160,7 +154,7 @@ const getEvidenceURL = (fileName) => {
   padding: 2px;
 }
 .preview button {
-  background-color: #1e88e5;
+  background-color: #ffffff;
   border: none;
   color: white;
   padding: 2px;
@@ -183,4 +177,9 @@ textarea {
 .evidence {
   width: 15%;
 }
+
+.missing a {
+  color: red;
+}
+
 </style>

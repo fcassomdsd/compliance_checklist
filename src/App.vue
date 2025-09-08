@@ -1,130 +1,54 @@
 <template>
   <div>
     <div class="titulo">
-      <img src="../src/images/logo_idac.png"/>
+      <img :src="logo"/>
       <span>
         <h2>Compliance Table with Evidence (Desktop)</h2>
       </span>
     </div>
     <div>
-    <label>Especialidad:</label>
-    <select v-model="specialty" @change="loadChecklistAndSession">
+    <span>Location: {{ store.sessionSummary.location }}</span>
+    </div>
+    <div>
+    <label>Specialty:</label>
+    <select v-model="store.specialty" @change="store.loadChecklistAndSession">
       <option value="NONE">Select a specialty</option>
       <option value="VIG">Vigilancia Radar</option>
       <option value="COM">Comunicaciones de Radio</option>
       <option value="RNA">Radioayudas</option>
       <option value="EEM">Energia y Equipos MET</option>
     </select>
-    <button id="exportBtn" :disabled="!checklistLoaded" @click="autosave">Export CSV</button>
-    <button id="finalizeBtn" :disabled="isDone" @click="showConfirm('Finalize inspection', 'finalize the inspection')">Finalize inspection</button>
+    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showConfirm('Finalize inspection', 'finalize the inspection')">Finalize inspection</button>
     <ModalWindow
-      :show="showModal"
-      :titulo="tituloModal"
-      :accion="accionModal" 
-      @cancel="showModal = false" 
-      @confirm="confirmModal"
+      :show="store.showModal"
+      :titulo="store.tituloModal"
+      :accion="store.accionModal" 
+      @cancel="store.showModal == false" 
+      @confirm="store.confirmModal"
     />
     </div>
-    <p id="currentPath">{{ currentPath }}</p>
-    <ChecklistTable v-if="checklistLoaded"
-          :checklist="checklist" 
-          :session-data="sessionData"
-          :evidenceFiles="evidenceFiles" 
-          :isDone="isDone" 
-          @update-session="updateSession"
+    <p id="currentPath">{{ store.currentPath }}</p>
+    <ChecklistTable v-if="store.checklistLoaded"
+          :checklist="store.checklist" 
+          :session-data="store.sessionData"
     />
   </div>
 </template>
 
 <script setup>
 
-import { ref, watch } from 'vue';
 import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
+import { useChecklistStore } from './stores/checklistStore';
+import logo from './images/logo_idac.png'
 
-const checklist = ref(null);
-const checklistLoaded = ref(false);
-const currentPath = ref('');
-const evidenceFiles = ref([]);
-const isDone = ref(true);
-const sessionData = ref({});
-const showModal = ref(false);
-const specialty = ref('NONE');
-const tituloModal = ref('');
-const accionModal = ref('');
+// add and configure vue-toastification
+import { useToast } from "vue-toastification";
+const toast = useToast();
 
-let sessionElectron = {};
-let saveTimer = null;
+// Access the Pinia store
+const store = useChecklistStore();
 
-const showConfirm = (titulo, accion) => {
-
-  tituloModal.value = titulo;
-  accionModal.value = accion;
-  showModal.value = true;
-
-}
-
-const confirmModal = () => {
-
-  showModal.value = false;
-  if (tituloModal.value == 'Finalize inspection') { finalize() };
-
-}
-
-const showSavePath = (path) => {
-  currentPath.value = `Saving to: ${path}`;
-};
-
-const loadChecklistAndSession = async () => {
-  if (specialty.value === 'NONE') {
-    checklist.value = null;
-    checklistLoaded.value = false;
-    evidenceFiles.value = [];
-    sessionData.value = {};
-    isDone.value = true;
-    return;
-  }
-
-  try {
-    const savePath = await window.electronAPI.setSavePath(specialty.value);
-    showSavePath(savePath);
-    sessionData.value = await window.electronAPI.loadSession(specialty.value);
-    checklist.value = await window.electronAPI.loadChecklist(specialty.value);
-    checklistLoaded.value = true;
-    isDone.value = await window.electronAPI.checkFile('Done', specialty.value);
-    evidenceFiles.value = await window.electronAPI.readEvidence();
-    console.log(evidenceFiles.value.toString());
-  } catch (error) {
-    alert(error.message);
-    checklistLoaded.value = false;
-  }
-};
-
-const exportCSV = async () => {
-  // Implement CSV export logic (similar to index.js)
-  alert('CSV export not implemented in this example');
-};
-
-const finalize = () => {
-  window.electronAPI.saveFile(new Date().toString(), specialty.value, "Done");
-  isDone.value = true;
-};
-
-const updateSession = (rowId, checklistId, field, value) => {
-  if (!sessionData.value[rowId]) sessionData.value[rowId] = {};
-  sessionData.value[rowId][field] = value;
-  sessionData.value[rowId]["id"] = checklistId;
-  sessionElectron = JSON.stringify(sessionData.value);
-  autoSave();
-};
-
-const autoSave = () => {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    window.electronAPI.saveSession(JSON.parse(sessionElectron));
-//    window.electronAPI.saveSession({"1" : {"comments": "abcd"}},0);
-  }, 1000);
-};
 </script>
 
 <style scoped>
@@ -167,4 +91,5 @@ button:disabled {
 button:hover:not(:disabled) {
   background-color: #1565c0;
 }
+
 </style>

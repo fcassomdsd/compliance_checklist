@@ -17,6 +17,7 @@ h2 {
   margin-top: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   background-color: #ffffff;
+  overflow-x: auto;
 }
 
 #csvTable thead {
@@ -94,6 +95,14 @@ button:hover:not(:disabled) {
 #currentPath {
   font-size: 0.9em;
   color: #0d47a1;
+}
+
+.question {
+    width: 20%;
+}
+
+.verification {
+    width: 20%;
 }
 
 .compliance {
