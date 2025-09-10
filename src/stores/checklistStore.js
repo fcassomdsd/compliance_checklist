@@ -28,7 +28,15 @@ export const useChecklistStore = defineStore('checklist', () => {
     const modalCreateDPTitle = "Create default path";
     const modalCreateDPExplanation = "The default path for inspection data does not exist.  I can create it for you.";
     const modalCreateDPAction = "create the default path";
-    const createDPSuccess = "Default path created successfully!";     
+    const createDPSuccess = "Default path created successfully!";  
+    
+    // specialty data
+    const specialtyList = [
+      { "code" : "VIG", "name" : "Vigilancia Radar" },
+      { "code" : "COM", "name" : "Comunicaciones de Radio" },
+      { "code" : "RNA", "name" : "Radioayudas" },
+      { "code" : "EEM", "name" : "Energia y Equipos MET" }
+    ]   
     
     
     let saveTimer = null;
@@ -131,6 +139,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         showModal.value = true;
     };
     const confirmModal = () => {
+       try {
         showModal.value = false;
         switch(tituloModal.value) {
           case modalFinalizeTitle: {
@@ -139,7 +148,7 @@ export const useChecklistStore = defineStore('checklist', () => {
             break;
           }
           case modalCreateDPTitle: {
-            es.createDefaultPath();
+            specialtyList.forEach( (x) => es.createPath(x.code));            
             toast.success(createDPSuccess);
             break;
           }
@@ -147,6 +156,10 @@ export const useChecklistStore = defineStore('checklist', () => {
             break;          
           }
         }
+      } catch (error) {
+        console.log(error);
+        toast.error(`Error in ${tituloModal.value} : ${error.message}`);
+      }
     };
     const showConfirmDefaultPath = () => {
       showConfirm(modalCreateDPTitle, modalCreateDPExplanation, modalCreateDPAction);
@@ -158,6 +171,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     };
     return {
         specialty,
+        specialtyList,
         checklist,
         checklistLoaded,
         currentPath,
