@@ -2,11 +2,28 @@ const { app, ipcMain } = require('electron');
 const path = require('path');
 const { loadChecklist } = require('./utils/checklist');
 const { loadSession, saveSession } = require('./utils/session');
-const { saveEvidenceFile, deleteFile, readDir, safeJoin, safePath } = require('./utils/fileOps');
+const { saveEvidenceFile, deleteFile, readDir, safeJoin, safePath, fileExists, ensureDir } = require('./utils/fileOps');
 
 
 let defaultSavePath = safeJoin(app.getPath('documents'), 'Current_inspection');
 let currentSavePath = defaultSavePath;
+
+ipcMain.handle('check-default-path', async () => {
+  try {
+    return await fileExists(defaultSavePath);
+  } catch (err) {
+    throw err;
+  }
+});
+
+ipcMain.handle('create-default-path', () => {
+    try {
+    ensureDir(defaultSavePath);
+  } catch (err) {
+    throw err;
+  }
+  
+});
 
 ipcMain.handle('read-evidence', () => {
   return readDir(safePath(currentSavePath));

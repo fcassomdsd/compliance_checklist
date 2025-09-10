@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const { ipcMain } = require('./ipcHandles');
+
 const path = require('path');
 
 function createWindow() {

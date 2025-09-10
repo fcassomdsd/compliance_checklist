@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
+//import createElectronService from "./electronServices.js";
 
 
 
@@ -14,4 +15,5 @@ const options = {
 
 app.use(Toast, options);
 app.use(createPinia());
+//app.use(createElectronService);
 app.mount('#app');

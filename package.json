@@ -1,13 +1,16 @@
 {
   "name": "compliance-app",
-  "version": "1.0a",
+  "version": "1.0.0a",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "build:win-portable": "electron-builder --win portable",
+    "dist": "electron-builder"
   },
   "dependencies": {
+    "ajv": "^8.17.0",
     "pinia": "^2.2.2",
     "vue-toastification": "^2.0.0-rc.5",
     "winston": "^3.13.0"
@@ -15,12 +18,39 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.4",
     "@vue/test-utils": "^2.4.6",
-    "ajv": "^8.17.0",
     "electron": "^37.3.1",
     "electron-builder": "^26.0.12",
     "electron-log": "^5.4.3",
     "vite": "^5.4.8",
     "vitest": "^2.0.5",
     "vue": "^3.5.18"
+  },
+  "build": {
+    "appId": "com.AviationI.aviationchecklist",
+    "productName": "Aviation Safety Oversight Checklist",
+    "win": {
+      "target": [ {"target": "portable", 
+                   "arch" : ["x64"] }
+                ],
+      "icon": "./src/images/icon2.ico"
+    },
+    "directories": {
+      "output": "dist-portable",
+      "buildResources": "resources"
+     },
+     "files": [
+       "dist/**/*",
+       "main.js",
+       "preload.js",
+       "ipcHandles.js",
+       "utils/**/*"
+     ],
+     "extraResources": [
+       {
+         "from": "src/images/",
+         "to": "images/",
+         "filter": ["**/*"]
+       }
+     ]
+    }
   }
-}

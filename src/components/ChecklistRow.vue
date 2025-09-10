@@ -42,8 +42,8 @@
           <td>
             <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
           </td>
-          <td :class="{ 'missing' : (store.evidenceFiles[evidence]['URL'] == '') }" >
-            <a :href="store.evidenceFiles[evidence]['URL']" target="_blank">{{ store.evidenceFiles[evidence]['count'] }}{{
+          <td :class="{ 'missing' : (store.evidenceFiles[evidence]?.URL == '') }" >
+            <a :href="store.evidenceFiles[evidence]?.URL" target="_blank">{{ store.evidenceFiles[evidence]?.count }}{{
                evidence
             }}</a>
           </td>

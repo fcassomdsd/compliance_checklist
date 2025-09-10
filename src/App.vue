@@ -18,12 +18,15 @@
       <option value="RNA">Radioayudas</option>
       <option value="EEM">Energia y Equipos MET</option>
     </select>
-    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showConfirm('Finalize inspection', 'finalize the inspection')">Finalize inspection</button>
+    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showConfirm(store.modalFinalizeTitle, store.modalFinalizeExplanation, store.modalFinalizeAction)">
+        Finalize inspection
+    </button>
     <ModalWindow
       :show="store.showModal"
       :titulo="store.tituloModal"
+      :explanation="store.explanationModal"
       :accion="store.accionModal" 
-      @cancel="store.showModal == false" 
+      @cancel="store.showModal = false" 
       @confirm="store.confirmModal"
     />
     </div>
@@ -36,18 +39,33 @@
 </template>
 
 <script setup>
-
+import { onMounted } from 'vue';
 import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
 import logo from './images/logo_idac.png'
+import { createElectronService } from './electronServices';
 
 // add and configure vue-toastification
 import { useToast } from "vue-toastification";
 const toast = useToast();
+const es = createElectronService();
 
 // Access the Pinia store
 const store = useChecklistStore();
+
+onMounted( async () => {
+
+  // Check if the default path exists
+  try {
+    if (!await es.defaultPathExists()) {
+      store.showConfirmDefaultPath();
+    }  
+  } catch (error) {
+    toast.error(error);  
+  }
+
+})
 
 </script>
 

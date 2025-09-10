@@ -1,6 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  checkDefaultPath: () => ipcRenderer.invoke('check-default-path'),
+  createDefaultPath: () => ipcRenderer.invoke('create-default-path'),
   loadChecklist: (specialty) => ipcRenderer.invoke('load-checklist', specialty),
   loadSession: (specialty) => ipcRenderer.invoke('load-session', specialty),
   readEvidence: () => ipcRenderer.invoke('read-evidence'),
