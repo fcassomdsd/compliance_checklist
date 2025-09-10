@@ -4,9 +4,9 @@ export const createElectronService = () => {
     return await window.electronAPI.checkDefaultPath();
   }
 
-  const createDefaultPath = async () => {
+  const createPath = async (filePath) => {
     try {
-      await window.electronAPI.createDefaultPath();  
+      await window.electronAPI.createPath(filePath);  
     } catch(error) {
       throw error;
     }
@@ -14,7 +14,7 @@ export const createElectronService = () => {
 
   return {
       defaultPathExists,
-      createDefaultPath
+      createPath
   }
 
 }

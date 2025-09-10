@@ -16,13 +16,17 @@ ipcMain.handle('check-default-path', async () => {
   }
 });
 
-ipcMain.handle('create-default-path', () => {
-    try {
-    ensureDir(defaultSavePath);
+ipcMain.handle('create-path', async (event, filePath) => {
+  try {
+    if (filePath === null) {
+      await ensureDir(defaultSavePath);
+    }
+    else { 
+      await ensureDir(safeJoin(defaultSavePath, filePath));
+    }
   } catch (err) {
     throw err;
   }
-  
 });
 
 ipcMain.handle('read-evidence', () => {

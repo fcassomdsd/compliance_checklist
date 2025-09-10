@@ -13,10 +13,9 @@
     <label>Specialty:</label>
     <select v-model="store.specialty" @change="store.loadChecklistAndSession">
       <option value="NONE">Select a specialty</option>
-      <option value="VIG">Vigilancia Radar</option>
-      <option value="COM">Comunicaciones de Radio</option>
-      <option value="RNA">Radioayudas</option>
-      <option value="EEM">Energia y Equipos MET</option>
+      <option v-for="(specialty) in store.specialtyList" :value="specialty.code" >
+          {{specialty.name }}
+      </option> 
     </select>
     <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showConfirm(store.modalFinalizeTitle, store.modalFinalizeExplanation, store.modalFinalizeAction)">
         Finalize inspection
