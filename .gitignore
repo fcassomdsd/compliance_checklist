@@ -1,6 +1,7 @@
 node_modules/
 logs/
-dist*/
+dist/
+dist-*/
 package-lock.json
 *~
 .~lock*

@@ -2,8 +2,11 @@
   <div v-if="show" class="modal-overlay">
     <div class="modal-container">
       <h2 class="modal-title">{{ titulo }}?</h2>
-      <p class="modal-message">
-        Do you really want to {{ accion }}?
+      <p class="modal-explanation">
+        {{ explanation }}
+      </p>
+      <p class="modal-confirmation">
+        Do you want to {{ accion }}?
       </p>
 
       <div class="modal-actions">
@@ -19,14 +22,17 @@
 </template>
 
 <script setup>
-defineProps({
+const props = defineProps({
   show: {
     type: Boolean,
     required: true
   },
   titulo: { type: String },
+  explanation: { type: String },
   accion: { type: String }
+  
 })
+
 </script>
 
 <style scoped>
@@ -55,9 +61,15 @@ defineProps({
   margin-bottom: 12px;
 }
 
-.modal-message {
-  font-size: 0.95rem;
+.modal-explanation {
+  font-size: 0.9rem;
   color: #555;
+  margin-bottom: 12px;
+}
+
+.modal-confirmation {
+  font-size: 1.1rem;
+  color: #733;
   margin-bottom: 20px;
 }
 

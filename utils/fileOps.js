@@ -3,6 +3,22 @@ const fsSync = require('fs');
 const path = require('path');
 const logger = require('./logger');
 
+const fileExists = async (filePath) => {
+
+  try {
+    await fs.access(safePath(filePath));  
+    return true;
+  } catch (error) {
+      if (error.code == "ENOENT") {
+        // it doesn't exist
+        return false; 
+      }       
+      else {
+        throw error;     
+     }
+  }
+}
+
 const safeJoin = (base, input) => {
   const resolved = path.resolve(base, input);
   if (!resolved.startsWith(base)) {
@@ -109,4 +125,4 @@ async function validForWrite(filePath, fileSize) {
     }
 }
 
-module.exports = { saveEvidenceFile, deleteFile, readDir, safeJoin, safePath };
+module.exports = { saveEvidenceFile, deleteFile, readDir, safeJoin, safePath, fileExists, ensureDir };

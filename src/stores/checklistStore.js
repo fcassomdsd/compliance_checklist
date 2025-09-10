@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
 import { useToast } from 'vue-toastification';
+import { createElectronService } from "../electronServices.js";
 const toast = useToast();
+const es = createElectronService();
 
 export const useChecklistStore = defineStore('checklist', () => {
     // State
@@ -14,7 +16,21 @@ export const useChecklistStore = defineStore('checklist', () => {
     const sessionSummary = ref({"location" : "", "finalized" : true});
     const showModal = ref(false);
     const tituloModal = ref('');
+    const explanationModal = ref('');
     const accionModal = ref('');
+
+    // modal window data
+    const modalFinalizeTitle = "Finalize Checklist";
+    const modalFinalizeExplanation = "Finalizing the checklist will prevent further changes, and cannot be undone";
+    const modalFinalizeAction = "finalize the current checklist";
+    const finalizeSuccess = "Checklist finalized successfully!";
+    
+    const modalCreateDPTitle = "Create default path";
+    const modalCreateDPExplanation = "The default path for inspection data does not exist.  I can create it for you.";
+    const modalCreateDPAction = "create the default path";
+    const createDPSuccess = "Default path created successfully!";     
+    
+    
     let saveTimer = null;
     // Actions
     const loadChecklistAndSession = async () => {
@@ -108,17 +124,34 @@ export const useChecklistStore = defineStore('checklist', () => {
             window.electronAPI.saveSession(JSON.stringify(sessionObj, null, 2));
         }, 1000);
     };
-    const showConfirm = (titulo, accion) => {
+    const showConfirm = (titulo, explanation, accion) => {
         tituloModal.value = titulo;
+        explanationModal.value = explanation;
         accionModal.value = accion;
         showModal.value = true;
     };
     const confirmModal = () => {
         showModal.value = false;
-        if (tituloModal.value === 'Finalize inspection') {
+        switch(tituloModal.value) {
+          case modalFinalizeTitle: {
             finalize();
+            toast.success(finalizeSuccess);
+            break;
+          }
+          case modalCreateDPTitle: {
+            es.createDefaultPath();
+            toast.success(createDPSuccess);
+            break;
+          }
+          default: {
+            break;          
+          }
         }
     };
+    const showConfirmDefaultPath = () => {
+      showConfirm(modalCreateDPTitle, modalCreateDPExplanation, modalCreateDPAction);
+    }
+    
     const finalize = () => {
         sessionSummary.value["finalized"] = true;
         autoSave();
@@ -133,10 +166,12 @@ export const useChecklistStore = defineStore('checklist', () => {
         sessionSummary,
         showModal,
         tituloModal,
+        explanationModal,
         accionModal,
         loadChecklistAndSession,
         updateSession,
         showConfirm,
+        showConfirmDefaultPath,
         confirmModal,
         finalize
     };
