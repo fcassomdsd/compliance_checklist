@@ -54,19 +54,18 @@
 </template>
 
 <script setup>
-import { defineProps, ref, computed} from 'vue';
+import { defineProps, ref} from 'vue';
 import { useChecklistStore } from '../stores/checklistStore';
 import { useToast } from 'vue-toastification';
-import trash from '../images/trash.png'
+import trash from '../images/trash.png';
+import { createFileService } from '../fileServices.js';
 
+const fs = createFileService();
 const toast = useToast();
-
 const radioButtons = ref(["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]);
 
 // Access the Pinia store
 const store = useChecklistStore();
-
-
 const props = defineProps(['newTopic', 'qnumber', 'row', 'session']);
 
 const radioChange = (event) => {
@@ -87,11 +86,7 @@ const evidenceChange = async (event) => {
     try {
 
       const buffer = await file.arrayBuffer();
-      const savedPath = await window.electronAPI.saveEvidence({
-          "name" : file.name,
-          "size" : file.size,
-          "bufferArray" : Array.from(new Uint8Array(buffer))
-      })
+      const savedPath = fs.saveEvidence(store.specialty.value, file.name, buffer);
       
       if (savedPath) {      
         if (!store.evidenceFiles[file.name]) {
@@ -119,8 +114,17 @@ const evidenceChange = async (event) => {
 const removeEvidence = async (index, evidence) => {
 
   if (store.evidenceFiles[evidence]["count"] === 1) {
-    await window.electronAPI.deleteEvidence(evidence);
-    delete store.evidenceFiles[evidence];
+    try {
+      if (await fs.deleteEvidence(store.specialty.value, evidence)) {
+        delete store.evidenceFiles[evidence];
+      }
+      else {
+        throw new Error("removeEvidence: could not delete file " + evidence);
+      }
+    } catch(error) {
+      console.log("evidenceChanged failed: " + error);
+      toast.error(error);
+    }
   }
   else {
     store.evidenceFiles[evidence]["count"]--;  
@@ -129,14 +133,6 @@ const removeEvidence = async (index, evidence) => {
   const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
   store.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence);
 };
-
-const EvidenceURL = computed( (index) => {
-
-    const fileName = props.session.evidence[index];
-    if (!fileName) return "";
-    
-    return store.evidenceFiles[fileName] ? store.evidenceFiles[fileName].URL : "";  
- });
 
 </script>
 

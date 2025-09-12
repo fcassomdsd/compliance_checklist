@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
 import { useToast } from 'vue-toastification';
-import { createElectronService } from "../electronServices.js";
+import { createFileService } from '../fileServices.js';
+
 const toast = useToast();
-const es = createElectronService();
+const fs = createFileService();
 
 export const useChecklistStore = defineStore('checklist', () => {
     // State
@@ -42,39 +43,51 @@ export const useChecklistStore = defineStore('checklist', () => {
     let saveTimer = null;
     // Actions
     const loadChecklistAndSession = async () => {
-        if (specialty.value == "NONE") {
-            checklist.value = null;
-            checklistLoaded.value = false;
-            sessionSummary.value = {"location" : "", "finalized" : true};
-            evidenceFiles.value = [];
+        // initialize state
+        checklist.value = null;
+        checklistLoaded.value = false;
+        sessionSummary.value.location = "";
+        sessionSummary.value.finalized = true;
+        // clear out evidenceFiles
+        for (const key of Object.keys(evidenceFiles.value)) {
+          delete evidenceFiles[key];            
+        }
             
-            // clear out session data
-            for (const key of Object.keys(sessionData)) {
-              delete sessionData[key];            
-            }
+        // clear out session data
+        for (const key of Object.keys(sessionData)) {
+          delete sessionData[key];            
+        }
+        if (specialty.value == "NONE") {
             return;
         } 
         try {
-            currentPath.value = await window.electronAPI.setSavePath(specialty.value);
-            let sessionRead = await window.electronAPI.loadSession(specialty.value);
-            // can't assign session object directly;  use JSON.parse
-            JSON.parse(JSON.stringify(sessionRead), (key, value) =>{
-               if (key.match("[0-9]+") && typeof value == "object") {
-                  sessionData[key] = value;
-               } else {
-                  if (key == "summary") {
-                     sessionSummary.value = value;
-                  }
-               }
-               return value;
-            }); 
-            if (!sessionSummary.value["finalized"]) {
-              sessionSummary.value["finalized"] = false;
-            }
-            
-            checklist.value = await window.electronAPI.loadChecklist(specialty.value);
+            // load checklist
+            checklist.value = await fs.loadChecklist(specialty.value);
             checklistLoaded.value = true;
+
+            // load session, if exists
+            let sessionRead = await fs.loadSession(specialty.value);
+            if (sessionRead !== null) {
+              // can't assign session object directly;  use JSON.parse
+              JSON.parse(JSON.stringify(sessionRead), (key, value) =>{
+                 if (key.match("[0-9]+") && typeof value == "object") {
+                    sessionData[key] = value;
+                 } else {
+                    if (key == "summary") {
+                       sessionSummary.value = value;
+                    }
+                 }  
+                 return value;
+              });
+            }
+            if (!sessionSummary.value["specialty"]) {
+              sessionSummary.value["specialty"] = specialty.value;
+            }
             await loadEvidence(sessionData);
+            sessionSummary.value["finalized"] = false;
+            currentPath.value = await fs.setSavePath(specialty.value);
+            autoSave();
+           
             toast.success("Checklist and session loaded");
         } catch (error) {
             toast.error(error.message); // Or use toast notification
@@ -83,15 +96,12 @@ export const useChecklistStore = defineStore('checklist', () => {
     };
     
     const loadEvidence = async (sessionObj) => {
-        const efiles = await window.electronAPI.readEvidence();
-        let eFilesObject = {};
-        evidenceFiles.value = {};
+        const efiles = await fs.readEvidence(specialty.value);
         efiles.forEach( (x) => { evidenceFiles.value[x.name] = {};
                                  evidenceFiles.value[x.name]["URL"]= x.URL;
                                  evidenceFiles.value[x.name]["count"] = 0;
                                });
         updateEvidenceCount(sessionObj);
-
     }; 
     const updateEvidenceCount = (obj) => {
         if (obj !== null) {
@@ -129,7 +139,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         saveTimer = setTimeout(() => {
             sessionSummary.value["lastUpdated"] = new Date().toISOString();
             const sessionObj = {"summary" : sessionSummary.value, "responses" : sessionData};
-            window.electronAPI.saveSession(JSON.stringify(sessionObj, null, 2));
+            fs.saveSession(currentPath.value, sessionObj);
         }, 1000);
     };
     const showConfirm = (titulo, explanation, accion) => {
@@ -148,7 +158,7 @@ export const useChecklistStore = defineStore('checklist', () => {
             break;
           }
           case modalCreateDPTitle: {
-            specialtyList.forEach( (x) => es.createPath(x.code));            
+            specialtyList.forEach( (x) => fs.createDefaultPath(x.code));            
             toast.success(createDPSuccess);
             break;
           }
