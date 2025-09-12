@@ -1,102 +1,107 @@
 const { app, ipcMain } = require('electron');
 const path = require('path');
-const { loadChecklist } = require('./utils/checklist');
-const { loadSession, saveSession } = require('./utils/session');
-const { saveEvidenceFile, deleteFile, readDir, safeJoin, safePath, fileExists, ensureDir } = require('./utils/fileOps');
+const { fileExists, safeJoin, safePath, ensureDir, listDir, readFile, saveFile, deleteFile, getFileStats } = require('./utils/fileOps');
+const logger = require('./utils/wlogger');
 
+const defaultSavePath = safeJoin(app.getPath('documents'), 'Current_inspection');
 
-let defaultSavePath = safeJoin(app.getPath('documents'), 'Current_inspection');
-let currentSavePath = defaultSavePath;
+function makePath(fileDir, pathArray = []) {
+  const dirPath = (fileDir === null ? defaultSavePath : filePath);
+  if (pathArray.length == 0) {
+     return(dirPath);
+  }
+  else { 
+    return safeJoin(dirPath, pathArray.reduce( (prev,x) => path.join(prev, x)));
+  }
+}
 
-ipcMain.handle('check-default-path', async () => {
+/**
+  filePath : the directory or file to check; if null, then fallback to defaultSavePath
+  pathLegs : any additional components of the path, existing under the previous filePath
+  
+*/
+ipcMain.handle('check-path', async (event, filePath, pathLegs) => {
   try {
-    return await fileExists(defaultSavePath);
+    const toFilePath = makePath(filePath, pathLegs);
+    return await fileExists(toFilePath);
   } catch (err) {
+    logger.error("check-path: could not assess presence of file " + toFilePath);
     throw err;
   }
 });
 
-ipcMain.handle('create-path', async (event, filePath) => {
+ipcMain.handle('get-path', async (event, filePath, pathLegs) => {
   try {
-    if (filePath === null) {
-      await ensureDir(defaultSavePath);
-    }
-    else { 
-      await ensureDir(safeJoin(defaultSavePath, filePath));
-    }
+    return makePath(filePath, pathLegs);
   } catch (err) {
+    logger.error("create-dir: could not create directory " + makePath(filePath, fileLegs));
     throw err;
   }
 });
 
-ipcMain.handle('read-evidence', () => {
-  return readDir(safePath(currentSavePath));
-});
-
-ipcMain.handle('set-save-path', (event, specialty) => {
-  currentSavePath = safeJoin(defaultSavePath, path.join(specialty, "Evidence"));
-  return currentSavePath;
-});
-
-ipcMain.handle('load-checklist', async (event, specialty) => {
+ipcMain.handle('get-stats', async (event, filePath, pathLegs) => {
   try {
-    const filePath = safeJoin(defaultSavePath, path.join(specialty, 'checklist.json'));
-    return await loadChecklist(filePath);
+    const fileStats = await getFileStats(makePath(filePath, pathLegs));
+    return fileStats;
   } catch (err) {
+    logger.error("get-stats: could not stat file " + makePath(filePath, fileLegs));
     throw err;
   }
 });
 
-ipcMain.handle('load-session', async (event, specialty) => {
+ipcMain.handle('create-dir', async (event, filePath, pathLegs) => {
   try {
-    const filePath = safeJoin(defaultSavePath, path.join(specialty, 'session.json'));
-    return await loadSession(filePath);
-  } catch(err) {
-     throw err;
+      await ensureDir(makePath(filePath, pathLegs));
+  } catch (err) {
+    logger.error("create-dir: could not create directory " + makePath(filePath, fileLegs));
+    throw err;
   }
 });
 
-ipcMain.handle('save-session', (event, session) => {
-  try {  
-    const filePath = safeJoin(path.dirname(currentSavePath), 'session.json');
-    saveSession(filePath, session);
-  } catch (error) {
-     throw error;
+ipcMain.handle('list-path', async (event, filePath, pathLegs) => {
+  try {
+    const dirList = await listDir(makePath(filePath, pathLegs));
+    return dirList;
+  } catch (err) {
+    logger.error("list-path: could not read directory " + makePath(filePath, pathLegs));
+    throw err;
   }
   
 });
 
-ipcMain.handle('save-evidence', async (event, fileObj) => {
-   
+ipcMain.handle('read-file', async (event, filePath, pathLegs) => {
   try {
-
-    const newFileObj =  {
-       "name" : fileObj.name,
-       "size" : fileObj.size,
-       "buffer" : Buffer.from(fileObj.bufferArray)
-    }
-    const filePath = await saveEvidenceFile(safePath(currentSavePath), newFileObj);
-    return filePath;
-  } catch (error) {
-    console.log("Handle 'save-evidence' failed" + error);
-    throw error;
+    const fileContent = await readFile(makePath(filePath, pathLegs));
+    return fileContent;
+  } catch (err) {
+    logger.error('read-file: could not read file ' + filePath);
+    throw err;
   }
+  
 });
 
-ipcMain.handle('save-file', async (event, bufferArray, ruta, fileName) => {
+ipcMain.handle('save-file', async (event, data, filePath, pathLegs) => {
    try {
-    const toFilePath = (ruta ? safeJoin(defaultSavePath, ruta, fileName) : safeJoin(defaultSavePath, fileName));
+    const toFilePath = makePath(filePath, pathLegs);
     console.log(toFilePath);
-    return saveEvidenceFile(Buffer.from(bufferArray), toFilePath);
+    const dataToSave = (typeof data === "string" ? data : Buffer.from(data));
+    const saved = await saveFile(toFilePath, data);
+    return saved;
   } catch (error) {
-    console.log("Could not save evidence file " + fileName);
+    logger.error("save-file: Could not save file " + toFilePath);
     throw error;
   }
 });
 
-ipcMain.handle('delete-evidence', async (event, fileName) => {
-  const ruta = safeJoin(currentSavePath, fileName);
-  return deleteFile(ruta);
+ipcMain.handle('delete-file', async (event, filePath, pathLegs) => {
+  try {
+    const toFilePath = makePath(filePath, pathLegs);
+    const deleted = await deleteFile(toFilePath);
+    return deleted;
+  } catch (err) {
+    logger.error("delete-file: Could not delete file " + toFilePath);
+    throw err;
+  }
 });
 
 module.exports = { ipcMain };

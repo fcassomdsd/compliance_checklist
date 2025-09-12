@@ -13,7 +13,7 @@
     <label>Specialty:</label>
     <select v-model="store.specialty" @change="store.loadChecklistAndSession">
       <option value="NONE">Select a specialty</option>
-      <option v-for="(specialty) in store.specialtyList" :value="specialty.code" >
+      <option v-for="(specialty, index) in store.specialtyList" :key="index" :value="specialty.code" >
           {{specialty.name }}
       </option> 
     </select>
@@ -43,12 +43,12 @@ import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
 import logo from './images/logo_idac.png'
-import { createElectronService } from './electronServices';
+import { createFileService } from './fileServices';
 
 // add and configure vue-toastification
 import { useToast } from "vue-toastification";
 const toast = useToast();
-const es = createElectronService();
+const fs = createFileService();
 
 // Access the Pinia store
 const store = useChecklistStore();
@@ -57,7 +57,7 @@ onMounted( async () => {
 
   // Check if the default path exists
   try {
-    if (!await es.defaultPathExists()) {
+    if (!await fs.defaultPathExists()) {
       store.showConfirmDefaultPath();
     }  
   } catch (error) {

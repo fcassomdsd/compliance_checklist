@@ -1,7 +1,5 @@
-const fs = require('fs').promises;
-const path = require('path');
-const Ajv = require('ajv');
-const logger = require('./logger');
+import Ajv from 'ajv';
+//import logger from './logger';
 
 const ajv = new Ajv({ allErrors: true, verbose: true });
 
@@ -67,16 +65,10 @@ const sessionSchema = {
 
 const validateSession = ajv.compile(sessionSchema);
 
-async function loadSession(filePath) {
+const parseSession = (contents) => {
    
 try {
-    logger.info("Loading session from " + filePath);
-    const exists = await fs.access(filePath).then(() => true).catch(() => false);
-    if (!exists) {
-       throw new Error("Could not get access to session file");
-    }
-    const content = await fs.readFile(filePath, 'utf-8');
-    const json = JSON.parse(content);
+    const json = JSON.parse(contents);
     if (!validateSession(json)) {
       const errors = validateSession.errors?.map(err => 
         `Invalid session data at ${err.instancePath}: ${err.message}`
@@ -85,22 +77,9 @@ try {
     }
     return json;
   } catch (e) {
-    logger.error(`Failed to load session ${filePath}:`, e);
+    console.log(`Failed to load session:`, e);
     throw e;
   }   
 }
 
-async function saveSession(filePath, data) {
-  try {  
-    sessionString = (typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
-    fs.writeFile(filePath, sessionString);
-  } catch (error) {
-    logger.error("Could not write to session file" + filePath, error);
-    throw error;
-  }
-}
-
-module.exports = {
-  loadSession,
-  saveSession
-};
+export default parseSession;

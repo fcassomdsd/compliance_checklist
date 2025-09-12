@@ -1,29 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  checkDefaultPath: () => ipcRenderer.invoke('check-default-path'),
-  createPath: (filePath) => ipcRenderer.invoke('create-path', filePath),
-  loadChecklist: (specialty) => ipcRenderer.invoke('load-checklist', specialty),
-  loadSession: (specialty) => ipcRenderer.invoke('load-session', specialty),
-  readEvidence: () => ipcRenderer.invoke('read-evidence'),
-  saveSession: (session) => ipcRenderer.invoke('save-session', session),
-  saveEvidence: (fileObj) => {
-    if (typeof fileObj.name !== 'string' || fileObj.name.includes('..')) {
-      throw new Error('Invalid file name');
-    }
-    return ipcRenderer.invoke('save-evidence', fileObj);
-  },
-  saveFile: (bufferArray, ruta, fileName) => {
-    if (typeof fileName !== 'string' || fileName.includes('..') || typeof ruta !== 'string' || ruta.includes('..')) {
-      throw new Error('Invalid file name or path');
-    }
-    return ipcRenderer.invoke('save-file', bufferArray, ruta, fileName);
-  },
-  setSavePath: (specialty) => ipcRenderer.invoke('set-save-path', specialty),
-  deleteEvidence: (fileName) => {
-    if (typeof fileName !== 'string' || fileName.includes('..')) {
-      throw new Error('Invalid file name');
-    }
-    return ipcRenderer.invoke('delete-evidence', fileName);
-  } 
+  checkPath: (filePath, ...pathLegs) => ipcRenderer.invoke('check-path', filePath, pathLegs),
+  createDir: (filePath, ...pathLegs) => ipcRenderer.invoke('create-dir', filePath, pathLegs),
+  deleteFile: (filePath, ...pathLegs) => ipcRenderer.invoke('delete-file', filePath, pathLegs),
+  getPath: (filePath, ...pathLegs) => ipcRenderer.invoke('get-path', filePath, pathLegs),
+  getStats: (filePath, ...pathLegs) => ipcRenderer.invoke('get-stats', filePath, pathLegs),
+  listPath: (filePath, ...pathLegs) => ipcRenderer.invoke('list-path', filePath, pathLegs),
+  readFile: (filePath, ...pathLegs) => ipcRenderer.invoke('read-file', filePath, pathLegs),
+  saveFile: (data, filePath, ...pathLegs) => ipcRenderer.invoke('save-file', data, filePath, pathLegs)
 });

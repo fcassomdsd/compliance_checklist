@@ -1,7 +1,6 @@
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const path = require('path');
-const logger = require('./logger');
+const logger = require('./wlogger');
 
 const fileExists = async (filePath) => {
 
@@ -14,6 +13,7 @@ const fileExists = async (filePath) => {
         return false; 
       }       
       else {
+        logger.error("fileExists: could not get access to file " + filePath);
         throw error;     
      }
   }
@@ -22,7 +22,7 @@ const fileExists = async (filePath) => {
 const safeJoin = (base, input) => {
   const resolved = path.resolve(base, input);
   if (!resolved.startsWith(base)) {
-    throw new Error('Invalid path: Path traversal detected');
+    throw new Error('safeJoin: Invalid path: Path traversal detected: ' + base + "/" + input);
   }
   return resolved;
 };
@@ -30,7 +30,7 @@ const safeJoin = (base, input) => {
 const safePath = (filePath) => {
 
   if (typeof filePath !== "string" || filePath.includes("..") ) {
-    throw new Error("Illegal path name");    
+    throw new Error("safePath: Illegal path name: " + filePath);    
   }
   else {
     return filePath;  
@@ -39,63 +39,75 @@ const safePath = (filePath) => {
 
 async function ensureDir(dirPath) {
   try {
-    fs.mkdir(safePath(dirPath), { recursive: true });
+    const found = await fileExists(dirPath);
+    if (!found) {
+      fs.mkdir(safePath(dirPath), { recursive: true });
+    }
     return dirPath;
   }
   catch(e) {
-    logger.error(`Could not create directory ${dirPath}`, e);
+    logger.error(`ensurePath: Could not create directory ${dirPath}`, e);
     throw e;
   }
 }
 
-async function readDir(ruta) {
+async function listDir(dirPath) {
 
   try {
-    
-    await ensureDir(ruta);
-    const dirContents = await fs.readdir(ruta); 
-    return dirContents.map( (x) => ( { "name": x, "URL" : path.join(ruta, x), "count" : 0 } ) );
+    const toDirPath = safePath(dirPath);
+    const found = await fileExists(toDirPath);
+    if (found) {
+      const dirContents = await fs.readdir(toDirPath); 
+      return dirContents.map( (x) => ( { "name": x, "URL" : path.join(toDirPath, x), "count" : 0 } ) );
+    }
+    else {
+      throw new Error(`readDir: Directory does not exist: ${dirPath}`);
+    }
   } catch (error) {
-    logger.error(`Could not read contents of directory ${ruta} `, error);
+    logger.error(`Could not read contents of directory ${dirPath} `, error);
     throw error;
   }
 
 }
 
-async function saveEvidenceFile(fileDir, fileObj) {
- 
-  const MAX_FILE_SIZE = 100 * 1024 * 1024;
-  const MAX_SIZE_LABEL = '100' + 'MB';
- 
+async function readFile(filePath) {
+
   try {
-    const filePath = safeJoin(fileDir, fileObj.name);
-    await ensureDir(path.dirname(filePath));
-  
-    if (fileObj.size > MAX_FILE_SIZE) {
-      throw new Error(`File size exceeds ${MAX_SIZE_LABEL} limit`);
-    }
- 
-    if (await validForWrite(filePath, fileObj.size)) {
-      fs.writeFile(filePath, fileObj.buffer);
-      logger.info("saveEvidenceFile : returning " + filePath);
-      return filePath;
+    const toFilePath = safePath(filePath);
+    const found = await fileExists(toFilePath);
+    if (found) {
+      const fileContents = await fs.readFile(toFilePath, 'utf-8'); 
+      return fileContents;
     }
     else {
-      logger.info("saveEvidenceFile : returning null");
-      return null;    
+      throw new Error(`readFile: File does not exist: ${filePath}`);
     }
-    return filePath;
   } catch (error) {
-    logger.error("Could not save evidence file: ", error);
+    logger.error(`Could not read contents of file ${filePath} `, error);
     throw error;
   }
 
+}
+
+async function saveFile(filePath, buffer) {
+ 
+  try {
+    const toFilePath = safePath(filePath);
+    await ensureDir(path.dirname(filePath));
+  
+    fs.writeFile(toFilePath, buffer, 'utf-8');
+    logger.info("saveEvidenceFile : returning " + filePath);
+    return filePath;
+  } catch (error) {
+    logger.error("Could not save file: " + filePath + " :", error);
+    throw error;
+  }
 }
 
 async function deleteFile(filePath) {
 
   try {
-    fs.unlink(safePath(filePath)); 
+    await fs.unlink(safePath(filePath)); 
     return true;
   } catch (error) {
     logger.error(`Could not delete file ${filePath}`, error);
@@ -104,25 +116,21 @@ async function deleteFile(filePath) {
   
 }
 
-async function validForWrite(filePath, fileSize) {
+async function getFileStats(filePath) {
 
   try {
     const fileStats = await fs.stat(filePath);
-    logger.info(fileStats);
-
-    // if size is different, file is different.  valid for writing
-    logger.info("validForWrite: returning " + (fileStats.size != fileSize));
-    return (fileStats.size != fileSize);
-    } catch (error) {
-      if (error.code == "ENOENT") {
-        // it doesn't exist, so valid for writing.
-        logger.info("validForWrite: returning true");
-        return true; 
-      }       
-      else {
-        throw error;     
-     }
+    return fileStats;
+  } catch (error) {
+    if (error.code == "ENOENT") {
+      // it doesn't exist, so valid for writing.
+      logger.info("getFileStats: file does not exist, returning null: " + filePath);
+      return null; 
+    }       
+    else {
+      throw error;     
     }
+  }
 }
 
-module.exports = { saveEvidenceFile, deleteFile, readDir, safeJoin, safePath, fileExists, ensureDir };
+module.exports = { fileExists, safeJoin, safePath, ensureDir, listDir, readFile, saveFile, deleteFile, getFileStats };
