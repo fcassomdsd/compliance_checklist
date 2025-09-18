@@ -39,6 +39,7 @@ describe('ChecklistRow.vue', () => {
       files: {
         'file1.jpg': { URL: '/path/file1.jpg', count: 1 },
         'file2.jpg': { URL: '/path/file2.jpg', count: 2 },
+        'missing.jpg': { URL: '', count: 0 },
       },
       add: vi.fn(),
       addCount: vi.fn(),
@@ -192,7 +193,7 @@ describe('ChecklistRow.vue', () => {
     });
     const row = wrapper.find('table.preview tr');
     expect(row.find('td.missing').exists()).toBe(true);
-    expect(row.find('a').text()).toBe('missing.jpg');
+    expect(row.find('a').text()).toBe('0missing.jpg');
   });
 
   it('handles evidenceChange with valid files', async () => {
@@ -211,6 +212,39 @@ describe('ChecklistRow.vue', () => {
     expect(mockEvidenceStore.addCount).toHaveBeenCalledWith('newfile.jpg');
     expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[1]);
     expect(mockChecklistStore.updateSession).toHaveBeenCalledWith(1, 'checklist-1', 'evidence', ['file1.jpg', 'newfile.jpg']);
+    expect(mockToast.success).toHaveBeenCalledWith('Evidence updated');
+  });
+
+  it('handles evidenceChange with a missing file', async () => {
+    wrapper = mount(ChecklistRow, {
+      props: {
+        newTopic: false,
+        qnumber: 1,
+        row: { id: 'checklist-1', topic: 'Topic 1', reference: 'REF1', question: 'Question 1?', verification: 'Verify 1' },
+        session: { evidence: ['missing.jpg'] },
+      },
+      global: { plugins: [pinia] },
+    });
+    const row = wrapper.find('table.preview tr');
+    expect(row.find('td.missing').exists()).toBe(true);
+    expect(row.find('a').text()).toBe('0missing.jpg');
+
+    const fileInput = wrapper.find('input[type="file"]');
+    const files = [
+      { name: 'missing.jpg' }, 
+    ];
+    Object.defineProperty(fileInput.element, 'files', {
+        value: files,
+        writable: false,
+    });
+    
+    vi.mocked(mockEvidenceStore.addCount).mockImplementation((fileName) => (mockEvidenceStore.files[fileName].count++));      
+    await fileInput.trigger('change');
+
+    expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[0]);
+    expect(mockEvidenceStore.addCount).toHaveBeenCalledWith('missing.jpg');
+    expect(mockEvidenceStore.files['missing.jpg'].count).toBe(1);
+    expect(mockChecklistStore.updateSession).toHaveBeenCalledWith(1, 'checklist-1', 'evidence', ['missing.jpg']);
     expect(mockToast.success).toHaveBeenCalledWith('Evidence updated');
   });
 

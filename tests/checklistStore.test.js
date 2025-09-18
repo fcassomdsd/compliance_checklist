@@ -182,13 +182,13 @@ describe('Checklist Store', () => {
     });
   });
 
-  describe('showConfirm', () => {
+  describe('showFinalize', () => {
     it('sets modal state', () => {
-      store.showConfirm('Test Title', 'Test Explanation', 'Test Action');
+      store.showFinalize();
 
-      expect(store.tituloModal.value).toBe('Test Title');
-      expect(store.explanationModal.value).toBe('Test Explanation');
-      expect(store.accionModal.value).toBe('Test Action');
+      expect(store.tituloModal.value).toBe('Finalize Checklist');
+      expect(store.explanationModal.value).toBe('Finalizing the checklist will prevent further changes, and cannot be undone');
+      expect(store.accionModal.value).toBe('finalize the current checklist');
       expect(store.showModal.value).toBe(true);
     });
   });

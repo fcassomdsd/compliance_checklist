@@ -77,6 +77,27 @@ export function parseSession(contents) {
   }   
 }
 
+// returns an array of all files that appear in session, and the number of times they appear
+export function getEvidenceLinks(sessionObj) { 
+  
+  let evidenceLinks = {};
+
+  JSON.parse(sessionObj, (key, value) => {
+    if (key == "evidence") {
+      value.forEach((x) => {
+        if (!evidenceLinks[x]) {
+          evidenceLinks[x] = { count : 1 }
+        } else {
+          evidenceLinks[x].count++;
+        } 
+      });
+    } 
+    return value;
+  });
+  
+  return evidenceLinks;
+}
+
 // this is here because this module should know well about the structure of the session object,
 // and how evidence is structured within it.  If it changes above, it may change here.
 export function countEvidence(obj, fileName, count = 0, found = false) {

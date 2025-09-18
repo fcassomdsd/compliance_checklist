@@ -42,7 +42,6 @@ export const useChecklistStore = defineStore('checklist', () => {
     ]   
     
     
-    let saveTimer = null;
     // Actions
     const loadChecklistAndSession = async () => {
         // initialize state
@@ -90,11 +89,11 @@ export const useChecklistStore = defineStore('checklist', () => {
 
             sessionSummary.value["finalized"] = false;
             currentPath.value = await fs.setSavePath(specialty.value);
-            const result = fs.saveSession(
-                             specialty.value,
-                             sessionSummary.value,
-                             sessionData,
-                             displayToast);
+            fs.saveSession(
+              specialty.value,
+              sessionSummary.value,
+              sessionData,
+              displayToast);
             toast.success("Checklist and session loaded");
         } catch (error) {
             toast.error(error.message); // Or use toast notification
@@ -108,28 +107,15 @@ export const useChecklistStore = defineStore('checklist', () => {
         sessionData[rowId]["id"] = checklistId;
         fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
     };
-    const autoSave = (displayError) => {
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => {
-          try {
-            sessionSummary.value["lastUpdated"] = new Date().toISOString();
-            const sessionObj = {"summary" : sessionSummary.value, "responses" : sessionData};
-            fs.saveSession(currentPath.value, sessionObj);
-          } catch (err) {
-            displayError(err.message);
-            throw err;
-          }
-        }, 1000);
-    };
     
     function displayToast(msg) {
       toast.error(msg);
     }
     
-    const showConfirm = (titulo, explanation, accion) => {
-        tituloModal.value = titulo;
-        explanationModal.value = explanation;
-        accionModal.value = accion;
+    const showFinalize = () => {
+        tituloModal.value = modalFinalizeTitle;
+        explanationModal.value = modalFinalizeExplanation;
+        accionModal.value = modalFinalizeAction;
         showModal.value = true;
     };
     const confirmModal = () => {
@@ -186,7 +172,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         accionModal,
         loadChecklistAndSession,
         updateSession,
-        showConfirm,
+        showFinalize,
         checkDefaultPath,
         confirmModal,
         finalize

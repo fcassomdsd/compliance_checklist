@@ -41,7 +41,7 @@ describe('App.vue', () => {
       modalFinalizeExplanation: 'Finalizing the checklist will prevent further changes, and cannot be undone',
       modalFinalizeAction: 'finalize the current checklist',
       loadChecklistAndSession: vi.fn(),
-      showConfirm : vi.fn(),
+      showFinalize : vi.fn(),
       confirmModal : vi.fn(),
       checkDefaultPath: vi.fn(),
       finalize: vi.fn(),
@@ -105,16 +105,12 @@ describe('App.vue', () => {
     expect(button.attributes('disabled')).toBeUndefined();
   });
 
-  it('calls showConfirm on finalize button click', async () => {
+  it('calls showFinalize on finalize button click', async () => {
     mockStore.sessionSummary.finalized = false;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#finalizeBtn');
     await button.trigger('click');
-    expect(mockStore.showConfirm).toHaveBeenCalledWith(
-      mockStore.modalFinalizeTitle,
-      mockStore.modalFinalizeExplanation,
-      mockStore.modalFinalizeAction
-    );
+    expect(mockStore.showFinalize).toHaveBeenCalled();
   });
 
   it('passes props to ModalWindow', () => {

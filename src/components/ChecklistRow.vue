@@ -42,7 +42,7 @@
           <td>
             <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
           </td>
-          <td :class="{ 'missing' : !(evidenceStore.files[evidence]) }" >
+          <td :class="{ 'missing' : (evidenceStore.files[evidence]?.URL == '') }" >
             <a :href="evidenceStore.files[evidence]?.URL" target="_blank">{{ evidenceStore.files[evidence]?.count }}{{
                evidence
             }}</a>
@@ -93,7 +93,13 @@ const evidenceChange = async (event) => {
       // update the evidence file record
       await evidenceStore.add(store.specialty, file);
 
-      if (!table.some((item) => item === file.name)) {
+      const inTable = table.some((item) => item === file.name);
+
+      if (inTable) { // it's already there
+        if (evidenceStore.files[file.name].count == 0) { // it's a missing file. update count
+          evidenceStore.addCount(file.name);
+        }
+      } else {
         evidenceStore.addCount(file.name);
         table.push(file.name);
       }

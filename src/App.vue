@@ -17,7 +17,7 @@
           {{specialty.name }}
       </option> 
     </select>
-    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showConfirm(store.modalFinalizeTitle, store.modalFinalizeExplanation, store.modalFinalizeAction)">
+    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
         Finalize inspection
     </button>
     <ModalWindow
