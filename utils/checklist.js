@@ -1,5 +1,4 @@
 import Ajv from 'ajv';
-//import logger from './logger';
 
 const ajv = new Ajv({ allErrors: true, verbose: true });
 const checklistSchema = {
@@ -43,12 +42,12 @@ const checklistSchema = {
 
 const validateChecklist = ajv.compile(checklistSchema);
 
-async function parseChecklist(contents) {
+export function parseChecklist(contents) {
    try {
     const json = JSON.parse(contents);
     if (!validateChecklist(json)) {
       const errors = validateChecklist.errors?.map(err => 
-        `Invalid session data at ${err.instancePath}: ${err.message}`
+        `Invalid checklist data at ${err.instancePath}: ${err.message}`
       ).join('; ') || 'Unknown validation error';
       throw new Error(`Checklist validation failed: ${errors}`);
     }
@@ -59,4 +58,3 @@ async function parseChecklist(contents) {
   }   
 }
 
-export default parseChecklist;

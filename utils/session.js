@@ -1,73 +1,68 @@
 import Ajv from 'ajv';
-//import logger from './logger';
 
 const ajv = new Ajv({ allErrors: true, verbose: true });
 
 const sessionSchema = {
   type: "object",
-  oneOf: [{
-    properties: {
-      summary: {
-        type: "object",
-        properties: {
-          specialty: {
-            type: "string"
-          },
-          location: {
-            type: "string"
-          },
-          finalized: {
-            type: "boolean"
-          },
-          lastUpdated: {
-            type: "string"
-          }
+  properties: {
+    summary: {
+      type: "object",
+      properties: {
+        specialty: {
+          type: "string"
+        },
+        location: {
+          type: "string"
+        },
+        finalized: {
+          type: "boolean"
+        },
+        lastUpdated: {
+          type: "string"
         }
-      }
+      },
+      additionalProperties: false,
+      required: ["specialty","location"]
     },
-    additionalProperties: false,
-    required: ["specialty", "location"]
-  }, {
-     properties : {
-        responses : {
-           type : "object",
-           patternProperties: {
-             "^[0-9]+$": {
-               type: "object",
-               properties: {
-                 id: {
-                   type: "string"
-                 },
-                 compliance: {
-                   type: "string",
-                   enum: ["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]
-                 },
-                 comments: {
-                   type: "string"
-                 },
-                 evidence: {
-                   type: "array",
-                   items: {
-                     type: "string",
-                   }
-                 }
-               },
-               additionalProperties: false,
-               required: ["id"]
+    responses : {
+       type : "object",
+       patternProperties: {
+         "^[0-9]+$": {
+           type: "object",
+           properties: {
+             id: {
+               type: "string"
+             },
+             compliance: {
+               type: "string",
+               enum: ["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]
+             },
+             comments: {
+               type: "string"
+             },
+             evidence: {
+               type: "array",
+               items: {
+                 type: "string",
+               }
              }
            },
-           additionalProperties: false
-        }
-     }
-     }
-  ]
+           additionalProperties: false,
+           required: ["id"]
+         }
+       },
+       additionalProperties: false
+    }
+  },
+  additionalProperties: false,
+  required: ["summary"]
 }
 
 const validateSession = ajv.compile(sessionSchema);
 
-const parseSession = (contents) => {
+export function parseSession(contents) {
    
-try {
+  try {
     const json = JSON.parse(contents);
     if (!validateSession(json)) {
       const errors = validateSession.errors?.map(err => 
@@ -82,4 +77,28 @@ try {
   }   
 }
 
-export default parseSession;
+// this is here because this module should know well about the structure of the session object,
+// and how evidence is structured within it.  If it changes above, it may change here.
+export function countEvidence(obj, fileName, count = 0, found = false) {
+
+  let newCount = count;
+
+  if (obj !== null) {  // -a
+    if (typeof obj === 'object') { // b
+      if ("evidence" in obj) { // c
+        newCount = countEvidence(obj.evidence, fileName, count, true);
+      } else { // -c
+        if (found) { // d
+          if (obj.findIndex((x) => x == fileName) > -1 ) { // e
+            return count + 1;                
+          }
+        } else { // -d
+          Object.values(obj).forEach( (value) => {
+            newCount = newCount + countEvidence(value, fileName, count, false);
+          });
+        }
+      }
+    }
+  }   
+  return newCount;
+} 
