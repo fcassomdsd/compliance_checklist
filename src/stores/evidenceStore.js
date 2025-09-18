@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { createFileService } from '../fileServices.js';
-import { countEvidence } from '../../utils/session.js';
+import { getEvidenceLinks } from '../../utils/session.js';
 
 export const useEvidenceStore = defineStore('evidence', () => {
 
@@ -23,12 +23,22 @@ export const useEvidenceStore = defineStore('evidence', () => {
                                  files.value[x.name]["URL"]= x.URL;
                                  files.value[x.name]["count"] = 0;
                                });
+
     };
 
     const updateCount = (obj) => {
-        for ( const key of Object.keys(files.value)) {
-          files.value[key].count = countEvidence(obj, key)
+
+      const evidenceLinks = getEvidenceLinks(JSON.stringify(obj))
+      
+      for ( const [linkName, linkObj] of Object.entries(evidenceLinks) ) {
+        if (!files.value[linkName]) {
+          files.value[linkName] = { URL : '', count : linkObj.count }
         }
+        else {
+          files.value[linkName].count = linkObj.count;
+        }
+      
+      }     
     }
     
     const add = async (specialty, fileObj) => {

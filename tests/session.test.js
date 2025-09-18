@@ -1,6 +1,6 @@
 // session.test.js
 import { describe, it, expect } from 'vitest';
-import { parseSession, countEvidence } from '../utils/session';
+import { parseSession, getEvidenceLinks } from '../utils/session';
 
 describe('session.js', () => {
   describe('parseSession', () => {
@@ -69,7 +69,8 @@ describe('session.js', () => {
     });
   });
 
-  describe('countEvidence', () => {
+  describe('getEvidenceLinks', () => {
+
     const sampleJson = {
       "1": {
         "comments": "several evidences",
@@ -92,23 +93,12 @@ describe('session.js', () => {
       }
     }
       
-    
-    it('finds count for only one', () => {
+    it('correctly counts each file ocurrence', () => {
 
-      const count = countEvidence(sampleJson, 'onlyOne.txt');
-      expect(count).toBe(1);
-    });
-
-    it('finds count for more than one', () => {
-
-      const count = countEvidence(sampleJson, 'IHaveThree.txt');
-      expect(count).toBe(3);
-    });
-
-    it('finds count for none', () => {
-
-      const count = countEvidence(sampleJson, 'IDontHaveAny.txt');
-      expect(count).toBe(0);
+      const elinks = getEvidenceLinks(JSON.stringify(sampleJson));
+      expect(elinks["onlyOne.txt"].count).toBe(1);
+      expect(elinks["IHaveThree.txt"].count).toBe(3);
+      expect(Object.keys(elinks).length).toBe(5);
     });
 
   });

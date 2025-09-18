@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import { ref } from 'vue';
 import { createFileService } from '../src/fileServices.js';
 import { useEvidenceStore } from '../src/stores/evidenceStore.js';
-import { countEvidence } from '../utils/session.js';
+import { getEvidenceLinks } from '../utils/session.js';
 
 // Mock dependencies
 vi.mock('vue', () => ({
@@ -11,18 +11,13 @@ vi.mock('vue', () => ({
 }));
 vi.mock('../src/fileServices.js');
 vi.mock('../utils/session.js', ()=> ({
-        countEvidence : (obj, fileName) => {
-          switch (fileName) {
-            case "onlyOne.txt" :
-              return 1;
-              break;
-            case "IHaveThree.txt" :
-              return 3;
-              break;
-            default :
-              return 0;           
-          }         
-        }
+        getEvidenceLinks : (obj) => ({
+          "onlyOne.txt" : { count : 1 },
+          "IHaveThree.txt" : { count : 3 },
+          "Ex3.json" : { count : 1 },
+          "Ex4.json" : { count : 1 },
+          "Ex6.json" : { count : 1 },
+        })
       }));
 
 describe('Evidence Store', () => {
@@ -261,6 +256,8 @@ describe('Evidence Store', () => {
     expect(evidence.files.value['onlyOne.txt'].count).toBe(1);    
     expect(evidence.files.value['IHaveThree.txt'].count).toBe(3);    
     expect(evidence.files.value['IHaveNone.txt'].count).toBe(0);    
+    expect(evidence.files.value['Ex6.json'].count).toBe(1);
+    expect(evidence.files.value['Ex6.json'].URL).toBe('');    
     });
 
   });
