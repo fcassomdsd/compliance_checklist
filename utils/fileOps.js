@@ -1,11 +1,13 @@
-const fs = require('fs').promises;
-const path = require('path');
-const logger = require('./wlogger');
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { logger } from './logger.js';
+import { safePath } from './fileSec.js';
 
-const fileExists = async (filePath) => {
+export const fileExists = async (filePath) => {
 
   try {
-    await fs.access(safePath(filePath));  
+    const newPath = safePath(filePath);
+    await fs.access(safePath(newPath));  
     return true;
   } catch (error) {
       if (error.code == "ENOENT") {
@@ -19,29 +21,11 @@ const fileExists = async (filePath) => {
   }
 }
 
-const safeJoin = (base, input) => {
-  const resolved = path.resolve(base, input);
-  if (!resolved.startsWith(base)) {
-    throw new Error('safeJoin: Invalid path: Path traversal detected: ' + base + "/" + input);
-  }
-  return resolved;
-};
-
-const safePath = (filePath) => {
-
-  if (typeof filePath !== "string" || filePath.includes("..") ) {
-    throw new Error("safePath: Illegal path name: " + filePath);    
-  }
-  else {
-    return filePath;  
-  }
-}
-
-async function ensureDir(dirPath) {
+export async function ensureDir(dirPath) {
   try {
     const found = await fileExists(dirPath);
     if (!found) {
-      fs.mkdir(safePath(dirPath), { recursive: true });
+      await fs.mkdir(safePath(dirPath), { recursive: true });
     }
     return dirPath;
   }
@@ -51,7 +35,7 @@ async function ensureDir(dirPath) {
   }
 }
 
-async function listDir(dirPath) {
+export async function listDir(dirPath) {
 
   try {
     const toDirPath = safePath(dirPath);
@@ -70,7 +54,7 @@ async function listDir(dirPath) {
 
 }
 
-async function readFile(filePath) {
+export async function readFile(filePath) {
 
   try {
     const toFilePath = safePath(filePath);
@@ -89,22 +73,23 @@ async function readFile(filePath) {
 
 }
 
-async function saveFile(filePath, buffer) {
+export async function saveFile(filePath, buffer) {
  
   try {
     const toFilePath = safePath(filePath);
-    await ensureDir(path.dirname(filePath));
+    const dirPath = path.dirname(toFilePath);
+    await fs.mkdir(dirPath, { recursive : true });
   
-    fs.writeFile(toFilePath, buffer, 'utf-8');
-    logger.info("saveEvidenceFile : returning " + filePath);
+    await fs.writeFile(toFilePath, buffer, 'utf-8');
+    logger.info("saveFile : returning " + filePath);
     return filePath;
   } catch (error) {
-    logger.error("Could not save file: " + filePath + " :", error);
+    logger.error("saveFile: Could not save file: " + filePath + " :", error);
     throw error;
   }
 }
 
-async function deleteFile(filePath) {
+export async function deleteFile(filePath) {
 
   try {
     await fs.unlink(safePath(filePath)); 
@@ -116,7 +101,7 @@ async function deleteFile(filePath) {
   
 }
 
-async function getFileStats(filePath) {
+export async function getFileStats(filePath) {
 
   try {
     const fileStats = await fs.stat(filePath);
@@ -132,5 +117,3 @@ async function getFileStats(filePath) {
     }
   }
 }
-
-module.exports = { fileExists, safeJoin, safePath, ensureDir, listDir, readFile, saveFile, deleteFile, getFileStats };

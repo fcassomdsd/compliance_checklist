@@ -13,12 +13,12 @@
     </thead>
     <tbody>
       <ChecklistRow
-        v-for="(row, index) in checklist.questions"
+        v-for="(row, index) in store.checklist?.questions || []"
         :key="index"
         :newTopic="topicChange(row.topic)"
         :qnumber="index + 1"
         :row="row"
-        :session="sessionData[index + 1] || {}"
+        :session="store.sessionData[index + 1] || {}"
       />
     </tbody>
   </table>
@@ -26,15 +26,24 @@
 
 <script setup>
 import ChecklistRow from './ChecklistRow.vue';
-defineProps(['checklist', 'sessionData']);
+import { useChecklistStore } from '../stores/checklistStore';
+
+// Access the Pinia store
+const store = useChecklistStore();
 
 let previousTopic = ""
+let emptyTopic = false;
 
 const topicChange = (t) => {
 
-  const isNew = previousTopic != t;
-  previousTopic = t;
-  return isNew;
+  if ((!t) || t.length == 0) {
+    console.log('Empty topic!');
+    return true;
+  } else { 
+    const isNew = previousTopic != t;
+    previousTopic = t;
+    return isNew;
+  }
 
 }
 

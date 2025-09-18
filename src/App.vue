@@ -30,10 +30,7 @@
     />
     </div>
     <p id="currentPath">{{ store.currentPath }}</p>
-    <ChecklistTable v-if="store.checklistLoaded"
-          :checklist="store.checklist" 
-          :session-data="store.sessionData"
-    />
+    <ChecklistTable v-if="store.checklistLoaded"/>
   </div>
 </template>
 
@@ -43,12 +40,6 @@ import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
 import logo from './images/logo_idac.png'
-import { createFileService } from './fileServices';
-
-// add and configure vue-toastification
-import { useToast } from "vue-toastification";
-const toast = useToast();
-const fs = createFileService();
 
 // Access the Pinia store
 const store = useChecklistStore();
@@ -56,14 +47,7 @@ const store = useChecklistStore();
 onMounted( async () => {
 
   // Check if the default path exists
-  try {
-    if (!await fs.defaultPathExists()) {
-      store.showConfirmDefaultPath();
-    }  
-  } catch (error) {
-    toast.error(error);  
-  }
-
+  await store.checkDefaultPath();
 })
 
 </script>

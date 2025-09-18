@@ -2,17 +2,19 @@ import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
 import { useToast } from 'vue-toastification';
 import { createFileService } from '../fileServices.js';
-
-const toast = useToast();
-const fs = createFileService();
+import { useEvidenceStore } from './evidenceStore.js';
 
 export const useChecklistStore = defineStore('checklist', () => {
+  const toast = useToast();
+  const fs = createFileService();
+  const evidence = useEvidenceStore();
+
     // State
     const specialty = ref('NONE');
     const checklist = ref(null);
     const checklistLoaded = ref(false);
     const currentPath = ref('');
-    const evidenceFiles = ref([]);
+//    const evidenceFiles = ref([]);
     const sessionData = reactive({});
     const sessionSummary = ref({"location" : "", "finalized" : true});
     const showModal = ref(false);
@@ -49,9 +51,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         sessionSummary.value.location = "";
         sessionSummary.value.finalized = true;
         // clear out evidenceFiles
-        for (const key of Object.keys(evidenceFiles.value)) {
-          delete evidenceFiles[key];            
-        }
+        evidence.reset();
             
         // clear out session data
         for (const key of Object.keys(sessionData)) {
@@ -83,11 +83,18 @@ export const useChecklistStore = defineStore('checklist', () => {
             if (!sessionSummary.value["specialty"]) {
               sessionSummary.value["specialty"] = specialty.value;
             }
-            await loadEvidence(sessionData);
+
+            // prepare evidence: load evidence and update counts with the session data
+            await evidence.load(specialty.value);
+            evidence.updateCount(sessionData);
+
             sessionSummary.value["finalized"] = false;
             currentPath.value = await fs.setSavePath(specialty.value);
-            autoSave();
-           
+            const result = fs.saveSession(
+                             specialty.value,
+                             sessionSummary.value,
+                             sessionData,
+                             displayToast);
             toast.success("Checklist and session loaded");
         } catch (error) {
             toast.error(error.message); // Or use toast notification
@@ -95,53 +102,30 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
     };
     
-    const loadEvidence = async (sessionObj) => {
-        const efiles = await fs.readEvidence(specialty.value);
-        efiles.forEach( (x) => { evidenceFiles.value[x.name] = {};
-                                 evidenceFiles.value[x.name]["URL"]= x.URL;
-                                 evidenceFiles.value[x.name]["count"] = 0;
-                               });
-        updateEvidenceCount(sessionObj);
-    }; 
-    const updateEvidenceCount = (obj) => {
-        if (obj !== null) {
-            if (typeof obj === 'object') {
-              if (Array.isArray(obj)) {
-                obj.forEach( (x) => {
-                  if (evidenceFiles.value[x] === undefined) {
-                    evidenceFiles.value[x] = {};
-                    evidenceFiles.value[x]["URL"]= "";
-                    evidenceFiles.value[x]["count"] = 1;
-                  }
-                  else {
-                    evidenceFiles.value[x]["count"]++;
-                  }
-                });
-              }
-              else {
-                Object.values(obj).forEach( (value) => {
-                  updateEvidenceCount(value);
-                });
-              }
-            }
-        } 
-        return 0;
-    }
- 
     const updateSession = (rowId, checklistId, field, value) => {
         if (!sessionData[rowId]) sessionData[rowId] = {};
         sessionData[rowId][field] = value;
         sessionData[rowId]["id"] = checklistId;
-        autoSave();
+        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
     };
-    const autoSave = () => {
+    const autoSave = (displayError) => {
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
+          try {
             sessionSummary.value["lastUpdated"] = new Date().toISOString();
             const sessionObj = {"summary" : sessionSummary.value, "responses" : sessionData};
             fs.saveSession(currentPath.value, sessionObj);
+          } catch (err) {
+            displayError(err.message);
+            throw err;
+          }
         }, 1000);
     };
+    
+    function displayToast(msg) {
+      toast.error(msg);
+    }
+    
     const showConfirm = (titulo, explanation, accion) => {
         tituloModal.value = titulo;
         explanationModal.value = explanation;
@@ -171,13 +155,22 @@ export const useChecklistStore = defineStore('checklist', () => {
         toast.error(`Error in ${tituloModal.value} : ${error.message}`);
       }
     };
-    const showConfirmDefaultPath = () => {
-      showConfirm(modalCreateDPTitle, modalCreateDPExplanation, modalCreateDPAction);
+    const checkDefaultPath = async () => {
+      try {
+        if (!await fs.defaultPathExists()) {
+          tituloModal.value = modalCreateDPTitle;
+          explanationModal.value = modalCreateDPExplanation;
+          accionModal.value = modalCreateDPAction;
+          showModal.value = true;
+        }  
+      } catch (error) {
+        toast.error(error);  
+      }
     }
     
     const finalize = () => {
         sessionSummary.value["finalized"] = true;
-        autoSave();
+        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
     };
     return {
         specialty,
@@ -185,7 +178,6 @@ export const useChecklistStore = defineStore('checklist', () => {
         checklist,
         checklistLoaded,
         currentPath,
-        evidenceFiles,
         sessionData,
         sessionSummary,
         showModal,
@@ -195,7 +187,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         loadChecklistAndSession,
         updateSession,
         showConfirm,
-        showConfirmDefaultPath,
+        checkDefaultPath,
         confirmModal,
         finalize
     };

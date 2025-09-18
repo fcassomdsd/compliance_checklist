@@ -2,10 +2,10 @@ node_modules/
 logs/
 dist/
 dist-*/
-tests/
 package-lock.json
 *~
 .~lock*
 *old
 *ods
 *txt
+eslint*

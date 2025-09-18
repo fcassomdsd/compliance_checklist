@@ -1,5 +1,5 @@
-import parseChecklist from '../utils/checklist.js';
-import parseSession from '../utils/session.js';
+import { parseChecklist } from '../utils/checklist.js';
+import { parseSession } from '../utils/session.js';
 
 export const createFileService = () => {
 
@@ -7,6 +7,8 @@ export const createFileService = () => {
   //const MAX_FILE_SIZE = getSizeAndSuffix("10MB");
   const EVIDENCE_MAX_SIZE = getSizeAndSuffix("10MB");
   const DEFAULT_ROOT = null;
+  
+  let saveTimer;
 
   function getSizeAndSuffix(sizeString) {
     
@@ -105,7 +107,6 @@ export const createFileService = () => {
   
   const loadSession = async (specialty) => {
     try {
-      const toFilePath = window.electronAPI.getPath(DEFAULT_ROOT, specialty, "session.json");
       const found = await window.electronAPI.checkPath(DEFAULT_ROOT, specialty, "session.json");
       if (found) {
         const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, specialty, "session.json")
@@ -128,14 +129,27 @@ export const createFileService = () => {
     }
   }
   
-  const saveSession = async (specialty, jsonObj) => {
-    try {
-      const sessionString = (typeof jsonObj === 'object' ? JSON.stringify(jsonObj, null, 2) : jsonObj);
-      await window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, specialty, "session.json");
-      return true;
-    } catch (error) {
-      throw new Error(`saveSession: could not save session for ${specialty} : ` + error.message);
-    }
+  const saveSession = (specialty, summary, responses, displayError) => {
+
+    // make sure they are objects and not strings
+    const newSummary = (typeof summary == 'string' ? JSON.parse(summary) : summary);
+    const newResponses = (typeof summary == 'string' ? JSON.parse(responses) : responses);
+    
+    let sessionObj = {"summary" : newSummary, "responses" : newResponses};
+    sessionObj.summary.lastUpdated = new Date().toISOString();
+
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        const sessionString = JSON.stringify(sessionObj, null, 2); 
+        window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, specialty, "session.json");
+        return true;
+      } catch (err) {
+        displayError(err.message);
+      }
+    }, 1000);
+    
+    return true;
   }
   
   return {
