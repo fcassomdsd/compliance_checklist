@@ -42,8 +42,8 @@
           <td>
             <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
           </td>
-          <td :class="{ 'missing' : (store.evidenceFiles[evidence]?.URL == '') }" >
-            <a :href="store.evidenceFiles[evidence]?.URL" target="_blank">{{ store.evidenceFiles[evidence]?.count }}{{
+          <td :class="{ 'missing' : (evidenceStore.files[evidence]?.URL == '') }" >
+            <a :href="evidenceStore.files[evidence]?.URL" target="_blank">{{ evidenceStore.files[evidence]?.count }}{{
                evidence
             }}</a>
           </td>
@@ -54,20 +54,24 @@
 </template>
 
 <script setup>
-import { defineProps, ref, computed} from 'vue';
+import { ref} from 'vue';
 import { useChecklistStore } from '../stores/checklistStore';
+import { useEvidenceStore } from '../stores/evidenceStore';
 import { useToast } from 'vue-toastification';
-import trash from '../images/trash.png'
+import trash from '../images/trash.png';
 
 const toast = useToast();
-
 const radioButtons = ref(["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]);
 
 // Access the Pinia store
 const store = useChecklistStore();
-
-
-const props = defineProps(['newTopic', 'qnumber', 'row', 'session']);
+const evidenceStore = useEvidenceStore();
+const props = defineProps({
+  newTopic : { type : Boolean },
+  qnumber : { type : Number },
+  row : { type : Object},
+  session : { type : Object }
+ });
 
 const radioChange = (event) => {
   store.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value);
@@ -86,28 +90,22 @@ const evidenceChange = async (event) => {
 
     try {
 
-      const buffer = await file.arrayBuffer();
-      const savedPath = await window.electronAPI.saveEvidence({
-          "name" : file.name,
-          "size" : file.size,
-          "bufferArray" : Array.from(new Uint8Array(buffer))
-      })
-      
-      if (savedPath) {      
-        if (!store.evidenceFiles[file.name]) {
-          store.evidenceFiles[file.name] = { "count" : 0, "URL" : "" };
+      // update the evidence file record
+      await evidenceStore.add(store.specialty, file);
+
+      const inTable = table.some((item) => item === file.name);
+
+      if (inTable) { // it's already there
+        if (evidenceStore.files[file.name].count == 0) { // it's a missing file. update count
+          evidenceStore.addCount(file.name);
         }
-        store.evidenceFiles[file.name]["URL"] = savedPath;
-      }
-      
-      if (!table.some((item) => item === file.name)) {
+      } else {
+        evidenceStore.addCount(file.name);
         table.push(file.name);
-        store.evidenceFiles[file.name]["count"]++; 
       }
- 
     } catch (error) {
       console.log("evidenceChanged failed: " + error);
-      toast.error(error);
+      toast.error(error.message);
     }
       
   }
@@ -118,25 +116,16 @@ const evidenceChange = async (event) => {
 
 const removeEvidence = async (index, evidence) => {
 
-  if (store.evidenceFiles[evidence]["count"] === 1) {
-    await window.electronAPI.deleteEvidence(evidence);
-    delete store.evidenceFiles[evidence];
-  }
-  else {
-    store.evidenceFiles[evidence]["count"]--;  
-  }
+    try {
+      await evidenceStore.subtract(store.specialty, evidence);
+    } catch(error) {
+      console.log("evidenceChanged failed: " + error);
+      toast.error(error.message);
+    }
 
   const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
   store.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence);
 };
-
-const EvidenceURL = computed( (index) => {
-
-    const fileName = props.session.evidence[index];
-    if (!fileName) return "";
-    
-    return store.evidenceFiles[fileName] ? store.evidenceFiles[fileName].URL : "";  
- });
 
 </script>
 

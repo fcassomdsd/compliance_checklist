@@ -1,7 +1,4 @@
-const fs = require('fs').promises;
-const path = require('path');
-const Ajv = require('ajv');
-const logger = require('./logger');
+import Ajv from 'ajv';
 
 const ajv = new Ajv({ allErrors: true, verbose: true });
 const checklistSchema = {
@@ -45,28 +42,19 @@ const checklistSchema = {
 
 const validateChecklist = ajv.compile(checklistSchema);
 
-async function loadChecklist(filePath) {
+export function parseChecklist(contents) {
    try {
-
-    const exists = await fs.access(filePath).then(() => true).catch(() => false);
-    if (!exists) {
-       throw new Error("Could not get access to checklist file");
-    }
-    const content = await fs.readFile(filePath, 'utf-8');
-    const json = JSON.parse(content);
+    const json = JSON.parse(contents);
     if (!validateChecklist(json)) {
       const errors = validateChecklist.errors?.map(err => 
-        `Invalid session data at ${err.instancePath}: ${err.message}`
+        `Invalid checklist data at ${err.instancePath}: ${err.message}`
       ).join('; ') || 'Unknown validation error';
       throw new Error(`Checklist validation failed: ${errors}`);
     }
     return json;
   } catch (e) {
-    logger.error(`Failed to load checklist ${filePath}:`, e);
+    console.log(`Failed to parse checklist :`, e);
     throw e;
   }   
 }
 
-module.exports = {
-  loadChecklist
-};

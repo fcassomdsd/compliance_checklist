@@ -1,17 +1,20 @@
 import { defineStore } from 'pinia';
 import { ref, reactive } from 'vue';
 import { useToast } from 'vue-toastification';
-import { createElectronService } from "../electronServices.js";
-const toast = useToast();
-const es = createElectronService();
+import { createFileService } from '../fileServices.js';
+import { useEvidenceStore } from './evidenceStore.js';
 
 export const useChecklistStore = defineStore('checklist', () => {
+  const toast = useToast();
+  const fs = createFileService();
+  const evidence = useEvidenceStore();
+
     // State
     const specialty = ref('NONE');
     const checklist = ref(null);
     const checklistLoaded = ref(false);
     const currentPath = ref('');
-    const evidenceFiles = ref([]);
+//    const evidenceFiles = ref([]);
     const sessionData = reactive({});
     const sessionSummary = ref({"location" : "", "finalized" : true});
     const showModal = ref(false);
@@ -39,42 +42,58 @@ export const useChecklistStore = defineStore('checklist', () => {
     ]   
     
     
-    let saveTimer = null;
     // Actions
     const loadChecklistAndSession = async () => {
-        if (specialty.value == "NONE") {
-            checklist.value = null;
-            checklistLoaded.value = false;
-            sessionSummary.value = {"location" : "", "finalized" : true};
-            evidenceFiles.value = [];
+        // initialize state
+        checklist.value = null;
+        checklistLoaded.value = false;
+        sessionSummary.value.location = "";
+        sessionSummary.value.finalized = true;
+        // clear out evidenceFiles
+        evidence.reset();
             
-            // clear out session data
-            for (const key of Object.keys(sessionData)) {
-              delete sessionData[key];            
-            }
+        // clear out session data
+        for (const key of Object.keys(sessionData)) {
+          delete sessionData[key];            
+        }
+        if (specialty.value == "NONE") {
             return;
         } 
         try {
-            currentPath.value = await window.electronAPI.setSavePath(specialty.value);
-            let sessionRead = await window.electronAPI.loadSession(specialty.value);
-            // can't assign session object directly;  use JSON.parse
-            JSON.parse(JSON.stringify(sessionRead), (key, value) =>{
-               if (key.match("[0-9]+") && typeof value == "object") {
-                  sessionData[key] = value;
-               } else {
-                  if (key == "summary") {
-                     sessionSummary.value = value;
-                  }
-               }
-               return value;
-            }); 
-            if (!sessionSummary.value["finalized"]) {
-              sessionSummary.value["finalized"] = false;
-            }
-            
-            checklist.value = await window.electronAPI.loadChecklist(specialty.value);
+            // load checklist
+            checklist.value = await fs.loadChecklist(specialty.value);
             checklistLoaded.value = true;
-            await loadEvidence(sessionData);
+
+            // load session, if exists
+            let sessionRead = await fs.loadSession(specialty.value);
+            if (sessionRead !== null) {
+              // can't assign session object directly;  use JSON.parse
+              JSON.parse(JSON.stringify(sessionRead), (key, value) =>{
+                 if (key.match("[0-9]+") && typeof value == "object") {
+                    sessionData[key] = value;
+                 } else {
+                    if (key == "summary") {
+                       sessionSummary.value = value;
+                    }
+                 }  
+                 return value;
+              });
+            }
+            if (!sessionSummary.value["specialty"]) {
+              sessionSummary.value["specialty"] = specialty.value;
+            }
+
+            // prepare evidence: load evidence and update counts with the session data
+            await evidence.load(specialty.value);
+            evidence.updateCount(sessionData);
+
+            sessionSummary.value["finalized"] = false;
+            currentPath.value = await fs.setSavePath(specialty.value);
+            fs.saveSession(
+              specialty.value,
+              sessionSummary.value,
+              sessionData,
+              displayToast);
             toast.success("Checklist and session loaded");
         } catch (error) {
             toast.error(error.message); // Or use toast notification
@@ -82,60 +101,21 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
     };
     
-    const loadEvidence = async (sessionObj) => {
-        const efiles = await window.electronAPI.readEvidence();
-        let eFilesObject = {};
-        evidenceFiles.value = {};
-        efiles.forEach( (x) => { evidenceFiles.value[x.name] = {};
-                                 evidenceFiles.value[x.name]["URL"]= x.URL;
-                                 evidenceFiles.value[x.name]["count"] = 0;
-                               });
-        updateEvidenceCount(sessionObj);
-
-    }; 
-    const updateEvidenceCount = (obj) => {
-        if (obj !== null) {
-            if (typeof obj === 'object') {
-              if (Array.isArray(obj)) {
-                obj.forEach( (x) => {
-                  if (evidenceFiles.value[x] === undefined) {
-                    evidenceFiles.value[x] = {};
-                    evidenceFiles.value[x]["URL"]= "";
-                    evidenceFiles.value[x]["count"] = 1;
-                  }
-                  else {
-                    evidenceFiles.value[x]["count"]++;
-                  }
-                });
-              }
-              else {
-                Object.values(obj).forEach( (value) => {
-                  updateEvidenceCount(value);
-                });
-              }
-            }
-        } 
-        return 0;
-    }
- 
     const updateSession = (rowId, checklistId, field, value) => {
         if (!sessionData[rowId]) sessionData[rowId] = {};
         sessionData[rowId][field] = value;
         sessionData[rowId]["id"] = checklistId;
-        autoSave();
+        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
     };
-    const autoSave = () => {
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => {
-            sessionSummary.value["lastUpdated"] = new Date().toISOString();
-            const sessionObj = {"summary" : sessionSummary.value, "responses" : sessionData};
-            window.electronAPI.saveSession(JSON.stringify(sessionObj, null, 2));
-        }, 1000);
-    };
-    const showConfirm = (titulo, explanation, accion) => {
-        tituloModal.value = titulo;
-        explanationModal.value = explanation;
-        accionModal.value = accion;
+    
+    function displayToast(msg) {
+      toast.error(msg);
+    }
+    
+    const showFinalize = () => {
+        tituloModal.value = modalFinalizeTitle;
+        explanationModal.value = modalFinalizeExplanation;
+        accionModal.value = modalFinalizeAction;
         showModal.value = true;
     };
     const confirmModal = () => {
@@ -148,7 +128,7 @@ export const useChecklistStore = defineStore('checklist', () => {
             break;
           }
           case modalCreateDPTitle: {
-            specialtyList.forEach( (x) => es.createPath(x.code));            
+            specialtyList.forEach( (x) => fs.createDefaultPath(x.code));            
             toast.success(createDPSuccess);
             break;
           }
@@ -161,13 +141,22 @@ export const useChecklistStore = defineStore('checklist', () => {
         toast.error(`Error in ${tituloModal.value} : ${error.message}`);
       }
     };
-    const showConfirmDefaultPath = () => {
-      showConfirm(modalCreateDPTitle, modalCreateDPExplanation, modalCreateDPAction);
+    const checkDefaultPath = async () => {
+      try {
+        if (!await fs.defaultPathExists()) {
+          tituloModal.value = modalCreateDPTitle;
+          explanationModal.value = modalCreateDPExplanation;
+          accionModal.value = modalCreateDPAction;
+          showModal.value = true;
+        }  
+      } catch (error) {
+        toast.error(error);  
+      }
     }
     
     const finalize = () => {
         sessionSummary.value["finalized"] = true;
-        autoSave();
+        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
     };
     return {
         specialty,
@@ -175,7 +164,6 @@ export const useChecklistStore = defineStore('checklist', () => {
         checklist,
         checklistLoaded,
         currentPath,
-        evidenceFiles,
         sessionData,
         sessionSummary,
         showModal,
@@ -184,8 +172,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         accionModal,
         loadChecklistAndSession,
         updateSession,
-        showConfirm,
-        showConfirmDefaultPath,
+        showFinalize,
+        checkDefaultPath,
         confirmModal,
         finalize
     };

@@ -1,82 +1,69 @@
-const fs = require('fs').promises;
-const path = require('path');
-const Ajv = require('ajv');
-const logger = require('./logger');
+import Ajv from 'ajv';
 
 const ajv = new Ajv({ allErrors: true, verbose: true });
 
 const sessionSchema = {
   type: "object",
-  oneOf: [{
-    properties: {
-      summary: {
-        type: "object",
-        properties: {
-          specialty: {
-            type: "string"
-          },
-          location: {
-            type: "string"
-          },
-          finalized: {
-            type: "boolean"
-          },
-          lastUpdated: {
-            type: "string"
-          }
+  properties: {
+    summary: {
+      type: "object",
+      properties: {
+        specialty: {
+          type: "string"
+        },
+        location: {
+          type: "string"
+        },
+        finalized: {
+          type: "boolean"
+        },
+        lastUpdated: {
+          type: "string"
         }
-      }
+      },
+      additionalProperties: false,
+      required: ["specialty","location"]
     },
-    additionalProperties: false,
-    required: ["specialty", "location"]
-  }, {
-     properties : {
-        responses : {
-           type : "object",
-           patternProperties: {
-             "^[0-9]+$": {
-               type: "object",
-               properties: {
-                 id: {
-                   type: "string"
-                 },
-                 compliance: {
-                   type: "string",
-                   enum: ["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]
-                 },
-                 comments: {
-                   type: "string"
-                 },
-                 evidence: {
-                   type: "array",
-                   items: {
-                     type: "string",
-                   }
-                 }
-               },
-               additionalProperties: false,
-               required: ["id"]
+    responses : {
+       type : "object",
+       patternProperties: {
+         "^[0-9]+$": {
+           type: "object",
+           properties: {
+             id: {
+               type: "string"
+             },
+             compliance: {
+               type: "string",
+               enum: ["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]
+             },
+             comments: {
+               type: "string"
+             },
+             evidence: {
+               type: "array",
+               items: {
+                 type: "string",
+               }
              }
            },
-           additionalProperties: false
-        }
-     }
-     }
-  ]
+           additionalProperties: false,
+           required: ["id"]
+         }
+       },
+       additionalProperties: false
+    }
+  },
+  additionalProperties: false,
+  required: ["summary"]
 }
 
 const validateSession = ajv.compile(sessionSchema);
 
-async function loadSession(filePath) {
+export function parseSession(contents) {
    
-try {
-    logger.info("Loading session from " + filePath);
-    const exists = await fs.access(filePath).then(() => true).catch(() => false);
-    if (!exists) {
-       throw new Error("Could not get access to session file");
-    }
-    const content = await fs.readFile(filePath, 'utf-8');
-    const json = JSON.parse(content);
+  try {
+    const json = JSON.parse(contents);
     if (!validateSession(json)) {
       const errors = validateSession.errors?.map(err => 
         `Invalid session data at ${err.instancePath}: ${err.message}`
@@ -85,22 +72,54 @@ try {
     }
     return json;
   } catch (e) {
-    logger.error(`Failed to load session ${filePath}:`, e);
+    console.log(`Failed to load session:`, e);
     throw e;
   }   
 }
 
-async function saveSession(filePath, data) {
-  try {  
-    sessionString = (typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
-    fs.writeFile(filePath, sessionString);
-  } catch (error) {
-    logger.error("Could not write to session file" + filePath, error);
-    throw error;
-  }
+// returns an array of all files that appear in session, and the number of times they appear
+export function getEvidenceLinks(sessionObj) { 
+  
+  let evidenceLinks = {};
+
+  JSON.parse(sessionObj, (key, value) => {
+    if (key == "evidence") {
+      value.forEach((x) => {
+        if (!evidenceLinks[x]) {
+          evidenceLinks[x] = { count : 1 }
+        } else {
+          evidenceLinks[x].count++;
+        } 
+      });
+    } 
+    return value;
+  });
+  
+  return evidenceLinks;
 }
 
-module.exports = {
-  loadSession,
-  saveSession
-};
+// this is here because this module should know well about the structure of the session object,
+// and how evidence is structured within it.  If it changes above, it may change here.
+export function countEvidence(obj, fileName, count = 0, found = false) {
+
+  let newCount = count;
+
+  if (obj !== null) {  // -a
+    if (typeof obj === 'object') { // b
+      if ("evidence" in obj) { // c
+        newCount = countEvidence(obj.evidence, fileName, count, true);
+      } else { // -c
+        if (found) { // d
+          if (obj.findIndex((x) => x == fileName) > -1 ) { // e
+            return count + 1;                
+          }
+        } else { // -d
+          Object.values(obj).forEach( (value) => {
+            newCount = newCount + countEvidence(value, fileName, count, false);
+          });
+        }
+      }
+    }
+  }   
+  return newCount;
+} 

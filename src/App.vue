@@ -13,11 +13,11 @@
     <label>Specialty:</label>
     <select v-model="store.specialty" @change="store.loadChecklistAndSession">
       <option value="NONE">Select a specialty</option>
-      <option v-for="(specialty) in store.specialtyList" :value="specialty.code" >
+      <option v-for="(specialty, index) in store.specialtyList" :key="index" :value="specialty.code" >
           {{specialty.name }}
       </option> 
     </select>
-    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showConfirm(store.modalFinalizeTitle, store.modalFinalizeExplanation, store.modalFinalizeAction)">
+    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
         Finalize inspection
     </button>
     <ModalWindow
@@ -30,10 +30,7 @@
     />
     </div>
     <p id="currentPath">{{ store.currentPath }}</p>
-    <ChecklistTable v-if="store.checklistLoaded"
-          :checklist="store.checklist" 
-          :session-data="store.sessionData"
-    />
+    <ChecklistTable v-if="store.checklistLoaded"/>
   </div>
 </template>
 
@@ -43,12 +40,6 @@ import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
 import logo from './images/logo_idac.png'
-import { createElectronService } from './electronServices';
-
-// add and configure vue-toastification
-import { useToast } from "vue-toastification";
-const toast = useToast();
-const es = createElectronService();
 
 // Access the Pinia store
 const store = useChecklistStore();
@@ -56,14 +47,7 @@ const store = useChecklistStore();
 onMounted( async () => {
 
   // Check if the default path exists
-  try {
-    if (!await es.defaultPathExists()) {
-      store.showConfirmDefaultPath();
-    }  
-  } catch (error) {
-    toast.error(error);  
-  }
-
+  await store.checkDefaultPath();
 })
 
 </script>
