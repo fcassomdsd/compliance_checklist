@@ -8,7 +8,7 @@
     <td>{{ row.reference }}</td>
     <td class="question">{{ row.question }}</td>
     <td class="verification">{{ row.verification }}</td>
-    <td class="compliance">
+    <td class="compliance" :style="radioColors[session.compliance]">
       <label v-for="(radioBtn, index) in radioButtons" :key="index">
         <input
           type="radio"
@@ -30,6 +30,7 @@
     </td>
     <td class="evidence">
       <input
+        style="width : 100%"
         type="file"
         class="evidence-upload"
         :name="`evidence-${qnumber}`"
@@ -37,12 +38,12 @@
         multiple
         @change="evidenceChange($event)"
       />
-      <table class="preview" :id="`evidencetable-${qnumber}`">
+      <table class="preview"  :id="`evidencetable-${qnumber}`">
         <tr v-for="(evidence, index) in session.evidence" :key="index">
           <td>
             <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
           </td>
-          <td :class="{ 'missing' : (evidenceStore.files[evidence]?.URL == '') }" >
+          <td :class="{ 'missing' : (evidenceStore.files[evidence]?.URL == '')}">
             <a :href="evidenceStore.files[evidence]?.URL" target="_blank">{{ evidenceStore.files[evidence]?.count }}{{
                evidence
             }}</a>
@@ -60,18 +61,31 @@ import { useEvidenceStore } from '../stores/evidenceStore';
 import { useToast } from 'vue-toastification';
 import trash from '../images/trash.png';
 
-const toast = useToast();
-const radioButtons = ref(["Not applicable", "Compliant", "Partial Compliance", "Non-compliant"]);
-
-// Access the Pinia store
-const store = useChecklistStore();
-const evidenceStore = useEvidenceStore();
 const props = defineProps({
   newTopic : { type : Boolean },
   qnumber : { type : Number },
   row : { type : Object},
   session : { type : Object }
  });
+
+const toast = useToast();
+const radioButtons = ref([
+   "Not applicable",
+   "Compliant",
+   "Partial Compliance",
+   "Non-compliant",
+]);
+
+const radioColors = ref({
+   "Not applicable" : "border : 3px solid #aaaaaa",
+   "Compliant"      : "border : 3px solid #55FF55",
+   "Partial Compliance" : "border : 3px solid #FFFF00",
+   "Non-compliant" : "border : 3px solid #FF5555"
+});
+
+// Access the Pinia store
+const store = useChecklistStore();
+const evidenceStore = useEvidenceStore();
 
 const radioChange = (event) => {
   store.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value);
@@ -130,42 +144,6 @@ const removeEvidence = async (index, evidence) => {
 </script>
 
 <style scoped>
-.full-span {
-  background-color: #e3f2fd;
-  font-weight: bold;
-  text-align: center;
-  color: #0d47a1;
-}
-.preview td {
-  font-size: 0.9em;
-  color: #1565c0;
-  margin: 1px;
-  padding: 2px;
-}
-.preview button {
-  background-color: #ffffff;
-  border: none;
-  color: white;
-  padding: 2px;
-  margin: 1px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-textarea {
-  width: 100%;
-  height: 60px;
-  resize: vertical;
-}
-.compliance {
-  width: 15%;
-}
-.comments {
-  width: 15%;
-}
-.evidence {
-  width: 15%;
-}
 
 .missing a {
   color: red;
