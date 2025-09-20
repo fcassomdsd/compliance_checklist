@@ -11,7 +11,7 @@ import { useChecklistStore } from '../src/stores/checklistStore.js';
 vi.mock('../src/components/ChecklistTable.vue');
 vi.mock('../src/components/ModalWindow.vue');
 vi.mock('../src/stores/checklistStore.js');
-vi.mock('../src/images/logo_idac.png', () => ({ default : 'mock-logo-url' }));
+vi.mock('../src/images/compliance-logo.png', () => ({ default : 'mock-logo-url' }));
 
 describe('App.vue', () => {
   let wrapper;
@@ -61,7 +61,7 @@ describe('App.vue', () => {
   });
 
   it('renders correctly', () => {
-    expect(wrapper.find('h2').text()).toBe('Compliance Table with Evidence (Desktop)');
+    expect(wrapper.find('h2').text()).toBe('Operational Safety Compliance Checklist');
     expect(wrapper.find('img').attributes('src')).toBe('mock-logo-url');
     expect(wrapper.find('select').exists()).toBe(true);
     expect(wrapper.findComponent(ModalWindow).exists()).toBe(true);
