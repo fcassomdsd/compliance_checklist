@@ -49,7 +49,7 @@
           ]
         }
       ],
-      "icon": "./src/images/icon2.ico"
+      "icon": "./src/images/complianceApp.ico"
     },
     "directories": {
       "output": "dist-portable",
