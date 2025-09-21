@@ -49,7 +49,7 @@
           ]
         }
       ],
-      "icon": "./src/images/icon2.ico"
+      "icon": "./src/images/complianceApp.ico"
     },
     "directories": {
       "output": "dist-portable",
@@ -57,7 +57,7 @@
     },
     "files": [
       "dist/**/*",
-      "main.js",
+      "main.mjs",
       "preload.js",
       "ipcHandles.js",
       "utils/**/*"

@@ -4,7 +4,6 @@ import { parseSession } from '../utils/session.js';
 export const createFileService = () => {
 
   // Default maximum file upload size
-  //const MAX_FILE_SIZE = getSizeAndSuffix("10MB");
   const EVIDENCE_MAX_SIZE = getSizeAndSuffix("10MB");
   const DEFAULT_ROOT = null;
   
@@ -152,6 +151,20 @@ export const createFileService = () => {
     return true;
   }
   
+  const saveExportFile = async (csvContent, specialty) => {
+
+    try {
+      if ( !csvContent || csvContent.length == 0) {
+        throw new Error('Empty checklist detected');
+      }
+      const fileName = 'compliance_export.csv'; 
+      await window.electronAPI.saveFile(csvContent, DEFAULT_ROOT, specialty, fileName);
+    } catch (error) {
+      throw new Error('saveExportFile: could not save file: ' + error.message);
+    }
+
+  }
+  
   return {
     defaultPathExists,
     setSavePath,
@@ -161,6 +174,7 @@ export const createFileService = () => {
     loadChecklist,
     loadSession,
     readEvidence,
+    saveExportFile,
     saveSession
   }
 }
