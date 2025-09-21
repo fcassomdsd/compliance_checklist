@@ -1,17 +1,18 @@
-import path from 'node:path';
-import url from 'node:url';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron/main';
 import { setupIpcHandles } from './ipcHandles.js';
 
 
-const metaurl = import.meta.URL;
+const fileName = fileURLToPath(import.meta.url);
+const dirName = dirname(fileName);
 
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: '/home/fernando/git/compliance_app/preload.js'
+      preload: join(dirName, 'preload.js')
     },
   });
   win.loadFile('dist/index.html');

@@ -16,6 +16,11 @@ describe('fileSec', () => {
       expect(result).toBe('/valid/path/file.txt');
     });
 
+    it('returns as valid just a root path', () => {
+      const result = safePath('/');
+      expect(result).toBe('/');
+    });
+
     it('throws on path with ..', () => {
       expect(() => safePath('/path/../file.txt')).toThrow('safePath: Illegal path name: /path/../file.txt');
     });
@@ -26,8 +31,12 @@ describe('fileSec', () => {
       expect(() => safePath(undefined)).toThrow('safePath: Illegal path name: undefined');
     });
 
+    it('throws on string that is not a path', () => {
+      expect(() => safePath('This is not a path')).toThrow('safePath: Not absolute path: This is not a path');
+    });
+
     it('throws on empty string', () => {
-      expect(() => safePath('')).toThrow('safePath: Illegal path name: ');
+      expect(() => safePath('')).toThrow('safePath: Empty path detected: ');
     });
   });
 
