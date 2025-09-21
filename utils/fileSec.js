@@ -51,14 +51,35 @@ export function safePath(filePath) {
   if (typeof filePath != 'string') {
     throw new Error('safePath: Illegal path name: ' + filePath );
   }  
+
+  if (filePath == '' ) {
+    throw new Error('safePath: Empty path detected: ' + filePath);  
+  }
+
+  // parse the path for it's components
+  const pathObj = path.parse(filePath);
+  
+  // check the root.  That depends on the operating system
+  if (path.sep == '/') {
+    if (pathObj.root != '/') {
+      throw new Error('safePath: Not absolute path: ' + filePath );
+    }
+  }
+  else {
+    if (!pathObj.root.match(/^[A-Z]:\\$/)) {
+      throw new Error('safePath: Not absolute path: ' + filePath );
+    }
+  }
+  
+  const pathRemainder = filePath.substring(pathObj.root.length);
   
   // check for '..'
-  if (filePath.includes('..')) {
+  if (pathRemainder.includes('..')) {
     throw new Error('safePath: Illegal path name: ' + filePath) ;
   }  
   
-  // check for invalid strings (empty or with invalid characters)
-  if (filePath == '' || (filePath.match('[?%*:|<>",;=]') !== null)) {
+  // check for invalid characters
+  if (pathRemainder.match('[?%*:|<>",;=]') !== null) {
     throw new Error('safePath: Illegal path name: ' + filePath );
   }  
 

@@ -52,6 +52,7 @@ describe('Checklist Store', () => {
       createDefaultPath: vi.fn(),
       readEvidence: vi.fn(),
       setSavePath: vi.fn(),
+      saveExportFile: vi.fn(),
       updateEvidenceCount: vi.fn(),
     };
     vi.mocked(createFileService).mockReturnValue(mockFs);
@@ -256,6 +257,120 @@ describe('Checklist Store', () => {
 
       expect(store.sessionSummary.value.finalized).toBe(true);
       expect(mockFs.saveSession).toBeCalled();
+    });
+  });
+  
+  describe('export', () => {
+    beforeEach( () => {
+
+      store.specialty.value = 'VIG';
+      store.checklist.value =  {
+            specialty: 'VIG',
+            questions: [{
+                id : "1",
+                question : "question 1",
+                verification : "verification 1",
+                topic : "topic 1",
+                sequence : "0010",
+                reference : "reference 1"
+              },{
+                id : "2",
+                question : "question 2",
+                verification : "verification 2",
+                topic : "topic 1",
+                sequence : "0020",
+                reference : "reference 2"
+              },{
+                id : "3",
+                question : "question 3",
+                verification : "verification 3",
+                topic : "topic 2",
+                sequence : "0010",
+                reference : "reference 3"
+              },{
+                id : "4",
+                question : "question 4",
+                verification : "verification 4",
+                topic : "topic 2",
+                sequence : "0020",
+                reference : "reference 4"
+              },{
+                id : "5",
+                question : "question 5",
+                verification : "verification 5",
+                topic : "topic 3",
+                sequence : "0010",
+                reference : "reference 5"
+              },{
+                id : "6",
+                question : "question 6",
+                verification : "verification 6",
+                topic : "topic 3",
+                sequence : "0020",
+                reference : "reference 6"
+              }
+            ]
+          }
+
+      store.sessionSummary.value = {
+        specialty: "VIG",
+        location: "Location A",
+        finalized: true,
+        lastUpdated: new Date().toISOString()
+      };
+
+      store.sessionData["1"] = {
+        id: "1",
+        compliance: "Compliant",
+        comments: 'Test "comments"',
+      };
+
+      store.sessionData["3"] = {
+        id: "2",
+        comments: "Multiline\nTest comments",
+      };
+
+      store.sessionData["4"] = {
+        id: "3",
+        compliance: "Non-compliant",
+        comments: "Multiline\nTest comments"
+      };
+
+      store.sessionData["5"] = {
+        id: "4",
+        compliance: "Partial Compliance"
+      };
+
+      store.sessionData["6"] = {
+        id: "5",
+        compliance: "Not applicable",
+        comments: "comments 6"
+      };
+
+    });
+    
+    it('creates export string correctly', async () => {
+
+      const exportedString =
+        'topic 2\n' +
+        '4|"reference 4"|"question 4"|"Non-compliant"|"Multiline<br>Test comments"\n'+   
+        'topic 3\n' +
+        '5|\"reference 5\"|\"question 5\"|\"Partial Compliance\"|\"\"'   
+
+      store.exportChecklist();
+
+      await expect(mockFs.saveExportFile).toHaveBeenCalledWith(exportedString, "VIG");
+      expect(mockToast.success).toHaveBeenCalledWith('Checklist exported');
+    });
+
+    it('handles an emtpy checklist', async () => {
+
+      store.checklist.value.questions = [];
+  
+      store.exportChecklist();
+
+      await expect(mockFs.saveExportFile).not.toBeCalledWith('abc', "VIG");
+      expect(mockToast.error).toHaveBeenCalledWith('Empty checklist not exported');
     });
   });
 });
