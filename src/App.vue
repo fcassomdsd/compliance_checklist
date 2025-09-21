@@ -19,22 +19,11 @@
         <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
           Finalize inspection
         </button>
+        <button id="exportBtn" :disabled="(!store.sessionSummary.finalized || !store.checklistLoaded)" @click="store.exportChecklist()">
+            Report Findings
+        </button>
       </div>
     </div>
-    <div>
-    <label>Specialty:</label>
-    <select v-model="store.specialty" @change="store.loadChecklistAndSession">
-      <option value="NONE">Select a specialty</option>
-      <option v-for="(specialty, index) in store.specialtyList" :key="index" :value="specialty.code" >
-          {{specialty.name }}
-      </option> 
-    </select>
-    <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
-        Finalize inspection
-    </button>
-    <button id="exportBtn" :disabled="(!store.sessionSummary.finalized || !store.checklistLoaded)" @click="store.exportChecklist()">
-        Report Findings
-    </button>
     <ModalWindow
       :show="store.showModal"
       :titulo="store.tituloModal"
