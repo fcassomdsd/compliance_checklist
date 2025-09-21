@@ -57,7 +57,7 @@
     },
     "files": [
       "dist/**/*",
-      "main.js",
+      "main.mjs",
       "preload.js",
       "ipcHandles.js",
       "utils/**/*"
