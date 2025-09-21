@@ -44,6 +44,7 @@ describe('App.vue', () => {
       showFinalize : vi.fn(),
       confirmModal : vi.fn(),
       checkDefaultPath: vi.fn(),
+      exportChecklist: vi.fn(),
       finalize: vi.fn(),
     };
     vi.mocked(useChecklistStore).mockReturnValue(mockStore);
@@ -111,6 +112,51 @@ describe('App.vue', () => {
     const button = wrapper.find('#finalizeBtn');
     await button.trigger('click');
     expect(mockStore.showFinalize).toHaveBeenCalled();
+  });
+
+  it('renders export button enabled when finalized and checklist loaded', () => {
+
+    mockStore.sessionSummary.finalized = true;
+    mockStore.checklistLoaded = true;
+
+    wrapper = mount(App, { global: { plugins: [pinia] } });
+    const button = wrapper.find('#exportBtn');
+    expect(button.attributes('disabled')).toBeUndefined();
+    expect(button.text()).toBe('Report Findings');
+
+  });
+
+  it('renders export button disabled when not finalized and checklist loaded', async () => {
+    mockStore.sessionSummary.finalized = false;
+    mockStore.checklistLoaded = true;
+    wrapper = mount(App, { global: { plugins: [pinia] } });
+    const button = wrapper.find('#exportBtn');
+    expect(button.attributes('disabled')).toBeDefined();
+  });
+
+  it('renders export button disabled when finalized and checklist not loaded', async () => {
+    mockStore.sessionSummary.finalized = true;
+    mockStore.checklistLoaded = false;
+    wrapper = mount(App, { global: { plugins: [pinia] } });
+    const button = wrapper.find('#exportBtn');
+    expect(button.attributes('disabled')).toBeDefined();
+  });
+
+  it('renders export button disabled when not finalized and checklist not loaded', async () => {
+    mockStore.sessionSummary.finalized = false;
+    mockStore.checklistLoaded = false;
+    wrapper = mount(App, { global: { plugins: [pinia] } });
+    const button = wrapper.find('#exportBtn');
+    expect(button.attributes('disabled')).toBeDefined();
+  });
+
+  it('calls exportChecklist on export button click', async () => {
+    mockStore.sessionSummary.finalized = true;
+    mockStore.checklistLoaded = true;
+    wrapper = mount(App, { global: { plugins: [pinia] } });
+    const button = wrapper.find('#exportBtn');
+    await button.trigger('click');
+    expect(mockStore.exportChecklist).toHaveBeenCalled();
   });
 
   it('passes props to ModalWindow', () => {

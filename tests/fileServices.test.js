@@ -63,6 +63,33 @@ describe('fileServices', () => {
     expect(result).toEqual(mockDirList);
   });
 
+    describe('saveExportFile', () => { 
+      it('calls saveFile with correct arguments', async () => {
+ 
+        mockElectronAPI.saveFile.mockResolvedValue(true);
+    
+        const result = await fs.saveExportFile('This is a checklist','VIG');
+    
+        expect(mockElectronAPI.saveFile).toHaveBeenCalledWith('This is a checklist', null, 'VIG', 'compliance_export.csv');
+      });
+      
+      it('handles empty checklists', async () => {
+ 
+        await expect(fs.saveExportFile('','VIG')).rejects.toThrow('saveExportFile: could not save file: Empty checklist detected');
+        await expect(fs.saveExportFile(null,'VIG')).rejects.toThrow('saveExportFile: could not save file: Empty checklist detected');
+        await expect(fs.saveExportFile(undefined,'VIG')).rejects.toThrow('saveExportFile: could not save file: Empty checklist detected');
+   
+      });
+
+      it('handles errors', async () => {
+
+        mockElectronAPI.saveFile.mockImplementationOnce(() => {throw new Error('Save failed')});
+        await expect(fs.saveExportFile('This is a','VIG')).rejects.toThrow('saveExportFile: could not save file: Save failed');
+   
+      });
+      
+  });
+
   it('saveSession calls saveFile with correct arguments', async () => {
     const mockSessionSummary = {
         specialty: "VIG",
@@ -86,7 +113,7 @@ describe('fileServices', () => {
     
     expect(result).toBe(true);
   });
-  it('saves session after debounce', async () => {
+  it('saveSession saves session after debounce', async () => {
       vi.clearAllTimers();
       
     const mockSessionSummary = {
@@ -116,7 +143,7 @@ describe('fileServices', () => {
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(mockSessionString, null, "VIG", "session.json");
   });
 
-  it('handles errors', async () => {
+  it('saveSession handles errors', async () => {
     vi.clearAllTimers();
     const mockSessionSummary = {
         specialty: "VIG",
@@ -146,4 +173,5 @@ describe('fileServices', () => {
     expect(result).toBe(true);
     expect(mockCallback).toHaveBeenCalledWith('Save failed');
   });
+
 });

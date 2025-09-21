@@ -20,6 +20,9 @@
     <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
         Finalize inspection
     </button>
+    <button id="exportBtn" :disabled="(!store.sessionSummary.finalized || !store.checklistLoaded)" @click="store.exportChecklist()">
+        Report Findings
+    </button>
     <ModalWindow
       :show="store.showModal"
       :titulo="store.tituloModal"

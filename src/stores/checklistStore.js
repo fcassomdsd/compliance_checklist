@@ -87,7 +87,9 @@ export const useChecklistStore = defineStore('checklist', () => {
             await evidence.load(specialty.value);
             evidence.updateCount(sessionData);
 
-            sessionSummary.value["finalized"] = false;
+            if (!sessionSummary.value['finalized']) {
+              sessionSummary.value["finalized"] = false;
+            }
             currentPath.value = await fs.setSavePath(specialty.value);
             fs.saveSession(
               specialty.value,
@@ -150,14 +152,64 @@ export const useChecklistStore = defineStore('checklist', () => {
           showModal.value = true;
         }  
       } catch (error) {
-        toast.error(error);  
+        toast.error(error.message);  
       }
     }
     
     const finalize = () => {
         sessionSummary.value["finalized"] = true;
         fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
-    };
+    }; 
+    
+    const exportChecklist = async () => {
+
+      try {
+        const out = [];
+
+        const makeLine = (val) => {
+          let rawLine = (val || '');
+
+          rawLine = rawLine.toString().replaceAll(/\n/gm, '<br>');
+          rawLine = rawLine.toString().replaceAll('"', '""');
+
+          return rawLine;        
+        }        
+
+        if (checklist.value.questions.length == 0) {
+          throw new Error("Empty checklist not exported");        
+        }
+
+        let prevTopic = '';
+        const validCompliance = ["Non-compliant","Partial Compliance"];
+        const validQuestions = checklist.value.questions.entries();       
+        for (const [index, row] of validQuestions) {
+          if ( (sessionData[index+1] !== undefined) && validCompliance.includes(sessionData[index+1].compliance)) {
+            if (prevTopic != row.topic) {
+              out.push(row.topic);
+            } 
+            prevTopic = row.topic;
+            const qnumber = index + 1;
+            const session = sessionData[qnumber] || {};
+            const line = [
+              qnumber,
+              '"' + makeLine(row.reference) + '"',
+              '"' + makeLine(row.question) + '"',
+              '"' + makeLine((session.compliance || '')) + '"',
+              '"' + makeLine((session.comments || '')) + '"'
+            ];
+            out.push(line.join('|'));
+          }
+        }
+
+        const csvContent = out.join('\n');
+        await fs.saveExportFile(csvContent, specialty.value);
+        toast.success('Checklist exported');
+      } catch (error) {
+        toast.error(error.message);
+      }
+
+    };           
+    
     return {
         specialty,
         specialtyList,
@@ -175,6 +227,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         showFinalize,
         checkDefaultPath,
         confirmModal,
+        exportChecklist,
         finalize
     };
 });
