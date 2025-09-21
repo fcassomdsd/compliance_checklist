@@ -1,5 +1,14 @@
 <template>
-  <table id="csvTable" disabled>
+  <table id="cklTable" class="cklTable" disabled>
+    <colgroup>
+      <col style="width: 3%;">
+      <col style="width: 12%;">
+      <col style="width: 21%;">
+      <col style="width: 22%;">
+      <col style="width: 12%;">
+      <col style="width: 15%;">
+      <col style="width: 15%;">
+    </colgroup>
     <thead>
       <tr>
         <th>#</th>
@@ -50,26 +59,50 @@ const topicChange = (t) => {
 </script>
 
 <style scoped>
-#csvTable {
+
+.cklTable {
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
   background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  table-layout: fixed;
 }
-#csvTable thead {
-  background-color: #2e6da4;
-  color: white;
+
+.cklTable thead {
+  background-color: var(--primary-color);
+  color: var(--text-light);
   position: sticky;
   top: 0;
 }
-th, td {
-  border: 1px solid #cfd8dc;
-  padding: 10px;
-  vertical-align: top;
+
+.cklTable th:first-child {
+  border-top-left-radius: 12px;
 }
+.cklTable th:last-child {
+  border-top-right-radius: 12px;
+}
+.cklTable tr:last-child td:first-child {
+  border-bottom-left-radius: 12px;
+}
+.cklTable tr:last-child td:last-child {
+  border-bottom-right-radius: 12px;
+}
+
+th, td {
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  vertical-align: top;
+  border-left: none;
+  border-right: none;
+}
+
 th {
   text-align: center;
+  font-weight: 600;
 }
 
 </style>

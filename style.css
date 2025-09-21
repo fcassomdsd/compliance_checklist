@@ -1,118 +1,210 @@
+/* A more professional, modern look with improved spacing and a cohesive color palette. */
+
+:root {
+  --primary-color: #214d72; /* A deep blue for primary elements */
+  --secondary-color: #1e88e5; /* A bright blue for accents and buttons */
+  --light-blue: #e3f2fd; /* A very light blue for backgrounds */
+  --text-dark: #333333; /* Dark gray for main text */
+  --text-light: #f9f9f9; /* Off-white for light text */
+  --border-color: #cfd8dc; /* Light gray for borders */
+  --shadow-color: rgba(0,0,0,0.1); /* Subtle shadow */
+}
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f8fb;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--light-blue);
   margin: 0;
-  padding: 20px;
-  color: #333;
+  padding: 2.5rem;
+  color: var(--text-dark);
 }
 
-h2 {
-  color: #214d72;
+/* Header and Title Section */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2rem;
 }
 
-#csvTable {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  background-color: #ffffff;
-  overflow-x: auto;
+.header img {
+  height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color);
 }
 
-#csvTable thead {
-  background-color: #2e6da4;
+.header h2 {
+  color: var(--primary-color);
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+/* Controls and Info Section */
+.controls-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.controls-container label {
+  font-weight: 500;
+  color: var(--primary-color);
+}
+
+.controls-container select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: white;
+  min-width: 200px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+}
+
+/* Buttons */
+button {
+  background-color: var(--secondary-color);
+  border: none;
   color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 8px rgba(30, 136, 229, 0.2);
+}
+
+button:disabled {
+  background-color: #90caf9;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button:hover:not(:disabled) {
+  background-color: #1565c0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(30, 136, 229, 0.3);
+}
+
+#currentPath {
+  font-size: 0.9rem;
+  color: #0d47a1;
+  font-style: italic;
+  margin-bottom: 1rem;
+}
+
+/* Table Styling */
+.cklTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  table-layout: fixed;
+}
+
+.cklTable thead {
+  background-color: var(--primary-color);
+  color: var(--text-light);
   position: sticky;
   top: 0;
 }
 
+.cklTable th:first-child {
+  border-top-left-radius: 12px;
+}
+.cklTable th:last-child {
+  border-top-right-radius: 12px;
+}
+.cklTable tr:last-child td:first-child {
+  border-bottom-left-radius: 12px;
+}
+.cklTable tr:last-child td:last-child {
+  border-bottom-right-radius: 12px;
+}
+
 th, td {
-  border: 1px solid #cfd8dc;
-  padding: 10px;
+  border: 1px solid var(--border-color);
+  padding: 1rem;
   vertical-align: top;
+  border-left: none;
+  border-right: none;
 }
 
 th {
   text-align: center;
+  font-weight: 600;
 }
 
+/* Input and Controls inside table cells */
 textarea {
   width: 100%;
-  height: 60px;
+  min-height: 60px;
+  max-height: 150px;
   resize: vertical;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem;
 }
 
 input[type="file"] {
-  margin-top: 5px;
+  margin-top: 0.5rem;
 }
 
 .preview td {
   font-size: 0.9em;
-  color: #1565c0;
+  color: var(--secondary-color);
   margin: 1px;
-  padding : 2px;
+  padding: 0.5rem;
 }
 
 .full-span {
-  background-color: #e3f2fd;
+  background-color: #c3d2fd;
   font-weight: bold;
   text-align: center;
   color: #0d47a1;
+  padding: 0.75rem 1rem;
 }
 
 .preview button {
   background-color: #1e88e5;
   border: none;
   color: white;
-  padding: 2px;
-  margin: 1px;
+  padding: 0.5rem 1rem;
+  margin: 2px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
 }
 
-button {
-  background-color: #1e88e5;
-  border: none;
-  color: white;
-  padding: 10px 16px;
-  margin-right: 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-button:disabled {
-  background-color: #90caf9;
-  cursor: not-allowed;
-}
-
-button:hover:not(:disabled) {
-  background-color: #1565c0;
-}
-
-#currentPath {
-  font-size: 0.9em;
-  color: #0d47a1;
-}
-
-.question {
-    width: 20%;
-}
-
-.verification {
-    width: 20%;
-}
-
-.compliance {
-    width: 15%;
-}
-
-.comments {
-    width: 15%;
-}
-
-.evidence {
-    width: 15%;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  body {
+    padding: 1rem;
+  }
+  .header {
+    flex-direction: column;
+    text-align: center;
+  }
+  .controls-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .controls-container select {
+    width: 100%;
+  }
 }

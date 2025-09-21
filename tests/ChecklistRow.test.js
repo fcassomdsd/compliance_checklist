@@ -135,6 +135,15 @@ describe('ChecklistRow.vue', () => {
     await radio.setValue(true);
     expect(mockChecklistStore.updateSession).toHaveBeenCalledWith(1, 'checklist-1', 'compliance', 'Non-compliant');
   });
+  
+  it('correctly changes style of radio button cell on compliance change', async () => {
+    const cell = wrapper.find('td.compliance');
+    expect(cell.attributes('style')).toBe('border: 3px solid rgb(85, 255, 85);');
+    await wrapper.setProps({ session : { compliance : 'Non-compliant'}});
+    expect(wrapper.props().session.compliance).toBe('Non-compliant');
+    expect(cell.attributes('style')).toBe('border: 3px solid rgb(255, 85, 85);');
+
+  });
 
   it('renders comments textarea', () => {
     const textarea = wrapper.find('textarea[name="comments-1"]');

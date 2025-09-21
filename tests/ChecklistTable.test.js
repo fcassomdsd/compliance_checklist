@@ -52,7 +52,7 @@ describe('ChecklistTable.vue', () => {
   });
 
   it('renders table structure correctly', () => {
-    expect(wrapper.find('table#csvTable').exists()).toBe(true);
+    expect(wrapper.find('table#cklTable').exists()).toBe(true);
     const headers = wrapper.findAll('thead tr th');
     expect(headers.length).toBe(7);
     expect(headers[0].text()).toBe('#');
@@ -141,7 +141,7 @@ describe('ChecklistTable.vue', () => {
   });
 
   it('sets disabled attribute on table', () => {
-    expect(wrapper.find('table#csvTable').attributes('disabled')).toBeDefined();
+    expect(wrapper.find('table#cklTable').attributes('disabled')).toBeDefined();
   });
 
   it('handles null checklist', () => {

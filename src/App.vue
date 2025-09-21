@@ -1,13 +1,25 @@
 <template>
   <div>
-    <div class="titulo">
+    <div class="header">
       <img :src="logo"/>
       <span>
-        <h2>Compliance Table with Evidence (Desktop)</h2>
+        <h2>Operational Safety Compliance Checklist</h2>
       </span>
     </div>
-    <div>
-    <span>Location: {{ store.sessionSummary.location }}</span>
+    <div class="controls-container">
+      <span>Location: {{ store.sessionSummary.location }}</span>
+      <div>
+        <label>Specialty:</label>
+        <select v-model="store.specialty" @change="store.loadChecklistAndSession">
+          <option value="NONE">Select a specialty</option>
+          <option v-for="(specialty, index) in store.specialtyList" :key="index" :value="specialty.code" >
+              {{specialty.name }}
+          </option> 
+        </select>
+        <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
+          Finalize inspection
+        </button>
+      </div>
     </div>
     <div>
     <label>Specialty:</label>
@@ -31,7 +43,6 @@
       @cancel="store.showModal = false" 
       @confirm="store.confirmModal"
     />
-    </div>
     <p id="currentPath">{{ store.currentPath }}</p>
     <ChecklistTable v-if="store.checklistLoaded"/>
   </div>
@@ -42,7 +53,7 @@ import { onMounted } from 'vue';
 import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
-import logo from './images/logo_idac.png'
+import logo from './images/compliance-logo.png'
 
 // Access the Pinia store
 const store = useChecklistStore();
@@ -57,43 +68,63 @@ onMounted( async () => {
 
 <style scoped>
 /* Scoped styles from style.css */
-div.titulo {
+.header {
   display: flex;
-  height: 150px;
-  align-items: center
-}
-div.logo img {
-  object-fit: contain;
-}
-div.titulo > span {
-  display: inline-block;
-}
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f8fb;
-  margin: 0;
-  padding: 20px;
-  color: #333;
-}
-h2 {
-  color: #214d72;
-}
-button {
-  background-color: #1e88e5;
-  border: none;
-  color: white;
-  padding: 10px 16px;
-  margin-right: 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-button:disabled {
-  background-color: #90caf9;
-  cursor: not-allowed;
-}
-button:hover:not(:disabled) {
-  background-color: #1565c0;
+  align-items: center;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2rem;
 }
 
-</style>
+.header img {
+  height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.header h2 {
+  color: var(--primary-color);
+  font-weight: 600;
+  margin: 0;
+}
+.controls-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.controls-container label {
+  font-weight: 500;
+  color: var(--primary-color);
+}
+.controls-container select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: white;
+  min-width: 200px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236B7280'%3E%3Cpath d='M7 10l5 5 5-5H7z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1em;
+  font-size: 1.1rem;
+}
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    text-align: center;
+  }
+  .controls-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .controls-container select {
+    width: 100%;
+  }
+}</style>
