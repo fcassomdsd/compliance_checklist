@@ -338,7 +338,7 @@ describe('Checklist Store', () => {
 
       store.sessionData["5"] = {
         id: "4",
-        compliance: "Partial Compliance"
+        compliance: "Non-compliant"
       };
 
       store.sessionData["6"] = {
@@ -355,7 +355,7 @@ describe('Checklist Store', () => {
         'topic 2\n' +
         '4|"reference 4"|"question 4"|"Non-compliant"|"Multiline<br>Test comments"\n'+   
         'topic 3\n' +
-        '5|\"reference 5\"|\"question 5\"|\"Partial Compliance\"|\"\"'   
+        '5|\"reference 5\"|\"question 5\"|\"Non-compliant\"|\"\"'   
 
       store.exportChecklist();
 

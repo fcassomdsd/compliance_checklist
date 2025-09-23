@@ -31,7 +31,7 @@ describe('ChecklistTable.vue', () => {
       sessionData: {
         1: { compliance: 'Compliant', id: 'checklist-1' },
         2: { compliance: 'Non-compliant', id: 'checklist-2' },
-        3: { compliance: 'Partial Compliance', id: 'checklist-3' },
+        3: { compliance: 'Non-compliant', id: 'checklist-3' },
       },
     };
     vi.mocked(useChecklistStore).mockReturnValue(mockStore);
@@ -95,7 +95,7 @@ describe('ChecklistTable.vue', () => {
       newTopic: true,
       qnumber: 3,
       row: { topic: 'Topic 2', reference: 'REF3', question: 'Question 3?', verification: 'Verify 3' },
-      session: { compliance: 'Partial Compliance', id: 'checklist-3' },
+      session: { compliance: 'Non-compliant', id: 'checklist-3' },
     });
   });
 
