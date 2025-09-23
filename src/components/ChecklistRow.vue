@@ -72,14 +72,12 @@ const toast = useToast();
 const radioButtons = ref([
    "Not applicable",
    "Compliant",
-   "Partial Compliance",
    "Non-compliant",
 ]);
 
 const radioColors = ref({
    "Not applicable" : "border : 3px solid #aaaaaa",
    "Compliant"      : "border : 3px solid #55FF55",
-   "Partial Compliance" : "border : 3px solid #FFFF00",
    "Non-compliant" : "border : 3px solid #FF5555"
 });
 

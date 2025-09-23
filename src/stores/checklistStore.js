@@ -180,7 +180,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
 
         let prevTopic = '';
-        const validCompliance = ["Non-compliant","Partial Compliance"];
+        const validCompliance = ["Non-compliant"];
         const validQuestions = checklist.value.questions.entries();       
         for (const [index, row] of validQuestions) {
           if ( (sessionData[index+1] !== undefined) && validCompliance.includes(sessionData[index+1].compliance)) {

@@ -111,7 +111,7 @@ describe('ChecklistRow.vue', () => {
 
   it('renders compliance radio buttons', () => {
     const radios = wrapper.findAll('input[type="radio"]');
-    expect(radios.length).toBe(4); // Not applicable, Compliant, Partial Compliance, Non-compliant
+    expect(radios.length).toBe(3); // Not applicable, Compliant, Non-compliant
     expect(radios[0].attributes('name')).toBe('compliance-1');
     expect(radios[1].attributes('value')).toBe('Compliant');
     expect(radios[1].element.checked).toBe(true); // Matches session.compliance
