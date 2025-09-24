@@ -161,6 +161,21 @@ textarea {
   padding: 0.5rem;
 }
 
+textarea.compliance {
+  padding: 0;
+}
+
+div.non-conformity {
+  border: 1px solid var(--border-color);
+  padding: 0;
+  vertical-align: top;
+  border-left: none;
+  border-right: none;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-right: 0.8rem;
+}
+
 input[type="file"] {
   margin-top: 0.5rem;
 }

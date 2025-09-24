@@ -128,7 +128,7 @@ export const createFileService = () => {
     }
   }
   
-  const saveSession = (specialty, summary, responses, displayError) => {
+  const saveSession = (summary, responses, displayError) => {
 
     // make sure they are objects and not strings
     const newSummary = (typeof summary == 'string' ? JSON.parse(summary) : summary);
@@ -141,7 +141,7 @@ export const createFileService = () => {
     saveTimer = setTimeout(() => {
       try {
         const sessionString = JSON.stringify(sessionObj, null, 2); 
-        window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, specialty, "session.json");
+        window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, newSummary.specialty, "session.json");
         return true;
       } catch (err) {
         displayError(err.message);

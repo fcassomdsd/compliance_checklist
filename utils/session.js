@@ -40,6 +40,9 @@ const sessionSchema = {
              comments: {
                type: "string"
              },
+             nonConformity: {
+               type: "string"
+             },
              evidence: {
                type: "array",
                items: {
@@ -97,29 +100,3 @@ export function getEvidenceLinks(sessionObj) {
   
   return evidenceLinks;
 }
-
-// this is here because this module should know well about the structure of the session object,
-// and how evidence is structured within it.  If it changes above, it may change here.
-export function countEvidence(obj, fileName, count = 0, found = false) {
-
-  let newCount = count;
-
-  if (obj !== null) {  // -a
-    if (typeof obj === 'object') { // b
-      if ("evidence" in obj) { // c
-        newCount = countEvidence(obj.evidence, fileName, count, true);
-      } else { // -c
-        if (found) { // d
-          if (obj.findIndex((x) => x == fileName) > -1 ) { // e
-            return count + 1;                
-          }
-        } else { // -d
-          Object.values(obj).forEach( (value) => {
-            newCount = newCount + countEvidence(value, fileName, count, false);
-          });
-        }
-      }
-    }
-  }   
-  return newCount;
-} 

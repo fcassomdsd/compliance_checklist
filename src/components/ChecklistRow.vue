@@ -14,17 +14,26 @@
           type="radio"
           :name="`compliance-${qnumber}`"
           :value="radioBtn"
-          :disabled="store.sessionSummary.finalized"
+          :disabled="sessionStore.summary.finalized"
           :checked="session.compliance === radioBtn"
           @change="radioChange($event)"
         /> {{ radioBtn }}<br>
       </label>
+      <div class="non-conformity" :hidden="session.compliance != 'Non-compliant'">
+        <textarea
+          :name="`nonConformity-${qnumber}`"
+          :value="session.nonConformity"
+          :disabled="sessionStore.summary.finalized"
+          placeholder="Describa la no conformidad"
+          @input="nonConformityChange($event)"
+        ></textarea>
+      </div>
     </td>
     <td class="comments">
       <textarea
         :name="`comments-${qnumber}`"
         :value="session.comments"
-        :disabled="store.sessionSummary.finalized"
+        :disabled="sessionStore.summary.finalized"
         @input="textAreaChange($event)"
       ></textarea>
     </td>
@@ -34,14 +43,14 @@
         type="file"
         class="evidence-upload"
         :name="`evidence-${qnumber}`"
-        :disabled="store.sessionSummary.finalized"
+        :disabled="sessionStore.summary.finalized"
         multiple
         @change="evidenceChange($event)"
       />
       <table class="preview"  :id="`evidencetable-${qnumber}`">
         <tr v-for="(evidence, index) in session.evidence" :key="index">
           <td>
-            <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
+            <input type="image" :src="trash" height="15" width="15" :disabled="sessionStore.summary.finalized" @click="removeEvidence(index, evidence)" />
           </td>
           <td :class="{ 'missing' : (evidenceStore.files[evidence]?.URL == '')}">
             <a :href="evidenceStore.files[evidence]?.URL" target="_blank">{{ evidenceStore.files[evidence]?.count }}{{
@@ -55,8 +64,8 @@
 </template>
 
 <script setup>
-import { ref} from 'vue';
-import { useChecklistStore } from '../stores/checklistStore';
+import { ref } from 'vue';
+import { useSessionStore } from '../stores/sessionStore';
 import { useEvidenceStore } from '../stores/evidenceStore';
 import { useToast } from 'vue-toastification';
 import trash from '../images/trash.png';
@@ -82,15 +91,19 @@ const radioColors = ref({
 });
 
 // Access the Pinia store
-const store = useChecklistStore();
+const sessionStore = useSessionStore();
 const evidenceStore = useEvidenceStore();
 
 const radioChange = (event) => {
-  store.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value);
+  sessionStore.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value);
 };
 
 const textAreaChange = (event) => {
-  store.updateSession(props.qnumber, props.row.id, 'comments', event.target.value);
+  sessionStore.updateSession(props.qnumber, props.row.id, 'comments', event.target.value);
+};
+
+const nonConformityChange = (event) => {
+  sessionStore.updateSession(props.qnumber, props.row.id, 'nonConformity', event.target.value);
 };
 
 const evidenceChange = async (event) => {
@@ -103,7 +116,7 @@ const evidenceChange = async (event) => {
     try {
 
       // update the evidence file record
-      await evidenceStore.add(store.specialty, file);
+      await evidenceStore.add(sessionStore.summary.specialty, file);
 
       const inTable = table.some((item) => item === file.name);
 
@@ -122,21 +135,21 @@ const evidenceChange = async (event) => {
       
   }
   
-  store.updateSession(props.qnumber, props.row.id, 'evidence', table);
+  sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', table);
   toast.success("Evidence updated");
 };
 
 const removeEvidence = async (index, evidence) => {
 
     try {
-      await evidenceStore.subtract(store.specialty, evidence);
+      await evidenceStore.subtract(sessionStore.summary.specialty, evidence);
     } catch(error) {
       console.log("evidenceChanged failed: " + error);
       toast.error(error.message);
     }
 
   const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
-  store.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence);
+  sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence);
 };
 
 </script>
