@@ -6,17 +6,20 @@ import App from '../src/App.vue';
 import ChecklistTable from '../src/components/ChecklistTable.vue';
 import ModalWindow from '../src/components/ModalWindow.vue';
 import { useChecklistStore } from '../src/stores/checklistStore.js';
+import { useSessionStore } from '../src/stores/sessionStore';
 
 // Mock dependencies
 vi.mock('../src/components/ChecklistTable.vue');
 vi.mock('../src/components/ModalWindow.vue');
 vi.mock('../src/stores/checklistStore.js');
+vi.mock('../src/stores/sessionStore.js');
 vi.mock('../src/images/compliance-logo.png', () => ({ default : 'mock-logo-url' }));
 
 describe('App.vue', () => {
   let wrapper;
   let pinia;
   let mockStore;
+  let mockSession;
   let defaultPathExists;
 
   beforeEach(() => {
@@ -30,7 +33,6 @@ describe('App.vue', () => {
         { code: 'VIG', name: 'Vigilancia Radar' },
         { code: 'COM', name: 'Comunicaciones de Radio' },
       ],
-      sessionSummary: { location: '', finalized: false },
       checklistLoaded: false,
       currentPath: '',
       showModal: false,
@@ -45,9 +47,15 @@ describe('App.vue', () => {
       confirmModal : vi.fn(),
       checkDefaultPath: vi.fn(),
       exportChecklist: vi.fn(),
-      finalize: vi.fn(),
     };
     vi.mocked(useChecklistStore).mockReturnValue(mockStore);
+
+    // Mock sesison store
+    mockSession = {
+      summary: { location: '', finalized: false },
+      finalize: vi.fn(),
+    };
+    vi.mocked(useSessionStore).mockReturnValue(mockSession);
 
     // Mount component
     wrapper = mount(App, {
@@ -70,7 +78,7 @@ describe('App.vue', () => {
   });
 
   it('displays session summary location', () => {
-    mockStore.sessionSummary.location = '/mock/location';
+    mockSession.summary.location = '/mock/location';
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const spans = wrapper.findAll('span');
     expect(spans[1].text()).toBe('Location: /mock/location');
@@ -92,7 +100,7 @@ describe('App.vue', () => {
   });
 
   it('renders finalize button disabled when finalized', async () => {
-    mockStore.sessionSummary.finalized = true;
+    mockSession.summary.finalized = true;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#finalizeBtn');
     expect(button.attributes('disabled')).toBeDefined();
@@ -100,14 +108,14 @@ describe('App.vue', () => {
   });
 
   it('renders finalize button enabled when not finalized', async () => {
-    mockStore.sessionSummary.finalized = false;
+    mockSession.summary.finalized = false;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#finalizeBtn');
     expect(button.attributes('disabled')).toBeUndefined();
   });
 
   it('calls showFinalize on finalize button click', async () => {
-    mockStore.sessionSummary.finalized = false;
+    mockSession.summary.finalized = false;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#finalizeBtn');
     await button.trigger('click');
@@ -116,7 +124,7 @@ describe('App.vue', () => {
 
   it('renders export button enabled when finalized and checklist loaded', () => {
 
-    mockStore.sessionSummary.finalized = true;
+    mockSession.summary.finalized = true;
     mockStore.checklistLoaded = true;
 
     wrapper = mount(App, { global: { plugins: [pinia] } });
@@ -127,7 +135,7 @@ describe('App.vue', () => {
   });
 
   it('renders export button disabled when not finalized and checklist loaded', async () => {
-    mockStore.sessionSummary.finalized = false;
+    mockSession.summary.finalized = false;
     mockStore.checklistLoaded = true;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#exportBtn');
@@ -135,7 +143,7 @@ describe('App.vue', () => {
   });
 
   it('renders export button disabled when finalized and checklist not loaded', async () => {
-    mockStore.sessionSummary.finalized = true;
+    mockSession.summary.finalized = true;
     mockStore.checklistLoaded = false;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#exportBtn');
@@ -143,7 +151,7 @@ describe('App.vue', () => {
   });
 
   it('renders export button disabled when not finalized and checklist not loaded', async () => {
-    mockStore.sessionSummary.finalized = false;
+    mockSession.summary.finalized = false;
     mockStore.checklistLoaded = false;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#exportBtn');
@@ -151,7 +159,7 @@ describe('App.vue', () => {
   });
 
   it('calls exportChecklist on export button click', async () => {
-    mockStore.sessionSummary.finalized = true;
+    mockSession.summary.finalized = true;
     mockStore.checklistLoaded = true;
     wrapper = mount(App, { global: { plugins: [pinia] } });
     const button = wrapper.find('#exportBtn');

@@ -27,7 +27,7 @@
         :newTopic="topicChange(row.topic)"
         :qnumber="index + 1"
         :row="row"
-        :session="store.sessionData[index + 1] || {}"
+        :session="sessionStore.responses[index + 1] || {}"
       />
     </tbody>
   </table>
@@ -36,12 +36,13 @@
 <script setup>
 import ChecklistRow from './ChecklistRow.vue';
 import { useChecklistStore } from '../stores/checklistStore';
+import { useSessionStore } from '../stores/sessionStore';
 
 // Access the Pinia store
 const store = useChecklistStore();
+const sessionStore = useSessionStore();
 
 let previousTopic = ""
-let emptyTopic = false;
 
 const topicChange = (t) => {
 

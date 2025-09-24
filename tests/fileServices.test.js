@@ -109,7 +109,7 @@ describe('fileServices', () => {
     const mockCallback = () =>  {console.log("varna")}
     mockElectronAPI.saveFile.mockResolvedValue(true);
     
-    const result = await fs.saveSession('VIG', mockSessionSummary, mockSessionResponses, mockCallback);
+    const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
     
     expect(result).toBe(true);
   });
@@ -133,7 +133,7 @@ describe('fileServices', () => {
       };
     const mockCallback = () =>  {console.log("varna")}
     const mockSessionString = JSON.stringify({ "summary" :mockSessionSummary, "responses" : mockSessionResponses }, null, 2);
-    const result = await fs.saveSession('VIG', mockSessionSummary, mockSessionResponses, mockCallback);
+    const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
 
 
       await vi.waitFor(() => {
@@ -164,7 +164,7 @@ describe('fileServices', () => {
     
 
     mockElectronAPI.saveFile.mockImplementationOnce(() => {throw new Error('Save failed')});
-    const result = await fs.saveSession('VIG', mockSessionSummary, mockSessionResponses, mockCallback);
+    const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
       
     await vi.waitFor(() => {
       vi.advanceTimersByTime(1000);

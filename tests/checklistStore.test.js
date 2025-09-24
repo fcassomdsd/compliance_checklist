@@ -4,7 +4,7 @@ import { ref, reactive } from 'vue';
 import { useToast } from 'vue-toastification';
 import { createFileService } from '../src/fileServices.js';
 import { useChecklistStore } from '../src/stores/checklistStore.js';
-import { useEvidenceStore } from '../src/stores/evidenceStore.js';
+import { useSessionStore } from '../src/stores/sessionStore.js';
 
 // Mock dependencies
 vi.mock('vue', () => ({
@@ -15,7 +15,7 @@ vi.mock('vue-toastification', () => ({
   useToast: vi.fn(),
 }));
 vi.mock('../src/fileServices.js');
-vi.mock('../src/stores/evidenceStore.js');
+vi.mock('../src/stores/sessionStore.js');
 
 // timers
 vi.useFakeTimers();
@@ -26,7 +26,7 @@ describe('Checklist Store', () => {
   let store;
   let mockFs;
   let mockToast;
-  let mockEvidence;
+  let mockSession;
   //const displayToast = (msg) => msg;
 
   beforeEach(() => {
@@ -46,8 +46,6 @@ describe('Checklist Store', () => {
     // Mock createFileService
     mockFs = {
       loadChecklist: vi.fn(),
-      loadSession: vi.fn(),
-      saveSession: vi.fn(),
       defaultPathExists : vi.fn(),
       createDefaultPath: vi.fn(),
       readEvidence: vi.fn(),
@@ -57,12 +55,14 @@ describe('Checklist Store', () => {
     };
     vi.mocked(createFileService).mockReturnValue(mockFs);
     
-    mockEvidence = {
-      load: vi.fn(),
-      reset: vi.fn(),
-      updateCount: vi.fn(),    
+    mockSession = {
+      summary: { "value" : {} },
+      responses : {},
+      loadSession: vi.fn(),
+      updateSession: vi.fn(),    
+      finalize: vi.fn(),    
     };
-    vi.mocked(useEvidenceStore).mockReturnValue(mockEvidence);
+    vi.mocked(useSessionStore).mockReturnValue(mockSession);
     
     // Initialize store
     store = useChecklistStore();
@@ -73,8 +73,6 @@ describe('Checklist Store', () => {
     expect(store.checklist).toEqual({ "value" : null  });
     expect(store.checklistLoaded).toEqual({ "value" : false});
     expect(store.currentPath).toEqual({ "value" : '' });
-    expect(store.sessionData).toEqual({});
-    expect(store.sessionSummary).toEqual({ "value" : { location: '', finalized: true }});
     expect(store.showModal).toEqual({ "value" : false });
     expect(store.tituloModal).toEqual({ "value" : '' });
     expect(store.explanationModal).toEqual({ "value" : '' });
@@ -96,13 +94,9 @@ describe('Checklist Store', () => {
 
       expect(store.checklist.value).toBe(null);
       expect(store.checklistLoaded.value).toBe(false);
-      expect(store.sessionSummary.value.location).toBe('');
-      expect(store.sessionSummary.value.finalized).toBe(true);
-      expect(store.sessionData).toEqual({});
 
       expect(mockFs.loadChecklist).not.toHaveBeenCalled();
-      expect(mockFs.loadSession).not.toHaveBeenCalled();
-      expect(mockEvidence.reset).toHaveBeenCalled();
+      expect(mockSession.loadSession).toHaveBeenCalled();
     });
 
     it('loads checklist, session, and evidence for valid specialty', async () => {
@@ -119,9 +113,7 @@ describe('Checklist Store', () => {
               }]
            }
       mockFs.loadChecklist.mockResolvedValue(mockChecklist);
-      mockFs.loadSession.mockResolvedValue({ summary: { location: '/path' }, responses: { 1: { id: '1' } } });
       mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence');
-      mockEvidence.load.mockResolvedValue([{ name: 'file.txt', URL: '/path/file.txt', count: 1 }]);
 
       await store.loadChecklistAndSession();
 
@@ -129,12 +121,9 @@ describe('Checklist Store', () => {
       expect(store.checklist.value).toEqual(mockChecklist);
       expect(store.checklistLoaded.value).toBe(true);
       expect(store.currentPath.value).toBe('/path/VIG/Evidence');
-      expect(store.sessionSummary.value).toEqual({ location: '/path', finalized: false, "specialty" : "VIG" });
-      expect(store.sessionData).toEqual({ 1: { id: '1' } });
 
       expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG');
-      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG');
-      expect(mockEvidence.load).toHaveBeenCalledWith('VIG');
+      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG');
     });
 
     it('handles load errors with toast', async () => {
@@ -145,41 +134,6 @@ describe('Checklist Store', () => {
 
       expect(store.checklistLoaded.value).toBe(false);
       expect(mockToast.error).toHaveBeenCalledWith('Load failed');
-    });
-
-    it('updates evidence counts after loading', async () => {
-      store.specialty.value = 'VIG';
-      mockFs.loadChecklist.mockResolvedValue({ specialty: 'VIG', questions: [] });
-      mockFs.loadSession.mockResolvedValue({ summary: { location: '/path' }, responses: { 1: { evidence: ['file.txt'] } } });
-      mockFs.updateEvidenceCount.mockImplementation((file) => file.count = 1);
-
-      await store.loadChecklistAndSession();
-
-      expect(mockEvidence.load).toHaveBeenCalledWith('VIG');
-      expect(mockEvidence.updateCount).toHaveBeenCalledWith({ 1: { evidence: ['file.txt'] } });
-    });
-  });
-
-  describe('updateSession', () => {
-    it('updates session data and triggers saveSession', () => {
-
-      store.updateSession('1', 'checklist-1', 'compliance', 'Compliant');
-      expect(store.sessionData['1']).toEqual({ compliance: 'Compliant', id: 'checklist-1' });
-      expect(mockFs.saveSession).toHaveBeenCalled();
-    });
-  });
-
-  describe('calls to saveSession', () => {
-    it('saves session after debounce', async () => {
-      store.sessionSummary.value.lastUpdated = new Date().toISOString();
-      const mockSessionObj = { summary: store.sessionSummary.value, responses: store.sessionData };
-      
-      store.updateSession('1', 'checklist-1', 'compliance', 'Compliant');
-      await vi.waitFor(() => {
-        vi.advanceTimersByTime(1000);
-      });
-
-      expect(mockFs.saveSession).toHaveBeenCalled();
     });
   });
 
@@ -202,9 +156,8 @@ describe('Checklist Store', () => {
         vi.advanceTimersByTime(1000);
       });
 
-      expect(store.sessionSummary.value.finalized).toBe(true);
       expect(mockToast.success).toHaveBeenCalledWith('Checklist finalized successfully!');
-      expect(mockFs.saveSession).toHaveBeenCalled();
+      expect(mockSession.finalize).toHaveBeenCalled();
     });
 
     it('handles create default path modal', () => {
@@ -237,29 +190,6 @@ describe('Checklist Store', () => {
     });
   });
 
-  describe('finalize', () => {
-    it('sets finalized to true and triggers saveSession', () => {
-
-      store.sessionSummary.value = {
-        specialty: "VIG",
-        location: "Location A",
-        finalized: false,
-        lastUpdated: new Date().toISOString()
-      };
-      store.sessionData["1"] = {
-        id: "1",
-        compliance: "Compliant",
-        comments: "Test comments",
-        evidence: ["file1.txt"]
-      };
-
-      store.finalize();
-
-      expect(store.sessionSummary.value.finalized).toBe(true);
-      expect(mockFs.saveSession).toBeCalled();
-    });
-  });
-  
   describe('export', () => {
     beforeEach( () => {
 
@@ -312,36 +242,36 @@ describe('Checklist Store', () => {
             ]
           }
 
-      store.sessionSummary.value = {
+      mockSession.summary.value = {
         specialty: "VIG",
         location: "Location A",
         finalized: true,
         lastUpdated: new Date().toISOString()
       };
 
-      store.sessionData["1"] = {
+      mockSession.responses["1"] = {
         id: "1",
         compliance: "Compliant",
         comments: 'Test "comments"',
       };
 
-      store.sessionData["3"] = {
+      mockSession.responses["3"] = {
         id: "2",
         comments: "Multiline\nTest comments",
       };
 
-      store.sessionData["4"] = {
+      mockSession.responses["4"] = {
         id: "3",
         compliance: "Non-compliant",
         comments: "Multiline\nTest comments"
       };
 
-      store.sessionData["5"] = {
+      mockSession.responses["5"] = {
         id: "4",
         compliance: "Non-compliant"
       };
 
-      store.sessionData["6"] = {
+      mockSession.responses["6"] = {
         id: "5",
         compliance: "Not applicable",
         comments: "comments 6"
@@ -359,6 +289,7 @@ describe('Checklist Store', () => {
 
       store.exportChecklist();
 
+      expect(mockToast.error).not.toHaveBeenCalled();
       await expect(mockFs.saveExportFile).toHaveBeenCalledWith(exportedString, "VIG");
       expect(mockToast.success).toHaveBeenCalledWith('Checklist exported');
     });

@@ -1,22 +1,19 @@
 import { defineStore } from 'pinia';
-import { ref, reactive } from 'vue';
+import { ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import { createFileService } from '../fileServices.js';
-import { useEvidenceStore } from './evidenceStore.js';
+import { useSessionStore } from './sessionStore.js';
 
 export const useChecklistStore = defineStore('checklist', () => {
   const toast = useToast();
   const fs = createFileService();
-  const evidence = useEvidenceStore();
+  const sessionStore = useSessionStore();
 
     // State
     const specialty = ref('NONE');
     const checklist = ref(null);
     const checklistLoaded = ref(false);
     const currentPath = ref('');
-//    const evidenceFiles = ref([]);
-    const sessionData = reactive({});
-    const sessionSummary = ref({"location" : "", "finalized" : true});
     const showModal = ref(false);
     const tituloModal = ref('');
     const explanationModal = ref('');
@@ -47,73 +44,26 @@ export const useChecklistStore = defineStore('checklist', () => {
         // initialize state
         checklist.value = null;
         checklistLoaded.value = false;
-        sessionSummary.value.location = "";
-        sessionSummary.value.finalized = true;
-        // clear out evidenceFiles
-        evidence.reset();
             
-        // clear out session data
-        for (const key of Object.keys(sessionData)) {
-          delete sessionData[key];            
-        }
-        if (specialty.value == "NONE") {
-            return;
-        } 
         try {
+
+          await sessionStore.loadSession(specialty.value);
+
+          if (specialty.value != "NONE") {
             // load checklist
             checklist.value = await fs.loadChecklist(specialty.value);
             checklistLoaded.value = true;
-
-            // load session, if exists
-            let sessionRead = await fs.loadSession(specialty.value);
-            if (sessionRead !== null) {
-              // can't assign session object directly;  use JSON.parse
-              JSON.parse(JSON.stringify(sessionRead), (key, value) =>{
-                 if (key.match("[0-9]+") && typeof value == "object") {
-                    sessionData[key] = value;
-                 } else {
-                    if (key == "summary") {
-                       sessionSummary.value = value;
-                    }
-                 }  
-                 return value;
-              });
-            }
-            if (!sessionSummary.value["specialty"]) {
-              sessionSummary.value["specialty"] = specialty.value;
-            }
-
-            // prepare evidence: load evidence and update counts with the session data
-            await evidence.load(specialty.value);
-            evidence.updateCount(sessionData);
-
-            if (!sessionSummary.value['finalized']) {
-              sessionSummary.value["finalized"] = false;
-            }
+            
             currentPath.value = await fs.setSavePath(specialty.value);
-            fs.saveSession(
-              specialty.value,
-              sessionSummary.value,
-              sessionData,
-              displayToast);
-            toast.success("Checklist and session loaded");
+            toast.success("Checklist loaded");
+          }
         } catch (error) {
-            toast.error(error.message); // Or use toast notification
+            toast.error(error.message);
             checklistLoaded.value = false;
         }
     };
     
-    const updateSession = (rowId, checklistId, field, value) => {
-        if (!sessionData[rowId]) sessionData[rowId] = {};
-        sessionData[rowId][field] = value;
-        sessionData[rowId]["id"] = checklistId;
-        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
-    };
-    
-    function displayToast(msg) {
-      toast.error(msg);
-    }
-    
+   
     const showFinalize = () => {
         tituloModal.value = modalFinalizeTitle;
         explanationModal.value = modalFinalizeExplanation;
@@ -125,7 +75,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         showModal.value = false;
         switch(tituloModal.value) {
           case modalFinalizeTitle: {
-            finalize();
+            sessionStore.finalize(specialty.value);
             toast.success(finalizeSuccess);
             break;
           }
@@ -156,11 +106,6 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
     }
     
-    const finalize = () => {
-        sessionSummary.value["finalized"] = true;
-        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
-    }; 
-    
     const exportChecklist = async () => {
 
       try {
@@ -183,13 +128,13 @@ export const useChecklistStore = defineStore('checklist', () => {
         const validCompliance = ["Non-compliant"];
         const validQuestions = checklist.value.questions.entries();       
         for (const [index, row] of validQuestions) {
-          if ( (sessionData[index+1] !== undefined) && validCompliance.includes(sessionData[index+1].compliance)) {
+          if ( (sessionStore.responses[index+1] !== undefined) && validCompliance.includes(sessionStore.responses[index+1].compliance)) {
             if (prevTopic != row.topic) {
               out.push(row.topic);
             } 
             prevTopic = row.topic;
             const qnumber = index + 1;
-            const session = sessionData[qnumber] || {};
+            const session = sessionStore.responses[qnumber] || {};
             const line = [
               qnumber,
               '"' + makeLine(row.reference) + '"',
@@ -216,18 +161,14 @@ export const useChecklistStore = defineStore('checklist', () => {
         checklist,
         checklistLoaded,
         currentPath,
-        sessionData,
-        sessionSummary,
         showModal,
         tituloModal,
         explanationModal,
         accionModal,
         loadChecklistAndSession,
-        updateSession,
         showFinalize,
         checkDefaultPath,
         confirmModal,
-        exportChecklist,
-        finalize
+        exportChecklist
     };
 });

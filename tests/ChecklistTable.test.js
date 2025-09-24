@@ -4,15 +4,18 @@ import { createPinia, setActivePinia } from 'pinia';
 import ChecklistTable from '../src/components/ChecklistTable.vue';
 import ChecklistRow from '../src/components/ChecklistRow.vue';
 import { useChecklistStore } from '../src/stores/checklistStore';
+import { useSessionStore } from '../src/stores/sessionStore';
 
 // Mock ChecklistRow component
 vi.mock('../src/components/ChecklistRow.vue');
 vi.mock('../src/stores/checklistStore');
+vi.mock('../src/stores/sessionStore');
 
 describe('ChecklistTable.vue', () => {
   let wrapper;
   let pinia;
   let mockStore;
+  let mockSession;
 
   beforeEach(() => {
     // Set up Pinia
@@ -28,13 +31,17 @@ describe('ChecklistTable.vue', () => {
           { topic: 'Topic 2', reference: 'REF3', question: 'Question 3?', verification: 'Verify 3' },
         ],
       },
-      sessionData: {
+    };
+    vi.mocked(useChecklistStore).mockReturnValue(mockStore);
+
+    mockSession = {
+      responses: {
         1: { compliance: 'Compliant', id: 'checklist-1' },
         2: { compliance: 'Non-compliant', id: 'checklist-2' },
         3: { compliance: 'Non-compliant', id: 'checklist-3' },
       },
     };
-    vi.mocked(useChecklistStore).mockReturnValue(mockStore);
+    vi.mocked(useSessionStore).mockReturnValue(mockSession);
 
     // Mount component
     wrapper = mount(ChecklistTable, {
@@ -128,7 +135,7 @@ describe('ChecklistTable.vue', () => {
   });
 
   it('handles missing session data for a row', () => {
-    mockStore.sessionData = { 1: { compliance: 'Compliant' } }; // Only session for first row
+    mockSession.responses = { 1: { compliance: 'Compliant' } }; // Only session for first row
     wrapper = mount(ChecklistTable, {
       global: {
         plugins: [pinia],

@@ -7,7 +7,7 @@
       </span>
     </div>
     <div class="controls-container">
-      <span>Location: {{ store.sessionSummary.location }}</span>
+      <span>Location: {{ sessionStore.summary.location }}</span>
       <div>
         <label>Specialty:</label>
         <select v-model="store.specialty" @change="store.loadChecklistAndSession">
@@ -16,10 +16,10 @@
               {{specialty.name }}
           </option> 
         </select>
-        <button id="finalizeBtn" :disabled="store.sessionSummary.finalized" @click="store.showFinalize()">
+        <button id="finalizeBtn" :disabled="sessionStore.summary.finalized" @click="store.showFinalize()">
           Finalize inspection
         </button>
-        <button id="exportBtn" :disabled="(!store.sessionSummary.finalized || !store.checklistLoaded)" @click="store.exportChecklist()">
+        <button id="exportBtn" :disabled="(!sessionStore.summary.finalized || !store.checklistLoaded)" @click="store.exportChecklist()">
             Report Findings
         </button>
       </div>
@@ -42,10 +42,12 @@ import { onMounted } from 'vue';
 import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
+import { useSessionStore } from './stores/sessionStore';
 import logo from './images/compliance-logo.png'
 
 // Access the Pinia store
 const store = useChecklistStore();
+const sessionStore = useSessionStore();
 
 onMounted( async () => {
 
