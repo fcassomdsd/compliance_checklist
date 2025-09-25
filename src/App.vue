@@ -53,6 +53,7 @@ onMounted( async () => {
 
   // Check if the default path exists
   await store.checkDefaultPath();
+  
 })
 
 </script>

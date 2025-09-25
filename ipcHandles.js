@@ -87,21 +87,25 @@ export function setupIpcHandles(ipcMain) {
       
     });
 
-    ipcMain.handle('save-file', async (event, data, filePath, pathLegs) => {
+    ipcMain.handle('save-file', async (event, fileData, filePath, pathLegs) => {
        try {
         // data should be a string or an array
-        if ((typeof data != 'string') && !Array.isArray(data)) {
+        if ((typeof fileData != 'string') && (fileData?.byteLength === undefined)) {
           throw new Error("Invalid buffer");
+        }
+        
+        if (fileData.length == 0) {
+          throw new Error('Buffer is empty');        
         }
 
         const dirPath = (filePath ? filePath : defaultSavePath);
         const toFilePath = safeJoin(dirPath, pathLegs);
-        const dataToSave = (typeof data === "string" ? data : Buffer.from(data));
+        const dataToSave = (typeof fileData === "string" ? fileData : Buffer.from(fileData));
         const saved = await saveFile(toFilePath, dataToSave);
         return saved;
       } catch (err) {
         logger.error(`save-file: Could not save file ${filePath} ${pathLegs} : ${err.message}`);
-        throw err;
+        throw new Error(`ipcHandles.save-file: Could not save file ${filePath} ${pathLegs} : ${err.message}`);
       }
     });
 

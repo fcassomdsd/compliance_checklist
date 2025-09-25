@@ -79,6 +79,11 @@ export async function saveFile(filePath, buffer) {
     const toFilePath = safePath(filePath);
     const dirPath = path.dirname(toFilePath);
     await fs.mkdir(dirPath, { recursive : true });
+    
+    if (buffer.length == 0) {
+      throw new Error('saveFile: Buffer is empty');
+    }
+    logger.info(`fileOps.saveFile: ${filePath} ${buffer.length}`);
   
     await fs.writeFile(toFilePath, buffer, 'utf-8');
     logger.info("saveFile : returning " + filePath);

@@ -169,6 +169,18 @@ describe('ipcHandles', () => {
   });
 
   describe('save-file', () => {
+    it('throws error on empty file', async () => {
+      const errorMessage = 'ipcHandles.save-file: Could not save file /mocked/path file.txt : Buffer is empty'
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt');
+      await expect(handles['save-file']({}, '', '/mocked/path', ['file.txt'])).rejects.toThrowError(errorMessage);
+    });
+
+    it('throws error on undefined file data', async () => {
+      const errorMessage = 'ipcHandles.save-file: Could not save file /mocked/path file.txt : Invalid buffer'
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt');
+      await expect(handles['save-file']({}, undefined, '/mocked/path', ['file.txt'])).rejects.toThrowError(errorMessage);
+    });
+
     it('saves string data', async () => {
       vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt');
       const result = await handles['save-file']({}, 'test data', '/mocked/path', ['file.txt']);
@@ -180,7 +192,7 @@ describe('ipcHandles', () => {
     it('saves Buffer data', async () => {
       const buffer = Buffer.from([0x74, 0x65, 0x73, 0x74]); // 'test'
       vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt');
-      const result = await handles['save-file']({}, Array.from(buffer), '/mocked/path', ['file.txt']);
+      const result = await handles['save-file']({}, buffer, '/mocked/path', ['file.txt']);
       expect(fileOps.saveFile).toHaveBeenCalledWith('/mocked/path/file.txt', buffer);
       expect(result).toBe('/mocked/path/file.txt');
     });
