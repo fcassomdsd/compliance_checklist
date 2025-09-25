@@ -43,8 +43,9 @@ export const useEvidenceStore = defineStore('evidence', () => {
     
     const add = async (specialty, fileObj) => {
 
+      try {
         const buffer = await fileObj.arrayBuffer();
-        const savedPath = fs.saveEvidence(specialty, fileObj.name, buffer);
+        const savedPath = await fs.saveEvidence(specialty, fileObj.name, buffer);
 
         // if file created or updated, update the URL
         if (savedPath !== null) {
@@ -60,6 +61,9 @@ export const useEvidenceStore = defineStore('evidence', () => {
             throw new Error('evidence.add: detected untracked file: '+ fileObj.name);
           }
         }
+      } catch (error) {
+        throw new Error('evidenceStore.add: could not add evidence: ' + error.message);
+      }
     }
     
     const addCount = (fileName) => {

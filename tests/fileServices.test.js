@@ -10,6 +10,7 @@ vi.useFakeTimers();
 const mockElectronAPI = {
   checkPath: vi.fn(),
   getPath: vi.fn(),
+  getStats: vi.fn(),
   readFile: vi.fn(),
   listPath: vi.fn(),
   saveFile: vi.fn(),
@@ -63,7 +64,30 @@ describe('fileServices', () => {
     expect(result).toEqual(mockDirList);
   });
 
-    describe('saveExportFile', () => { 
+    describe('saveEvidence', () => { 
+      it('calls saveFile with correct arguments', async () => {
+ 
+        mockElectronAPI.saveFile.mockResolvedValue(true);
+        const buffer = Buffer.from('This is a buffer');
+    
+        const result = await fs.saveEvidence('VIG', 'file1.txt', buffer);
+    
+        expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(buffer, null, 'VIG', 'Evidence', 'file1.txt');
+      });
+    
+      it('throws error for empty or undefined buffer', async () => {
+ 
+        mockElectronAPI.saveFile.mockResolvedValue(true);
+        const buffer = Buffer.from('');
+        
+        const errorMessage = 'saveEvidence: could not save evidence for VIG/file1.txt :'
+        await expect(fs.saveEvidence('VIG', 'file1.txt', buffer)).rejects.toThrowError(errorMessage+' File is empty');
+        await expect(fs.saveEvidence('VIG', 'file1.txt', undefined)).rejects.toThrowError(errorMessage+' Buffer is undefined');
+      });
+    
+    });
+
+    describe('saveExportFile', async () => { 
       it('calls saveFile with correct arguments', async () => {
  
         mockElectronAPI.saveFile.mockResolvedValue(true);
@@ -90,39 +114,70 @@ describe('fileServices', () => {
       
   });
 
-  it('saveSession calls saveFile with correct arguments', async () => {
-    const mockSessionSummary = {
-        specialty: "VIG",
-        location: "Location A",
-        finalized: false,
-        lastUpdated: "2023-01-01T10:00:00Z"
-      };
+  describe('saveSession', async () => { 
+    it('calls saveFile with correct arguments', async () => {
+      const mockSessionSummary = {
+          specialty: "VIG",
+          location: "Location A",
+          finalized: false,
+          lastUpdated: "2023-01-01T10:00:00Z"
+        };
+        
+        const mockSessionResponses = {
+          "1": {
+            id: "1",
+            compliance: "Compliant",
+            comments: "Test comments",
+            evidence: ["file1.txt"]
+          }
+        };
+      const mockCallback = () =>  {console.log("varna")}
+      mockElectronAPI.saveFile.mockResolvedValue(true);
       
-      const mockSessionResponses = {
-        "1": {
-          id: "1",
-          compliance: "Compliant",
-          comments: "Test comments",
-          evidence: ["file1.txt"]
-        }
-      };
-    const mockCallback = () =>  {console.log("varna")}
-    mockElectronAPI.saveFile.mockResolvedValue(true);
-    
-    const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
-    
-    expect(result).toBe(true);
-  });
-  it('saveSession saves session after debounce', async () => {
+      const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
+      
+      expect(result).toBe(true);
+    });
+
+    it('saves session after debounce', async () => {
+        vi.clearAllTimers();
+        
+      const mockSessionSummary = {
+          specialty: "VIG",
+          location: "Location A",
+          finalized: false,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        const mockSessionResponses = {
+          "1": {
+            id: "1",
+            compliance: "Compliant",
+            comments: "Test comments",
+            evidence: ["file1.txt"]
+          }
+        };
+      const mockCallback = () =>  {console.log("varna")}
+      const mockSessionString = JSON.stringify({ "summary" :mockSessionSummary, "responses" : mockSessionResponses }, null, 2);
+      const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
+  
+  
+        await vi.waitFor(() => {
+          vi.advanceTimersByTime(1000);
+        });
+  
+        expect(window.electronAPI.saveFile).toHaveBeenCalledWith(mockSessionString, null, "VIG", "session.json");
+    });
+  
+    it('handles errors', async () => {
       vi.clearAllTimers();
-      
-    const mockSessionSummary = {
-        specialty: "VIG",
-        location: "Location A",
-        finalized: false,
-        lastUpdated: new Date().toISOString()
-      };
-      
+      const mockSessionSummary = {
+          specialty: "VIG",
+          location: "Location A",
+          finalized: false,
+          lastUpdated: new Date().toISOString()
+        };
+        
       const mockSessionResponses = {
         "1": {
           id: "1",
@@ -131,47 +186,18 @@ describe('fileServices', () => {
           evidence: ["file1.txt"]
         }
       };
-    const mockCallback = () =>  {console.log("varna")}
-    const mockSessionString = JSON.stringify({ "summary" :mockSessionSummary, "responses" : mockSessionResponses }, null, 2);
-    const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
-
-
+      const mockCallback = vi.fn();
+      
+  
+      mockElectronAPI.saveFile.mockImplementationOnce(() => {throw new Error('Save failed')});
+      const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
+        
       await vi.waitFor(() => {
         vi.advanceTimersByTime(1000);
       });
-
-      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(mockSessionString, null, "VIG", "session.json");
-  });
-
-  it('saveSession handles errors', async () => {
-    vi.clearAllTimers();
-    const mockSessionSummary = {
-        specialty: "VIG",
-        location: "Location A",
-        finalized: false,
-        lastUpdated: new Date().toISOString()
-      };
-      
-    const mockSessionResponses = {
-      "1": {
-        id: "1",
-        compliance: "Compliant",
-        comments: "Test comments",
-        evidence: ["file1.txt"]
-      }
-    };
-    const mockCallback = vi.fn();
-    
-
-    mockElectronAPI.saveFile.mockImplementationOnce(() => {throw new Error('Save failed')});
-    const result = await fs.saveSession(mockSessionSummary, mockSessionResponses, mockCallback);
-      
-    await vi.waitFor(() => {
-      vi.advanceTimersByTime(1000);
+  
+      expect(result).toBe(true);
+      expect(mockCallback).toHaveBeenCalledWith('Save failed');
     });
-
-    expect(result).toBe(true);
-    expect(mockCallback).toHaveBeenCalledWith('Save failed');
   });
-
 });

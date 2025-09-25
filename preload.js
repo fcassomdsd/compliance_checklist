@@ -8,5 +8,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getStats: (filePath, ...pathLegs) => ipcRenderer.invoke('get-stats', filePath, pathLegs),
   listPath: (filePath, ...pathLegs) => ipcRenderer.invoke('list-path', filePath, pathLegs),
   readFile: (filePath, ...pathLegs) => ipcRenderer.invoke('read-file', filePath, pathLegs),
-  saveFile: (data, filePath, ...pathLegs) => ipcRenderer.invoke('save-file', data, filePath, pathLegs)
+  saveFile: (fileData, filePath, ...pathLegs) => ipcRenderer.invoke('save-file', fileData, filePath, pathLegs)
 });

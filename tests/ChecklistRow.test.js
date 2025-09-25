@@ -228,6 +228,7 @@ describe('ChecklistRow.vue', () => {
           value: files,
           writable: false,
       });      
+      
       await fileInput.trigger('change');
   
       expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[0]);
@@ -285,8 +286,8 @@ describe('ChecklistRow.vue', () => {
     });
   
     it('handles removeEvidence', async () => {
-      const trashButton = wrapper.find('input[type="image"]');
-      await trashButton.trigger('click');
+      const trashButton = wrapper.findAll('input[type="image"]');
+      await trashButton[2].trigger('click');
   
       expect(mockEvidenceStore.subtract).toHaveBeenCalledWith('VIG', 'file1.jpg');
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(1, 'checklist-1', 'evidence', []);
@@ -303,8 +304,8 @@ describe('ChecklistRow.vue', () => {
   
     it('handles removeEvidence error', async () => {
       mockEvidenceStore.subtract.mockRejectedValue(new Error('Remove failed'));
-      const trashButton = wrapper.find('input[type="image"]');
-      await trashButton.trigger('click');
+      const trashButton = wrapper.findAll('input[type="image"]');
+      await trashButton[2].trigger('click');
   
       expect(mockToast.error).toHaveBeenCalledWith('Remove failed');
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(1, 'checklist-1', 'evidence', []);
