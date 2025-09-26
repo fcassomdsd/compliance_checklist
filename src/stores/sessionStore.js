@@ -29,11 +29,16 @@ export const useSessionStore = defineStore('session', () => {
           delete responses[key];            
         }
 
-        if (specialty == "NONE") {
-            return;
-        } 
-
         try {
+
+            if ( (typeof specialty != "string") || specialty.length == 0 ) {
+              throw new Error("Invalid specialty value: " + specialty);            
+            }
+
+            if (specialty == "NONE") {
+                return;
+            } 
+
             // load session, if exists
             let sessionRead = await fs.loadSession(specialty);
             if (sessionRead !== null) {
@@ -48,6 +53,8 @@ export const useSessionStore = defineStore('session', () => {
                  }  
                  return value;
               });
+            } else {
+              summary.value.finalized = false;
             }
             if (!summary.value["specialty"]) {
               summary.value["specialty"] = specialty;
@@ -73,9 +80,15 @@ export const useSessionStore = defineStore('session', () => {
               summary.value,
               responses,
               displayToast);
-            toast.success("Session loaded");
+              
+            if (sessionRead !== null ) {
+              toast.success("Session loaded");
+            } else {
+              toast.info("New session created");
+            } 
         } catch (error) {
-            toast.error(error.message); // Or use toast notification
+            summary.value.finalized = true;
+            toast.error("Could not create session:" + error.message);
         }
     };
     

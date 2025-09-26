@@ -68,21 +68,28 @@ describe('fileServices', () => {
       it('calls saveFile with correct arguments', async () => {
  
         mockElectronAPI.saveFile.mockResolvedValue(true);
-        const buffer = Buffer.from('This is a buffer');
+        const result = await fs.saveEvidence('VIG', 'file1.txt', Buffer.from('This is a buffer'));
     
-        const result = await fs.saveEvidence('VIG', 'file1.txt', buffer);
-    
-        expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(buffer, null, 'VIG', 'Evidence', 'file1.txt');
+        expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(Buffer.from('This is a buffer'), null, 'VIG', 'Evidence', 'file1.txt');
       });
     
       it('throws error for empty or undefined buffer', async () => {
  
-        mockElectronAPI.saveFile.mockResolvedValue(true);
-        const buffer = Buffer.from('');
-        
         const errorMessage = 'saveEvidence: could not save evidence for VIG/file1.txt :'
-        await expect(fs.saveEvidence('VIG', 'file1.txt', buffer)).rejects.toThrowError(errorMessage+' File is empty');
+        await expect(fs.saveEvidence('VIG', 'file1.txt', Buffer.from(''))).rejects.toThrowError(errorMessage+' File is empty');
+
         await expect(fs.saveEvidence('VIG', 'file1.txt', undefined)).rejects.toThrowError(errorMessage+' Buffer is undefined');
+      });
+    
+      it('throws error for files over the size limit (10MB)', async () => {
+ 
+        mockElectronAPI.saveFile.mockResolvedValue(true);
+        const errorMessage = 'saveEvidence: could not save evidence for VIG/file1.txt : File size exceeds 10MB limit'
+
+        await expect(fs.saveEvidence('VIG', 'file1.txt', new ArrayBuffer(10*1000*1000+1))).rejects.toThrowError(errorMessage);
+
+        await fs.saveEvidence('VIG', 'file1.txt', new ArrayBuffer(10*1000*1000-1));
+
       });
     
     });

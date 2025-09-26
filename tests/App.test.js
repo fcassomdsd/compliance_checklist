@@ -42,7 +42,7 @@ describe('App.vue', () => {
       modalFinalizeTitle: 'Finalize Checklist',
       modalFinalizeExplanation: 'Finalizing the checklist will prevent further changes, and cannot be undone',
       modalFinalizeAction: 'finalize the current checklist',
-      loadChecklistAndSession: vi.fn(),
+      loadChecklist: vi.fn(),
       showFinalize : vi.fn(),
       confirmModal : vi.fn(),
       checkDefaultPath: vi.fn(),
@@ -53,6 +53,7 @@ describe('App.vue', () => {
     // Mock sesison store
     mockSession = {
       summary: { location: '', finalized: false },
+      loadSession: vi.fn(),
       finalize: vi.fn(),
     };
     vi.mocked(useSessionStore).mockReturnValue(mockSession);
@@ -92,11 +93,24 @@ describe('App.vue', () => {
     expect(options[1].attributes('value')).toBe('VIG');
   });
 
-  it('binds specialty to store and calls loadChecklistAndSession on change', async () => {
+  it('binds specialty to store and calls loadChecklist and loadSession on change', async () => {
+
+    mockStore.loadChecklist.mockResolvedValue(true);
     const select = wrapper.find('select');
     await select.setValue('VIG');
     expect(mockStore.specialty).toBe('VIG');
-    expect(mockStore.loadChecklistAndSession).toHaveBeenCalledTimes(1);
+    expect(mockStore.loadChecklist).toHaveBeenCalledTimes(1);
+    expect(mockSession.loadSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles checklist load errors correctly', async () => {
+
+    mockStore.loadChecklist.mockResolvedValue(false);
+    const select = wrapper.find('select');
+    await select.setValue('VIG');
+    expect(mockStore.specialty).toBe('VIG');
+    expect(mockStore.loadChecklist).toHaveBeenCalledTimes(1);
+    expect(mockSession.loadSession).not.toHaveBeenCalled();
   });
 
   it('renders finalize button disabled when finalized', async () => {

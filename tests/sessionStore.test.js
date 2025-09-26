@@ -39,7 +39,7 @@ describe('Session Store', () => {
     vi.mocked(reactive).mockImplementation((initialValue) => initialValue);
 
     // Mock useToast
-    mockToast = { success: vi.fn(), error: vi.fn() };
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), };
     vi.mocked(useToast).mockReturnValue(mockToast);
 
     // Mock createFileService
@@ -83,7 +83,7 @@ describe('Session Store', () => {
 
       await sessionStore.loadSession('VIG');
 
-      expect(mockToast.error).not.toHaveBeenCalled();
+      expect(mockToast.success).toHaveBeenCalledWith('Session loaded');
       expect(sessionStore.summary.value).toEqual({ location: '/path', finalized: false, specialty : "VIG" });
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } });
 
@@ -91,12 +91,39 @@ describe('Session Store', () => {
       expect(mockEvidence.load).toHaveBeenCalledWith('VIG');
     });
 
+    it('correctly creates session summary when file doesnt exist', async () => {
+      mockFs.loadSession.mockResolvedValue(null);
+
+      await expect(sessionStore.loadSession('VIG')).resolves.toBe(undefined);
+
+      expect(mockToast.info).toHaveBeenCalledWith('New session created');
+      expect(sessionStore.summary.value).toEqual({ location: '', finalized: false, specialty : "VIG" });
+      expect(sessionStore.responses).toEqual({});
+
+      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG');
+      expect(mockEvidence.load).not.toHaveBeenCalledWith();
+    });
+
+    it('handles invalid specialty value errors with toast', async () => {
+
+      await sessionStore.loadSession('');
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Invalid specialty value: ');
+
+      await sessionStore.loadSession(null);
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Invalid specialty value: null');
+
+      await sessionStore.loadSession(undefined);
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Invalid specialty value: undefined');
+
+      await sessionStore.loadSession({});
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Invalid specialty value: [object Object]');
+    });
+
     it('handles load errors with toast', async () => {
       mockFs.loadSession.mockRejectedValue(new Error('Load failed'));
 
       await sessionStore.loadSession('VIG');
-
-      expect(mockToast.error).toHaveBeenCalledWith('Load failed');
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Load failed');
     });
 
     it('updates evidence counts after loading', async () => {
