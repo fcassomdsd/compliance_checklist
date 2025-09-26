@@ -80,10 +80,7 @@ export const createFileService = () => {
         throw new Error('File is empty');
       }
 
-      console.log(`saveEvidence: fileSize = ${fileSize}`);
-      
       const toSave = Array.from(buffer);
-      console.log(toSave);
 
        // save if file doesn't exist or the size is different
       const stats = await window.electronAPI.getStats(DEFAULT_ROOT, specialty, "Evidence", fileName); 

@@ -87,16 +87,15 @@ describe('Checklist Store', () => {
     ]);
   });
 
-  describe('loadChecklistAndSession', () => {
+  describe('loadChecklist', () => {
     it('resets state and does nothing for specialty NONE', async () => {
       store.specialty.value = 'NONE';
-      await store.loadChecklistAndSession();
+      await store.loadChecklist();
 
       expect(store.checklist.value).toBe(null);
       expect(store.checklistLoaded.value).toBe(false);
 
       expect(mockFs.loadChecklist).not.toHaveBeenCalled();
-      expect(mockSession.loadSession).toHaveBeenCalled();
     });
 
     it('loads checklist, session, and evidence for valid specialty', async () => {
@@ -115,7 +114,7 @@ describe('Checklist Store', () => {
       mockFs.loadChecklist.mockResolvedValue(mockChecklist);
       mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence');
 
-      await store.loadChecklistAndSession();
+      await store.loadChecklist();
 
       expect(mockToast.error).not.toHaveBeenCalled();
       expect(store.checklist.value).toEqual(mockChecklist);
@@ -123,14 +122,13 @@ describe('Checklist Store', () => {
       expect(store.currentPath.value).toBe('/path/VIG/Evidence');
 
       expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG');
-      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG');
     });
 
     it('handles load errors with toast', async () => {
       store.specialty.value = 'VIG';
       mockFs.loadChecklist.mockRejectedValue(new Error('Load failed'));
 
-      await store.loadChecklistAndSession();
+      await store.loadChecklist();
 
       expect(store.checklistLoaded.value).toBe(false);
       expect(mockToast.error).toHaveBeenCalledWith('Load failed');

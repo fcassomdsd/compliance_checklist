@@ -40,14 +40,12 @@ export const useChecklistStore = defineStore('checklist', () => {
     
     
     // Actions
-    const loadChecklistAndSession = async () => {
+    const loadChecklist = async () => {
         // initialize state
         checklist.value = null;
         checklistLoaded.value = false;
             
         try {
-
-          await sessionStore.loadSession(specialty.value);
 
           if (specialty.value != "NONE") {
             // load checklist
@@ -61,6 +59,7 @@ export const useChecklistStore = defineStore('checklist', () => {
             toast.error(error.message);
             checklistLoaded.value = false;
         }
+        return checklistLoaded.value;
     };
     
    
@@ -165,7 +164,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         tituloModal,
         explanationModal,
         accionModal,
-        loadChecklistAndSession,
+        loadChecklist,
         showFinalize,
         checkDefaultPath,
         confirmModal,

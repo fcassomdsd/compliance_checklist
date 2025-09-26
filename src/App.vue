@@ -10,7 +10,7 @@
       <span>Location: {{ sessionStore.summary.location }}</span>
       <div>
         <label>Specialty:</label>
-        <select v-model="store.specialty" @change="store.loadChecklistAndSession">
+        <select v-model="store.specialty" @change="loadChecklistAndSession">
           <option value="NONE">Select a specialty</option>
           <option v-for="(specialty, index) in store.specialtyList" :key="index" :value="specialty.code" >
               {{specialty.name }}
@@ -43,11 +43,24 @@ import ChecklistTable from './components/ChecklistTable.vue';
 import ModalWindow from './components/ModalWindow.vue';
 import { useChecklistStore } from './stores/checklistStore';
 import { useSessionStore } from './stores/sessionStore';
+import { useToast } from 'vue-toastification';
 import logo from './images/compliance-logo.png'
 
 // Access the Pinia store
 const store = useChecklistStore();
 const sessionStore = useSessionStore();
+const toast = useToast();
+
+const loadChecklistAndSession = async () => {
+
+  try {
+  if (await store.loadChecklist()) {
+    await sessionStore.loadSession(store.specialty)  
+  }
+  } catch(error) {
+      toast.error("Could not load checklist or session: " + error.message);
+  }
+}
 
 onMounted( async () => {
 
