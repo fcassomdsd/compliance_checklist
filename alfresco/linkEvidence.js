@@ -17,42 +17,47 @@
 //        "evidence": [ "dddd1", "dddd2",...]
 //    }
 // }
-// 
-const baseDir = document.parent;
-const filesDir = baseDir.childByNamePath("Evidence");
-const linksDir = baseDir.childByNamePath("Links");
+//
+const baseDir = document.parent
+const filesDir = baseDir.childByNamePath('Evidence')
+const linksDir = baseDir.childByNamePath('Links')
 
-const filePrefix = baseDir.name;
-const sessionJSON = JSON.parse(baseDir.childByNamePath("session.json").content, (key, value) => ((typeof value == "object") && ("evidence" in value)) ? linkFileArray(key, value.evidence) : value);
+const filePrefix = baseDir.name
+const sessionJSON = JSON.parse(baseDir.childByNamePath('session.json').content, (key, value) =>
+  typeof value == 'object' && 'evidence' in value ? linkFileArray(key, value.evidence) : value
+)
 
 function linkFileArray(qnumber, listOfFiles) {
+  listOfFiles.map((x, index) => linkFile(x, qnumber, index + 1))
 
-  listOfFiles.map((x, index) => linkFile(x, qnumber, index+1));
-
-  return listOfFiles;
-
+  return listOfFiles
 }
 
 function linkFile(fileName, qnumber, seq) {
+  const sourceDocument = filesDir.childByNamePath(fileName)
+  var properties = []
+  properties['cm:name'] =
+    filePrefix +
+    '-P' +
+    qnumber.toString().padStart(3, '0') +
+    '-' +
+    seq.toString().padStart(2, '0') +
+    '-' +
+    fileName
+  properties['cm:destination'] = sourceDocument
 
-  const sourceDocument = filesDir.childByNamePath(fileName);
-  var properties = [];
-  properties["cm:name"] = filePrefix + "-P" + qnumber.toString().padStart(3, "0") + "-" + seq.toString().padStart(2, "0") + "-" + fileName;
-  properties["cm:destination"] = sourceDocument;
-  
   var linkNode = linksDir.createNode(
-      properties["cm:name"],
-      "{http://www.alfresco.org/model/application/1.0}filelink",
-      properties
-  );
+    properties['cm:name'],
+    '{http://www.alfresco.org/model/application/1.0}filelink',
+    properties
+  )
 
-  linkNode.save(); // Save the newly created link node
+  linkNode.save() // Save the newly created link node
 
-  if (!sourceDocument.hasAspect("app:linked")) {
-    sourceDocument.addAspect("app:linked");
-    sourceDocument.save();
+  if (!sourceDocument.hasAspect('app:linked')) {
+    sourceDocument.addAspect('app:linked')
+    sourceDocument.save()
   }
 
-  return properties["cm:name"];
-
+  return properties['cm:name']
 }

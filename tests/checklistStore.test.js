@@ -1,305 +1,312 @@
-import { describe, it, test, expect, vi, beforeEach } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
-import { ref, reactive } from 'vue';
-import { useToast } from 'vue-toastification';
-import { createFileService } from '../src/fileServices.js';
-import { useChecklistStore } from '../src/stores/checklistStore.js';
-import { useSessionStore } from '../src/stores/sessionStore.js';
+import { describe, it, test, expect, vi, beforeEach } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { ref, reactive } from 'vue'
+import { useToast } from 'vue-toastification'
+import { createFileService } from '../src/fileServices.js'
+import { useChecklistStore } from '../src/stores/checklistStore.js'
+import { useSessionStore } from '../src/stores/sessionStore.js'
 
 // Mock dependencies
 vi.mock('vue', () => ({
-  ref: vi.fn((refValue) => ({ "value" : refValue})),
+  ref: vi.fn((refValue) => ({ value: refValue })),
   reactive: vi.fn(),
-}));
+}))
 vi.mock('vue-toastification', () => ({
   useToast: vi.fn(),
-}));
-vi.mock('../src/fileServices.js');
-vi.mock('../src/stores/sessionStore.js');
+}))
+vi.mock('../src/fileServices.js')
+vi.mock('../src/stores/sessionStore.js')
 
 // timers
-vi.useFakeTimers();
-
+vi.useFakeTimers()
 
 describe('Checklist Store', () => {
-  let pinia;
-  let store;
-  let mockFs;
-  let mockToast;
-  let mockSession;
+  let pinia
+  let store
+  let mockFs
+  let mockToast
+  let mockSession
   //const displayToast = (msg) => msg;
 
   beforeEach(() => {
-    pinia = createPinia();
-    setActivePinia(pinia);
-    vi.clearAllMocks();
-    vi.clearAllTimers();
+    pinia = createPinia()
+    setActivePinia(pinia)
+    vi.clearAllMocks()
+    vi.clearAllTimers()
 
     // Mock ref and reactive
-    vi.mocked(ref).mockImplementation((initialValue) => ({ value: initialValue }));
-    vi.mocked(reactive).mockImplementation((initialValue) => initialValue);
+    vi.mocked(ref).mockImplementation((initialValue) => ({ value: initialValue }))
+    vi.mocked(reactive).mockImplementation((initialValue) => initialValue)
 
     // Mock useToast
-    mockToast = { success: vi.fn(), error: vi.fn() };
-    vi.mocked(useToast).mockReturnValue(mockToast);
+    mockToast = { success: vi.fn(), error: vi.fn() }
+    vi.mocked(useToast).mockReturnValue(mockToast)
 
     // Mock createFileService
     mockFs = {
       loadChecklist: vi.fn(),
-      defaultPathExists : vi.fn(),
+      defaultPathExists: vi.fn(),
       createDefaultPath: vi.fn(),
       readEvidence: vi.fn(),
       setSavePath: vi.fn(),
       saveExportFile: vi.fn(),
       updateEvidenceCount: vi.fn(),
-    };
-    vi.mocked(createFileService).mockReturnValue(mockFs);
-    
+    }
+    vi.mocked(createFileService).mockReturnValue(mockFs)
+
     mockSession = {
-      summary: { "value" : {} },
-      responses : {},
+      summary: { value: {} },
+      responses: {},
       loadSession: vi.fn(),
-      updateSession: vi.fn(),    
-      finalize: vi.fn(),    
-    };
-    vi.mocked(useSessionStore).mockReturnValue(mockSession);
-    
+      updateSession: vi.fn(),
+      finalize: vi.fn(),
+    }
+    vi.mocked(useSessionStore).mockReturnValue(mockSession)
+
     // Initialize store
-    store = useChecklistStore();
-  });
+    store = useChecklistStore()
+  })
 
   it('initializes state correctly', () => {
-    expect(store.specialty).toEqual({ "value" : 'NONE'});
-    expect(store.checklist).toEqual({ "value" : null  });
-    expect(store.checklistLoaded).toEqual({ "value" : false});
-    expect(store.currentPath).toEqual({ "value" : '' });
-    expect(store.showModal).toEqual({ "value" : false });
-    expect(store.tituloModal).toEqual({ "value" : '' });
-    expect(store.explanationModal).toEqual({ "value" : '' });
-    expect(store.accionModal).toEqual({ "value" : '' });
-    
+    expect(store.specialty).toEqual({ value: 'NONE' })
+    expect(store.checklist).toEqual({ value: null })
+    expect(store.checklistLoaded).toEqual({ value: false })
+    expect(store.currentPath).toEqual({ value: '' })
+    expect(store.showModal).toEqual({ value: false })
+    expect(store.tituloModal).toEqual({ value: '' })
+    expect(store.explanationModal).toEqual({ value: '' })
+    expect(store.accionModal).toEqual({ value: '' })
+
     // Verify specialtyList
     expect(store.specialtyList).toEqual([
       { code: 'VIG', name: 'Vigilancia Radar' },
       { code: 'COM', name: 'Comunicaciones de Radio' },
       { code: 'RNA', name: 'Radioayudas' },
       { code: 'EEM', name: 'Energia y Equipos MET' },
-    ]);
-  });
+    ])
+  })
 
   describe('loadChecklist', () => {
     it('resets state and does nothing for specialty NONE', async () => {
-      store.specialty.value = 'NONE';
-      await store.loadChecklist();
+      store.specialty.value = 'NONE'
+      await store.loadChecklist()
 
-      expect(store.checklist.value).toBe(null);
-      expect(store.checklistLoaded.value).toBe(false);
+      expect(store.checklist.value).toBe(null)
+      expect(store.checklistLoaded.value).toBe(false)
 
-      expect(mockFs.loadChecklist).not.toHaveBeenCalled();
-    });
+      expect(mockFs.loadChecklist).not.toHaveBeenCalled()
+    })
 
     it('loads checklist, session, and evidence for valid specialty', async () => {
-      store.specialty.value = 'VIG';
-      let mockChecklist =  {
-            specialty: 'VIG',
-            questions: [{
-              id : "1",
-              question : "question 1",
-              verification : "verification 1",
-              topic : "topic 1",
-              sequence : "0010",
-              reference : "reference 1"
-              }]
-           }
-      mockFs.loadChecklist.mockResolvedValue(mockChecklist);
-      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence');
+      store.specialty.value = 'VIG'
+      let mockChecklist = {
+        specialty: 'VIG',
+        questions: [
+          {
+            id: '1',
+            question: 'question 1',
+            verification: 'verification 1',
+            topic: 'topic 1',
+            sequence: '0010',
+            reference: 'reference 1',
+          },
+        ],
+      }
+      mockFs.loadChecklist.mockResolvedValue(mockChecklist)
+      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
 
-      await store.loadChecklist();
+      await store.loadChecklist()
 
-      expect(mockToast.error).not.toHaveBeenCalled();
-      expect(store.checklist.value).toEqual(mockChecklist);
-      expect(store.checklistLoaded.value).toBe(true);
-      expect(store.currentPath.value).toBe('/path/VIG/Evidence');
+      expect(mockToast.error).not.toHaveBeenCalled()
+      expect(store.checklist.value).toEqual(mockChecklist)
+      expect(store.checklistLoaded.value).toBe(true)
+      expect(store.currentPath.value).toBe('/path/VIG/Evidence')
 
-      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG');
-    });
+      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG')
+    })
 
     it('handles load errors with toast', async () => {
-      store.specialty.value = 'VIG';
-      mockFs.loadChecklist.mockRejectedValue(new Error('Load failed'));
+      store.specialty.value = 'VIG'
+      mockFs.loadChecklist.mockRejectedValue(new Error('Load failed'))
 
-      await store.loadChecklist();
+      await store.loadChecklist()
 
-      expect(store.checklistLoaded.value).toBe(false);
-      expect(mockToast.error).toHaveBeenCalledWith('Load failed');
-    });
-  });
+      expect(store.checklistLoaded.value).toBe(false)
+      expect(mockToast.error).toHaveBeenCalledWith('Load failed')
+    })
+  })
 
   describe('showFinalize', () => {
     it('sets modal state', () => {
-      store.showFinalize();
+      store.showFinalize()
 
-      expect(store.tituloModal.value).toBe('Finalize Checklist');
-      expect(store.explanationModal.value).toBe('Finalizing the checklist will prevent further changes, and cannot be undone');
-      expect(store.accionModal.value).toBe('finalize the current checklist');
-      expect(store.showModal.value).toBe(true);
-    });
-  });
+      expect(store.tituloModal.value).toBe('Finalize Checklist')
+      expect(store.explanationModal.value).toBe(
+        'Finalizing the checklist will prevent further changes, and cannot be undone'
+      )
+      expect(store.accionModal.value).toBe('finalize the current checklist')
+      expect(store.showModal.value).toBe(true)
+    })
+  })
 
   describe('confirmModal', () => {
     it('handles finalize modal', async () => {
-      store.tituloModal.value = 'Finalize Checklist';
-      store.confirmModal();
+      store.tituloModal.value = 'Finalize Checklist'
+      store.confirmModal()
       await vi.waitFor(() => {
-        vi.advanceTimersByTime(1000);
-      });
+        vi.advanceTimersByTime(1000)
+      })
 
-      expect(mockToast.success).toHaveBeenCalledWith('Checklist finalized successfully!');
-      expect(mockSession.finalize).toHaveBeenCalled();
-    });
+      expect(mockToast.success).toHaveBeenCalledWith('Checklist finalized successfully!')
+      expect(mockSession.finalize).toHaveBeenCalled()
+    })
 
     it('handles create default path modal', () => {
-      store.tituloModal.value = 'Create default path';
-      mockFs.createDefaultPath.mockImplementation((code) => true);
+      store.tituloModal.value = 'Create default path'
+      mockFs.createDefaultPath.mockImplementation((code) => true)
 
-      store.confirmModal();
+      store.confirmModal()
 
-      expect(mockFs.createDefaultPath).toHaveBeenCalledTimes(4); // For each specialty
-      expect(mockToast.success).toHaveBeenCalledWith('Default path created successfully!');
-    });
+      expect(mockFs.createDefaultPath).toHaveBeenCalledTimes(4) // For each specialty
+      expect(mockToast.success).toHaveBeenCalledWith('Default path created successfully!')
+    })
 
     it('handles unknown modal', () => {
-      store.tituloModal.value = 'Unknown';
-      store.confirmModal();
+      store.tituloModal.value = 'Unknown'
+      store.confirmModal()
 
-      expect(mockToast.success).not.toHaveBeenCalled();
-    });
-  });
+      expect(mockToast.success).not.toHaveBeenCalled()
+    })
+  })
 
   describe('checkDefaultPath', () => {
     it('shows create default path modal', async () => {
-      await store.checkDefaultPath();
+      await store.checkDefaultPath()
 
-      expect(mockFs.defaultPathExists).toHaveBeenCalled();
-      expect(store.tituloModal.value).toBe('Create default path');
-      expect(store.explanationModal.value).toBe('The default path for inspection data does not exist.  I can create it for you.');
-      expect(store.accionModal.value).toBe('create the default path');
-      expect(store.showModal.value).toBe(true);
-    });
-  });
+      expect(mockFs.defaultPathExists).toHaveBeenCalled()
+      expect(store.tituloModal.value).toBe('Create default path')
+      expect(store.explanationModal.value).toBe(
+        'The default path for inspection data does not exist.  I can create it for you.'
+      )
+      expect(store.accionModal.value).toBe('create the default path')
+      expect(store.showModal.value).toBe(true)
+    })
+  })
 
   describe('export', () => {
-    beforeEach( () => {
-
-      store.specialty.value = 'VIG';
-      store.checklist.value =  {
-            specialty: 'VIG',
-            questions: [{
-                id : "1",
-                question : "question 1",
-                verification : "verification 1",
-                topic : "topic 1",
-                sequence : "0010",
-                reference : "reference 1"
-              },{
-                id : "2",
-                question : "question 2",
-                verification : "verification 2",
-                topic : "topic 1",
-                sequence : "0020",
-                reference : "reference 2"
-              },{
-                id : "3",
-                question : "question 3",
-                verification : "verification 3",
-                topic : "topic 2",
-                sequence : "0010",
-                reference : "reference 3"
-              },{
-                id : "4",
-                question : "question 4",
-                verification : "verification 4",
-                topic : "topic 2",
-                sequence : "0020",
-                reference : "reference 4"
-              },{
-                id : "5",
-                question : "question 5",
-                verification : "verification 5",
-                topic : "topic 3",
-                sequence : "0010",
-                reference : "reference 5"
-              },{
-                id : "6",
-                question : "question 6",
-                verification : "verification 6",
-                topic : "topic 3",
-                sequence : "0020",
-                reference : "reference 6"
-              }
-            ]
-          }
+    beforeEach(() => {
+      store.specialty.value = 'VIG'
+      store.checklist.value = {
+        specialty: 'VIG',
+        questions: [
+          {
+            id: '1',
+            question: 'question 1',
+            verification: 'verification 1',
+            topic: 'topic 1',
+            sequence: '0010',
+            reference: 'reference 1',
+          },
+          {
+            id: '2',
+            question: 'question 2',
+            verification: 'verification 2',
+            topic: 'topic 1',
+            sequence: '0020',
+            reference: 'reference 2',
+          },
+          {
+            id: '3',
+            question: 'question 3',
+            verification: 'verification 3',
+            topic: 'topic 2',
+            sequence: '0010',
+            reference: 'reference 3',
+          },
+          {
+            id: '4',
+            question: 'question 4',
+            verification: 'verification 4',
+            topic: 'topic 2',
+            sequence: '0020',
+            reference: 'reference 4',
+          },
+          {
+            id: '5',
+            question: 'question 5',
+            verification: 'verification 5',
+            topic: 'topic 3',
+            sequence: '0010',
+            reference: 'reference 5',
+          },
+          {
+            id: '6',
+            question: 'question 6',
+            verification: 'verification 6',
+            topic: 'topic 3',
+            sequence: '0020',
+            reference: 'reference 6',
+          },
+        ],
+      }
 
       mockSession.summary.value = {
-        specialty: "VIG",
-        location: "Location A",
+        specialty: 'VIG',
+        location: 'Location A',
         finalized: true,
-        lastUpdated: new Date().toISOString()
-      };
+        lastUpdated: new Date().toISOString(),
+      }
 
-      mockSession.responses["1"] = {
-        id: "1",
-        compliance: "Compliant",
+      mockSession.responses['1'] = {
+        id: '1',
+        compliance: 'Compliant',
         comments: 'Test "comments"',
-      };
+      }
 
-      mockSession.responses["3"] = {
-        id: "2",
-        comments: "Multiline\nTest comments",
-      };
+      mockSession.responses['3'] = {
+        id: '2',
+        comments: 'Multiline\nTest comments',
+      }
 
-      mockSession.responses["4"] = {
-        id: "3",
-        compliance: "Non-compliant",
-        comments: "Multiline\nTest comments"
-      };
+      mockSession.responses['4'] = {
+        id: '3',
+        compliance: 'Non-compliant',
+        comments: 'Multiline\nTest comments',
+      }
 
-      mockSession.responses["5"] = {
-        id: "4",
-        compliance: "Non-compliant"
-      };
+      mockSession.responses['5'] = {
+        id: '4',
+        compliance: 'Non-compliant',
+      }
 
-      mockSession.responses["6"] = {
-        id: "5",
-        compliance: "Not applicable",
-        comments: "comments 6"
-      };
+      mockSession.responses['6'] = {
+        id: '5',
+        compliance: 'Not applicable',
+        comments: 'comments 6',
+      }
+    })
 
-    });
-    
     it('creates export string correctly', async () => {
-
       const exportedString =
         'topic 2\n' +
-        '4|"reference 4"|"question 4"|"Non-compliant"|"Multiline<br>Test comments"\n'+   
+        '4|"reference 4"|"question 4"|"Non-compliant"|"Multiline<br>Test comments"\n' +
         'topic 3\n' +
-        '5|\"reference 5\"|\"question 5\"|\"Non-compliant\"|\"\"'   
+        '5|\"reference 5\"|\"question 5\"|\"Non-compliant\"|\"\"'
 
-      store.exportChecklist();
+      store.exportChecklist()
 
-      expect(mockToast.error).not.toHaveBeenCalled();
-      await expect(mockFs.saveExportFile).toHaveBeenCalledWith(exportedString, "VIG");
-      expect(mockToast.success).toHaveBeenCalledWith('Checklist exported');
-    });
+      expect(mockToast.error).not.toHaveBeenCalled()
+      await expect(mockFs.saveExportFile).toHaveBeenCalledWith(exportedString, 'VIG')
+      expect(mockToast.success).toHaveBeenCalledWith('Checklist exported')
+    })
 
     it('handles an emtpy checklist', async () => {
+      store.checklist.value.questions = []
 
-      store.checklist.value.questions = [];
-  
-      store.exportChecklist();
+      store.exportChecklist()
 
-      await expect(mockFs.saveExportFile).not.toBeCalledWith('abc', "VIG");
-      expect(mockToast.error).toHaveBeenCalledWith('Empty checklist not exported');
-    });
-  });
-});
+      await expect(mockFs.saveExportFile).not.toBeCalledWith('abc', 'VIG')
+      expect(mockToast.error).toHaveBeenCalledWith('Empty checklist not exported')
+    })
+  })
+})

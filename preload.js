@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   checkPath: (filePath, ...pathLegs) => ipcRenderer.invoke('check-path', filePath, pathLegs),
@@ -8,5 +8,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getStats: (filePath, ...pathLegs) => ipcRenderer.invoke('get-stats', filePath, pathLegs),
   listPath: (filePath, ...pathLegs) => ipcRenderer.invoke('list-path', filePath, pathLegs),
   readFile: (filePath, ...pathLegs) => ipcRenderer.invoke('read-file', filePath, pathLegs),
-  saveFile: (fileData, filePath, ...pathLegs) => ipcRenderer.invoke('save-file', fileData, filePath, pathLegs)
-});
+  saveFile: (fileData, filePath, ...pathLegs) =>
+    ipcRenderer.invoke('save-file', fileData, filePath, pathLegs),
+})

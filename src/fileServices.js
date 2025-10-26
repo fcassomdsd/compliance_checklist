@@ -1,180 +1,197 @@
-import { parseChecklist } from '../utils/checklist.js';
-import { parseSession } from '../utils/session.js';
+import { parseChecklist } from '../utils/checklist.js'
+import { parseSession } from '../utils/session.js'
 
 export const createFileService = () => {
-
   // Default maximum file upload size
-  const EVIDENCE_MAX_SIZE = getSizeAndSuffix("10MB");
-  const DEFAULT_ROOT = null;
-  
-  let saveTimer;
+  const EVIDENCE_MAX_SIZE = getSizeAndSuffix('10MB')
+  const DEFAULT_ROOT = null
+
+  let saveTimer
 
   function getSizeAndSuffix(sizeString) {
-    
     const suffix = [
-      { "finder" : "B", "power" : 0, "base" : 1 },    
-      { "finder" : "KB", "power" : 1, "base" : 1000, "label" : "kB" },    
-      { "finder" : "MB", "power" : 2, "base" : 1000 },    
-      { "finder" : "GB", "power" : 3, "base" : 1000 },    
-      { "finder" : "KIB", "power" : 1, "base" : 1024, "label" : "KiB" },    
-      { "finder" : "MIB", "power" : 2, "base" : 1024, "label" : "MiB" },    
-      { "finder" : "GIB", "power" : 3, "base" : 1024, "label" : "GiB" }
+      { finder: 'B', power: 0, base: 1 },
+      { finder: 'KB', power: 1, base: 1000, label: 'kB' },
+      { finder: 'MB', power: 2, base: 1000 },
+      { finder: 'GB', power: 3, base: 1000 },
+      { finder: 'KIB', power: 1, base: 1024, label: 'KiB' },
+      { finder: 'MIB', power: 2, base: 1024, label: 'MiB' },
+      { finder: 'GIB', power: 3, base: 1024, label: 'GiB' },
     ]
-    
+
     // separate the size and the suffix
-    const ss = sizeString.match(/^([0-9]+([.][0-9]+){0,1})|([kmg]i{0,1}){0,1}b$/gi);
+    const ss = sizeString.match(/^([0-9]+([.][0-9]+){0,1})|([kmg]i{0,1}){0,1}b$/gi)
     if (!ss) {
-      throw new Error("Invalid file size format: " + sizeString);
+      throw new Error('Invalid file size format: ' + sizeString)
     }
 
     // get information about the suffix
-    const suffixInfo = suffix.find((x) => x.finder == ss[1].toUpperCase());
-      
-    const totalSize = Number.parseFloat(ss[0]) * Math.pow(suffixInfo.base, suffixInfo.power);
-    const sizeLabel = ( "label" in suffixInfo ? suffixInfo.label : suffixInfo.finder );
+    const suffixInfo = suffix.find((x) => x.finder == ss[1].toUpperCase())
 
-    return { "size" : totalSize, "label" : ss[0] + sizeLabel };
+    const totalSize = Number.parseFloat(ss[0]) * Math.pow(suffixInfo.base, suffixInfo.power)
+    const sizeLabel = 'label' in suffixInfo ? suffixInfo.label : suffixInfo.finder
+
+    return { size: totalSize, label: ss[0] + sizeLabel }
   }
 
   const defaultPathExists = async () => {
     try {
-      return await window.electronAPI.checkPath(DEFAULT_ROOT);
+      return await window.electronAPI.checkPath(DEFAULT_ROOT)
     } catch (error) {
-      throw new Error("defaultPathExists: could not check default path: " + error.message);
+      throw new Error('defaultPathExists: could not check default path: ' + error.message)
     }
   }
 
   const setSavePath = async (specialty) => {
-  try {
-      const filePath = window.electronAPI.getPath(DEFAULT_ROOT, specialty);
+    try {
+      const filePath = window.electronAPI.getPath(DEFAULT_ROOT, specialty)
       if (await window.electronAPI.checkPath(DEFAULT_ROOT, specialty)) {
-        return filePath;
-      }
-      else {
-        return null;
+        return filePath
+      } else {
+        return null
       }
     } catch (error) {
-      throw new Error(`setSavePath: could not save path ${specialty} : ` + error.message);
+      throw new Error(`setSavePath: could not save path ${specialty} : ` + error.message)
     }
   }
 
   const createDefaultPath = async (filePath) => {
     try {
-      await window.electronAPI.createDir(DEFAULT_ROOT, filePath, "Evidence");  
+      await window.electronAPI.createDir(DEFAULT_ROOT, filePath, 'Evidence')
     } catch (error) {
-      throw new Error(`createDefaultPath: could not create path ${filePath} : ` + error.message);
+      throw new Error(`createDefaultPath: could not create path ${filePath} : ` + error.message)
     }
   }
 
   const saveEvidence = async (specialty, fileName, buffer) => {
     try {
-      
       if (buffer === undefined) {
-        throw new Error('Buffer is undefined');      
+        throw new Error('Buffer is undefined')
       }
-      const fileSize = buffer.byteLength;
+      const fileSize = buffer.byteLength
       if (fileSize > EVIDENCE_MAX_SIZE.size) {
-        throw new Error(`File size exceeds ${EVIDENCE_MAX_SIZE.label} limit`);
+        throw new Error(`File size exceeds ${EVIDENCE_MAX_SIZE.label} limit`)
       }
       if (fileSize == 0) {
-        throw new Error('File is empty');
+        throw new Error('File is empty')
       }
 
-      const toSave = Array.from(buffer);
-
-       // save if file doesn't exist or the size is different
-      const stats = await window.electronAPI.getStats(DEFAULT_ROOT, specialty, "Evidence", fileName); 
-      if (!stats || (fileSize != stats.size)) {
-        const savedPath = await window.electronAPI.saveFile(buffer, DEFAULT_ROOT, specialty, "Evidence", fileName);
-        return savedPath;
-      }
-      else {
-        return null;
+      // save if file doesn't exist or the size is different
+      const stats = await window.electronAPI.getStats(DEFAULT_ROOT, specialty, 'Evidence', fileName)
+      if (!stats || fileSize != stats.size) {
+        const savedPath = await window.electronAPI.saveFile(
+          buffer,
+          DEFAULT_ROOT,
+          specialty,
+          'Evidence',
+          fileName
+        )
+        return savedPath
+      } else {
+        return null
       }
     } catch (error) {
-      throw new Error(`saveEvidence: could not save evidence for ${specialty}/${fileName} : ` + error.message);
+      throw new Error(
+        `saveEvidence: could not save evidence for ${specialty}/${fileName} : ` + error.message
+      )
     }
   }
 
   const deleteEvidence = async (specialty, fileName) => {
     try {
-      const deleted = await window.electronAPI.deleteFile(DEFAULT_ROOT, specialty, "Evidence", fileName);
-      return deleted;
+      const deleted = await window.electronAPI.deleteFile(
+        DEFAULT_ROOT,
+        specialty,
+        'Evidence',
+        fileName
+      )
+      return deleted
     } catch (error) {
-      throw new Error(`deleteEvidence: could not delete evidence ${specialty}/${fileName} : ` + error.message);
+      throw new Error(
+        `deleteEvidence: could not delete evidence ${specialty}/${fileName} : ` + error.message
+      )
     }
   }
-  
+
   const loadChecklist = async (specialty) => {
     try {
-      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, specialty, "checklist.json")
-      return parseChecklist(fileContents);
+      const fileContents = await window.electronAPI.readFile(
+        DEFAULT_ROOT,
+        specialty,
+        'checklist.json'
+      )
+      return parseChecklist(fileContents)
     } catch (error) {
-      throw new Error(`loadChecklist: could not load checklist for ${specialty} : ` + error.message);
+      throw new Error(`loadChecklist: could not load checklist for ${specialty} : ` + error.message)
     }
   }
-  
+
   const loadSession = async (specialty) => {
     try {
-      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, specialty, "session.json");
+      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, specialty, 'session.json')
       if (found) {
-        const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, specialty, "session.json")
-        return parseSession(fileContents);
-      }
-      else {
-        return null;
+        const fileContents = await window.electronAPI.readFile(
+          DEFAULT_ROOT,
+          specialty,
+          'session.json'
+        )
+        return parseSession(fileContents)
+      } else {
+        return null
       }
     } catch (error) {
-      throw new Error(`loadSession: could not load session for ${specialty} : ` + error.message);
+      throw new Error(`loadSession: could not load session for ${specialty} : ` + error.message)
     }
   }
-  
+
   const readEvidence = async (specialty) => {
     try {
-      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, specialty, "Evidence");
-      return dirList;
+      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, specialty, 'Evidence')
+      return dirList
     } catch (error) {
-      throw new Error(`readEvidence: could not read evidence for ${specialty} : ` + error.message);
+      throw new Error(`readEvidence: could not read evidence for ${specialty} : ` + error.message)
     }
   }
-  
+
   const saveSession = (summary, responses, displayError) => {
-
     // make sure they are objects and not strings
-    const newSummary = (typeof summary == 'string' ? JSON.parse(summary) : summary);
-    const newResponses = (typeof summary == 'string' ? JSON.parse(responses) : responses);
-    
-    let sessionObj = {"summary" : newSummary, "responses" : newResponses};
-    sessionObj.summary.lastUpdated = new Date().toISOString();
+    const newSummary = typeof summary == 'string' ? JSON.parse(summary) : summary
+    const newResponses = typeof summary == 'string' ? JSON.parse(responses) : responses
 
-    clearTimeout(saveTimer);
+    let sessionObj = { summary: newSummary, responses: newResponses }
+    sessionObj.summary.lastUpdated = new Date().toISOString()
+
+    clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
       try {
-        const sessionString = JSON.stringify(sessionObj, null, 2); 
-        window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, newSummary.specialty, "session.json");
-        return true;
+        const sessionString = JSON.stringify(sessionObj, null, 2)
+        window.electronAPI.saveFile(
+          sessionString,
+          DEFAULT_ROOT,
+          newSummary.specialty,
+          'session.json'
+        )
+        return true
       } catch (err) {
-        displayError(err.message);
+        displayError(err.message)
       }
-    }, 1000);
-    
-    return true;
+    }, 1000)
+
+    return true
   }
-  
+
   const saveExportFile = async (csvContent, specialty) => {
-
     try {
-      if ( !csvContent || csvContent.length == 0) {
-        throw new Error('Empty checklist detected');
+      if (!csvContent || csvContent.length == 0) {
+        throw new Error('Empty checklist detected')
       }
-      const fileName = 'compliance_export.csv'; 
-      await window.electronAPI.saveFile(csvContent, DEFAULT_ROOT, specialty, fileName);
+      const fileName = 'compliance_export.csv'
+      await window.electronAPI.saveFile(csvContent, DEFAULT_ROOT, specialty, fileName)
     } catch (error) {
-      throw new Error('saveExportFile: could not save file: ' + error.message);
+      throw new Error('saveExportFile: could not save file: ' + error.message)
     }
-
   }
-  
+
   return {
     defaultPathExists,
     setSavePath,
@@ -185,6 +202,6 @@ export const createFileService = () => {
     loadSession,
     readEvidence,
     saveExportFile,
-    saveSession
+    saveSession,
   }
 }
