@@ -2,7 +2,6 @@ node_modules/
 logs/
 dist/
 dist-*/
-package-lock.json
 *~
 .~lock*
 *old
