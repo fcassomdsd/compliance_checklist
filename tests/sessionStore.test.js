@@ -61,7 +61,7 @@ describe('Session Store', () => {
 
   it('initializes state correctly', () => {
     expect(sessionStore.responses).toEqual({})
-    expect(sessionStore.summary).toEqual({ value: { location: '', finalized: true } })
+    expect(sessionStore.summary).toEqual({ value: { location: '', finalized: true, generalComments: '' } })
   })
 
   describe('loadSession', () => {
@@ -78,7 +78,7 @@ describe('Session Store', () => {
 
     it('loads session and evidence for valid specialty', async () => {
       mockFs.loadSession.mockResolvedValue({
-        summary: { location: '/path' },
+        summary: { location: '/path', generalComments: '' },
         responses: { 1: { id: '1' } },
       })
       mockEvidence.load.mockResolvedValue([{ name: 'file.txt', URL: '/path/file.txt', count: 1 }])
@@ -90,6 +90,7 @@ describe('Session Store', () => {
         location: '/path',
         finalized: false,
         specialty: 'VIG',
+        generalComments: '',
       })
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
 
@@ -107,6 +108,7 @@ describe('Session Store', () => {
         location: '',
         finalized: false,
         specialty: 'VIG',
+        generalComments: '',
       })
       expect(sessionStore.responses).toEqual({})
 
@@ -210,6 +212,7 @@ describe('Session Store', () => {
         location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
+        generalComments: '',
       }
       sessionStore.responses['1'] = {
         id: '1',
@@ -231,6 +234,7 @@ describe('Session Store', () => {
         location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
+        generalComments: '',
       }
       sessionStore.responses['1'] = {
         id: '1',
@@ -242,8 +246,8 @@ describe('Session Store', () => {
       sessionStore.responses['2'] = {
         id: '2',
         compliance: 'Non-compliant',
-        comments: 'Test comments',
         nonConformity: 'bla bla bla',
+        comments: 'Test comments',
         evidence: ['file2.txt'],
       }
       sessionStore.responses['3'] = {

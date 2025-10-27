@@ -28,7 +28,7 @@ describe('ChecklistRow.vue', () => {
 
     // Mock checklist store
     mockSessionStore = {
-      summary: { finalized: false, specialty: 'VIG' },
+      summary: { finalized: false, specialty: 'VIG', generalComments: '' }, // <-- added generalComments
       updateSession: vi.fn(),
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSessionStore)

@@ -53,7 +53,7 @@ describe('App.vue', () => {
 
     // Mock sesison store
     mockSession = {
-      summary: { location: '', finalized: false },
+      summary: { location: '', finalized: false, generalComments: '' }, // <-- added
       loadSession: vi.fn(),
       finalize: vi.fn(),
     }
@@ -176,6 +176,32 @@ describe('App.vue', () => {
     const button = wrapper.find('#exportBtn')
     await button.trigger('click')
     expect(mockStore.exportChecklist).toHaveBeenCalled()
+  })
+
+  it('renders general comments button enabled when checklist loaded', () => {
+    mockStore.checklistLoaded = true
+
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    const button = wrapper.find('#genCommentsToggle')
+    expect(button.attributes('disabled')).toBeUndefined()
+    expect(button.text()).toBe('Show General Comments')
+  })
+
+  it('renders general comments button disabled when checklist not loaded', async () => {
+    mockStore.checklistLoaded = false
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    const button = wrapper.find('#genCommentsToggle')
+    expect(button.attributes('disabled')).toBeDefined()
+  })
+
+  it('shows and hides general comments on button click', async () => {
+    mockStore.checklistLoaded = true
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    expect(wrapper.find('div[class="general-comments"]').exists()).toBe(false)
+    const button = wrapper.find('#genCommentsToggle')
+    await button.trigger('click')
+    expect(button.text()).toBe("Hide General Comments")
+    expect(wrapper.find('div[class="general-comments"]').exists()).toBe(true)
   })
 
   it('passes props to ModalWindow', () => {
