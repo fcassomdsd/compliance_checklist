@@ -27,7 +27,7 @@ Examples of unacceptable behavior:
 ## Enforcement
 
 Instances of abusive behavior may be reported to:
-**Project Maintainer:** your.email@example.com  
+**Fernando Casso:** fcassorguez0427@gmail.com  
 All complaints will be reviewed fairly and confidentially.
 
 This Code of Conduct is adapted from the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
