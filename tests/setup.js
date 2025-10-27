@@ -23,6 +23,7 @@ global.window = {
         location: 'Aeropuerto Internacional de La Isabela',
         lastUpdated: '2025-09-07T19:46:45.098Z',
         finalized: false,
+        generalComments: '', // <-- added
       },
       responses: {
         1: {

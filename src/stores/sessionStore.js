@@ -11,13 +11,14 @@ export const useSessionStore = defineStore('session', () => {
 
   // State
   const responses = reactive({})
-  const summary = ref({ location: '', finalized: true })
+  const summary = ref({ location: '', finalized: true, generalComments: '' }) // <-- added generalComments
 
   // Actions
   const loadSession = async (specialty) => {
     // initialize state
     summary.value.location = ''
     summary.value.finalized = true
+    summary.value.generalComments = '' // ensure default
 
     // clear out evidenceFiles
     evidence.reset()
@@ -93,6 +94,12 @@ export const useSessionStore = defineStore('session', () => {
     fs.saveSession(summary.value, responses, displayToast)
   }
 
+  // New: update general comments stored in summary and save
+  const updateGeneralComments = (comments) => {
+    summary.value.generalComments = comments || ''
+    fs.saveSession(summary.value, responses, displayToast)
+  }
+
   function displayToast(msg) {
     toast.error(msg)
   }
@@ -115,6 +122,7 @@ export const useSessionStore = defineStore('session', () => {
     summary,
     loadSession,
     updateSession,
+    updateGeneralComments, // <-- exported
     finalize,
   }
 })

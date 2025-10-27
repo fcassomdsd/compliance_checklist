@@ -34,8 +34,31 @@
         >
           Report Findings
         </button>
+
+        <!-- General comments toggle -->
+        <button id="genCommentsToggle" @click="showGenComments = !showGenComments"
+        :disabled="!store.checklistLoaded"
+        >
+          {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
+        </button>
       </div>
     </div>
+
+    <!-- General comments area -->
+    <div v-if="showGenComments" class="general-comments">
+      <textarea
+        id="generalComments"
+        :value="sessionStore.summary.generalComments"
+        placeholder="Add general comments about this checklist..."
+        @input="onGeneralCommentsInput($event)"
+      ></textarea>
+      <div>
+        <button id="clearGeneralComments" @click="clearGeneralComments()" :disabled="sessionStore.summary.finalized">
+          Clear
+        </button>
+      </div>
+    </div>
+
     <ModalWindow
       :show="store.showModal"
       :titulo="store.tituloModal"
@@ -50,7 +73,7 @@
 </template>
 
 <script setup>
-  import { onMounted } from 'vue'
+  import { onMounted, ref } from 'vue'
   import ChecklistTable from './components/ChecklistTable.vue'
   import ModalWindow from './components/ModalWindow.vue'
   import { useChecklistStore } from './stores/checklistStore'
@@ -62,6 +85,17 @@
   const store = useChecklistStore()
   const sessionStore = useSessionStore()
   const toast = useToast()
+
+  // Local UI state for toggling general comments
+  const showGenComments = ref(false)
+
+  const onGeneralCommentsInput = (event) => {
+    sessionStore.updateGeneralComments(event.target.value)
+  }
+
+  const clearGeneralComments = () => {
+    sessionStore.updateGeneralComments('')
+  }
 
   const loadChecklistAndSession = async () => {
     try {
@@ -127,6 +161,19 @@
     background-position: right 0.75rem center;
     background-size: 1em;
     font-size: 1.1rem;
+  }
+  .general-comments {
+    margin: 1rem 0;
+  }
+
+  #generalComments {
+    width: 100%;
+    min-height: 120px;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    resize: vertical;
+    font-size: 1rem;
   }
   @media (max-width: 768px) {
     .header {

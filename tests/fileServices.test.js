@@ -145,6 +145,7 @@ describe('fileServices', () => {
         location: 'Location A',
         finalized: false,
         lastUpdated: '2023-01-01T10:00:00Z',
+        generalComments: '', // <-- added
       }
 
       const mockSessionResponses = {
@@ -173,6 +174,7 @@ describe('fileServices', () => {
         location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
+        generalComments: '', // <-- added
       }
 
       const mockSessionResponses = {
@@ -212,6 +214,7 @@ describe('fileServices', () => {
         location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
+        generalComments: '', // <-- added
       }
 
       const mockSessionResponses = {

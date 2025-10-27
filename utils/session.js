@@ -20,6 +20,9 @@ const sessionSchema = {
         lastUpdated: {
           type: 'string',
         },
+        generalComments: {
+          type: 'string',
+        },
       },
       additionalProperties: false,
       required: ['specialty', 'location'],
