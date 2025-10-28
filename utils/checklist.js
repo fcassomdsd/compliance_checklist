@@ -1,11 +1,24 @@
 import Ajv from 'ajv'
+import addFormats from 'ajv-formats'
 
 const ajv = new Ajv({ allErrors: true, verbose: true })
+addFormats(ajv)
+
 const checklistSchema = {
   type: 'object',
   properties: {
-    specialty: {
+    specialtyName: {
       type: 'string',
+    },
+    inspection: {
+      type: 'string',
+    },
+    location: {
+      type: 'string',
+    },
+    startDate: {
+      type: 'string',
+      format: 'date',
     },
     questions: {
       type: 'array',
@@ -36,7 +49,7 @@ const checklistSchema = {
       },
     },
   },
-  required: ['specialty', 'questions'],
+  required: ['specialtyName', 'questions'],
   additionalProperties: false,
 }
 

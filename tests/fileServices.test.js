@@ -142,10 +142,9 @@ describe('fileServices', () => {
     it('calls saveFile with correct arguments', async () => {
       const mockSessionSummary = {
         specialty: 'VIG',
-        location: 'Location A',
         finalized: false,
         lastUpdated: '2023-01-01T10:00:00Z',
-        generalComments: '', // <-- added
+        generalComments: '',
       }
 
       const mockSessionResponses = {
@@ -171,10 +170,9 @@ describe('fileServices', () => {
 
       const mockSessionSummary = {
         specialty: 'VIG',
-        location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
-        generalComments: '', // <-- added
+        generalComments: '',
       }
 
       const mockSessionResponses = {
@@ -211,10 +209,9 @@ describe('fileServices', () => {
       vi.clearAllTimers()
       const mockSessionSummary = {
         specialty: 'VIG',
-        location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
-        generalComments: '', // <-- added
+        generalComments: '',
       }
 
       const mockSessionResponses = {

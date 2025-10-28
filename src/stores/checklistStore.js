@@ -121,6 +121,41 @@ export const useChecklistStore = defineStore('checklist', () => {
         throw new Error('Empty checklist not exported')
       }
 
+      let propertyLine=[]
+
+      propertyLine = [
+        '"property"',
+        '"Location"',
+        checklist.value.location
+          ? '"' + makeLine(checklist.value.location) + '"' : '""',
+      ]
+      out.push(propertyLine.join('|'))
+      propertyLine = [
+        '"property"',
+        '"Start Date"',
+        checklist.value.startDate
+          ? '"' + makeLine(checklist.value.startDate) + '"' : '""',
+      ]
+      out.push(propertyLine.join('|'))
+      propertyLine = [
+        '"property"',
+        '"Specialty"',
+        checklist.value.specialtyName
+          ? '"' + makeLine(checklist.value.specialtyName) + '"' : '""', 
+      ]
+      out.push(propertyLine.join('|')) 
+      propertyLine = [
+        '"property"',
+        '"Inspection"',
+        '"' + makeLine(checklist.value.inspection) + '"',
+      ]
+      out.push(propertyLine.join('|'))
+      propertyLine = [
+        '"property"',
+        '"Total Questions"', 
+        '"' + makeLine(checklist.value.questions.length) + '"',
+      ]
+      out.push(propertyLine.join('|'))
       let prevTopic = ''
       const validCompliance = ['Non-compliant']
       const validQuestions = checklist.value.questions.entries()
@@ -140,14 +175,14 @@ export const useChecklistStore = defineStore('checklist', () => {
             '"' + makeLine(row.reference) + '"',
             '"' + makeLine(row.question) + '"',
             '"' + makeLine(session.compliance || '') + '"',
-            '"' + makeLine(session.comments || '') + '"',
+            '"' + makeLine(session.nonConformity || '') + '"',
           ]
           out.push(line.join('|'))
         }
       }
-
-      const csvContent = out.join('\n')
-      await fs.saveExportFile(csvContent, specialty.value)
+      
+      const exportedString = out.join('\n')
+      await fs.saveExportFile(exportedString, specialty.value)
       toast.success('Checklist exported')
     } catch (error) {
       toast.error(error.message)

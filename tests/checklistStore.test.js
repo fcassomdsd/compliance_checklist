@@ -197,7 +197,10 @@ describe('Checklist Store', () => {
     beforeEach(() => {
       store.specialty.value = 'VIG'
       store.checklist.value = {
-        specialty: 'VIG',
+        specialtyName: 'Sistemas de Vigilancia',
+        inspection: '0224',
+        startDate: '2024-01-01',
+        location: 'Location 1',
         questions: [
           {
             id: '1',
@@ -252,9 +255,9 @@ describe('Checklist Store', () => {
 
       mockSession.summary.value = {
         specialty: 'VIG',
-        location: 'Location A',
         finalized: true,
         lastUpdated: new Date().toISOString(),
+        generalComments: '',
       }
 
       mockSession.responses['1'] = {
@@ -272,11 +275,13 @@ describe('Checklist Store', () => {
         id: '3',
         compliance: 'Non-compliant',
         comments: 'Multiline\nTest comments',
+        nonConformity: 'Non-conformity details 1',
       }
 
       mockSession.responses['5'] = {
         id: '4',
         compliance: 'Non-compliant',
+        nonConformity: 'Non-conformity details 2',
       }
 
       mockSession.responses['6'] = {
@@ -288,10 +293,15 @@ describe('Checklist Store', () => {
 
     it('creates export string correctly', async () => {
       const exportedString =
+        '"property"|"Location"|"Location 1"\n' +
+        '"property"|"Start Date"|"2024-01-01"\n' +
+        '"property"|"Specialty"|"Sistemas de Vigilancia"\n' +
+        '"property"|"Inspection"|"0224"\n' +
+        '"property"|"Total Questions"|"6"\n' +
         'topic 2\n' +
-        '4|"reference 4"|"question 4"|"Non-compliant"|"Multiline<br>Test comments"\n' +
+        '4|"reference 4"|"question 4"|"Non-compliant"|"Non-conformity details 1"\n' +
         'topic 3\n' +
-        '5|\"reference 5\"|\"question 5\"|\"Non-compliant\"|\"\"'
+        '5|\"reference 5\"|\"question 5\"|\"Non-compliant\"|\"Non-conformity details 2\"'
 
       store.exportChecklist()
 
