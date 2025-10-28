@@ -48,12 +48,14 @@ describe('App.vue', () => {
       confirmModal: vi.fn(),
       checkDefaultPath: vi.fn(),
       exportChecklist: vi.fn(),
+      // default empty checklist object; tests will override when needed
+      checklist: null,
     }
     vi.mocked(useChecklistStore).mockReturnValue(mockStore)
 
     // Mock sesison store
     mockSession = {
-      summary: { location: '', finalized: false, generalComments: '' }, // <-- added
+      summary: { finalized: false, generalComments: '' },
       loadSession: vi.fn(),
       finalize: vi.fn(),
     }
@@ -80,10 +82,10 @@ describe('App.vue', () => {
   })
 
   it('displays session summary location', () => {
-    mockSession.summary.location = '/mock/location'
+    // location now comes from checklist.json in the checklist store
+    mockStore.checklist = { inspection: 'INS', startDate: '2025-09-01', location: '/mock/location' }
     wrapper = mount(App, { global: { plugins: [pinia] } })
-    const spans = wrapper.findAll('span')
-    expect(spans[1].text()).toBe('Location: /mock/location')
+    expect(wrapper.text()).toContain('Location: /mock/location')
   })
 
   it('renders specialty options from store', () => {
@@ -180,7 +182,7 @@ describe('App.vue', () => {
 
   it('renders general comments button enabled when checklist loaded', () => {
     mockStore.checklistLoaded = true
-
+    mockStore.checklist = {inspection: 'INS', startDate:'2025-09-01', location: '/loc'}
     wrapper = mount(App, { global: { plugins: [pinia] } })
     const button = wrapper.find('#genCommentsToggle')
     expect(button.attributes('disabled')).toBeUndefined()
@@ -196,6 +198,7 @@ describe('App.vue', () => {
 
   it('shows and hides general comments on button click', async () => {
     mockStore.checklistLoaded = true
+    mockStore.checklist = {inspection:'INS', startDate:'2025-09-01', location:'/loc'}
     wrapper = mount(App, { global: { plugins: [pinia] } })
     expect(wrapper.find('div[class="general-comments"]').exists()).toBe(false)
     const button = wrapper.find('#genCommentsToggle')

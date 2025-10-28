@@ -7,7 +7,11 @@
       </span>
     </div>
     <div class="controls-container">
-      <span>Location: {{ sessionStore.summary.location }}</span>
+      <!-- Show checklist-level information (inspection, startDate, location) -->
+      <span>Inspection: {{ store.checklist?.inspection || '' }}</span>
+      <span>Start: {{ store.checklist?.startDate || '' }}</span>
+      <span>Location: {{ store.checklist?.location || '' }}</span>
+
       <div>
         <label>Specialty:</label>
         <select v-model="store.specialty" @change="loadChecklistAndSession">

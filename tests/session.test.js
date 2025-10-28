@@ -8,7 +8,6 @@ describe('session.js', () => {
       const validJson = JSON.stringify({
         summary: {
           specialty: 'VIG',
-          location: 'Location A',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
@@ -21,7 +20,6 @@ describe('session.js', () => {
       const validJson = JSON.stringify({
         summary: {
           specialty: 'VIG',
-          location: 'Location A',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
@@ -55,7 +53,6 @@ describe('session.js', () => {
     it('throws an error for an invalid session object', async () => {
       const invalidJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },

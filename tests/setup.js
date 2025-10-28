@@ -2,8 +2,12 @@ import { vi } from 'vitest'
 
 global.window = {
   electronAPI: {
+    // checklist.json now contains inspection, location and startDate
     loadChecklist: vi.fn().mockResolvedValue({
       specialty: 'Test',
+      inspection: 'Inspection 001',
+      location: 'Aeropuerto Internacional de La Isabela',
+      startDate: '2025-09-07',
       questions: [
         {
           id: 'a01k1231r3yed99tc62614embva',
@@ -18,12 +22,12 @@ global.window = {
       ],
     }),
     loadSession: vi.fn().mockResolvedValue({
+      // session summary no longer contains location (moved to checklist.json)
       summary: {
         specialty: 'VIG',
-        location: 'Aeropuerto Internacional de La Isabela',
         lastUpdated: '2025-09-07T19:46:45.098Z',
         finalized: false,
-        generalComments: '', // <-- added
+        generalComments: '',
       },
       responses: {
         1: {

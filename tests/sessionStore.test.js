@@ -61,14 +61,13 @@ describe('Session Store', () => {
 
   it('initializes state correctly', () => {
     expect(sessionStore.responses).toEqual({})
-    expect(sessionStore.summary).toEqual({ value: { location: '', finalized: true, generalComments: '' } })
+    expect(sessionStore.summary).toEqual({ value: { finalized: true, generalComments: '' } })
   })
 
   describe('loadSession', () => {
     it('resets state and does nothing for specialty NONE', async () => {
       await sessionStore.loadSession('NONE')
 
-      expect(sessionStore.summary.value.location).toBe('')
       expect(sessionStore.summary.value.finalized).toBe(true)
       expect(sessionStore.responses).toEqual({})
 
@@ -78,7 +77,7 @@ describe('Session Store', () => {
 
     it('loads session and evidence for valid specialty', async () => {
       mockFs.loadSession.mockResolvedValue({
-        summary: { location: '/path', generalComments: '' },
+        summary: {},
         responses: { 1: { id: '1' } },
       })
       mockEvidence.load.mockResolvedValue([{ name: 'file.txt', URL: '/path/file.txt', count: 1 }])
@@ -87,10 +86,8 @@ describe('Session Store', () => {
 
       expect(mockToast.success).toHaveBeenCalledWith('Session loaded')
       expect(sessionStore.summary.value).toEqual({
-        location: '/path',
         finalized: false,
         specialty: 'VIG',
-        generalComments: '',
       })
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
 
@@ -105,7 +102,6 @@ describe('Session Store', () => {
 
       expect(mockToast.info).toHaveBeenCalledWith('New session created')
       expect(sessionStore.summary.value).toEqual({
-        location: '',
         finalized: false,
         specialty: 'VIG',
         generalComments: '',
@@ -209,7 +205,6 @@ describe('Session Store', () => {
     it('sets finalized to true and triggers saveSession', () => {
       sessionStore.summary.value = {
         specialty: 'VIG',
-        location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
         generalComments: '',
@@ -231,7 +226,6 @@ describe('Session Store', () => {
     it('removes dangling non-conformity entries', () => {
       sessionStore.summary.value = {
         specialty: 'VIG',
-        location: 'Location A',
         finalized: false,
         lastUpdated: new Date().toISOString(),
         generalComments: '',

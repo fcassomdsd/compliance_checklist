@@ -11,9 +11,6 @@ const sessionSchema = {
         specialty: {
           type: 'string',
         },
-        location: {
-          type: 'string',
-        },
         finalized: {
           type: 'boolean',
         },
@@ -25,7 +22,7 @@ const sessionSchema = {
         },
       },
       additionalProperties: false,
-      required: ['specialty', 'location'],
+      required: ['specialty'],
     },
     responses: {
       type: 'object',

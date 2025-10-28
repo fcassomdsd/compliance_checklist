@@ -11,12 +11,13 @@ export const useSessionStore = defineStore('session', () => {
 
   // State
   const responses = reactive({})
-  const summary = ref({ location: '', finalized: true, generalComments: '' }) // <-- added generalComments
+  // session summary: no longer holds location (moved to checklist.json)
+  const summary = ref({ finalized: true, generalComments: '' })
 
   // Actions
   const loadSession = async (specialty) => {
     // initialize state
-    summary.value.location = ''
+    // reset summary (no location)
     summary.value.finalized = true
     summary.value.generalComments = '' // ensure default
 
@@ -46,6 +47,7 @@ export const useSessionStore = defineStore('session', () => {
             responses[key] = value
           } else {
             if (key == 'summary') {
+              // assign session summary (expect no location here)
               summary.value = value
             }
           }
