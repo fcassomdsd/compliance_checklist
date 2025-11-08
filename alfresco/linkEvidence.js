@@ -19,8 +19,8 @@
 // }
 //
 const baseDir = document.parent
-const filesDir = baseDir.childByNamePath('Evidence')
-const linksDir = baseDir.childByNamePath('Links')
+const filesDir = baseDir.childByNamePath('Evidencias')
+const linksDir = baseDir.childByNamePath('Enlaces')
 
 const filePrefix = baseDir.name
 const sessionJSON = JSON.parse(baseDir.childByNamePath('session.json').content, (key, value) =>
@@ -45,19 +45,26 @@ function linkFile(fileName, qnumber, seq) {
     '-' +
     fileName
   properties['cm:destination'] = sourceDocument
+  
+  const targetDocument = linksDir.childByNamePath(properties['cm:name']);
+  
+  if (!targetDocument) {
 
-  var linkNode = linksDir.createNode(
-    properties['cm:name'],
-    '{http://www.alfresco.org/model/application/1.0}filelink',
-    properties
-  )
-
-  linkNode.save() // Save the newly created link node
-
-  if (!sourceDocument.hasAspect('app:linked')) {
-    sourceDocument.addAspect('app:linked')
-    sourceDocument.save()
+    var linkNode = linksDir.createNode(
+      properties['cm:name'],
+      '{http://www.alfresco.org/model/application/1.0}filelink',
+      properties
+    )
+  
+    linkNode.save() // Save the newly created link node
+  
+    if (!sourceDocument.hasAspect('app:linked')) {
+      sourceDocument.addAspect('app:linked')
+      sourceDocument.save()
+    }
+  
+    return properties['cm:name']
+  }  else {
+    return null;  
   }
-
-  return properties['cm:name']
 }
