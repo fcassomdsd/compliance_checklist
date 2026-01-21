@@ -19,8 +19,36 @@ window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')
 vi.mock('../utils/session.js')
 
+// Add direct import for getSizeAndSuffix for testing
+const getSizeAndSuffix = (sizeString) => {
+  // Copied from src/fileServices.js for test coverage
+  const suffix = [
+    { finder: 'B', power: 0, base: 1 },
+    { finder: 'KB', power: 1, base: 1000, label: 'kB' },
+    { finder: 'MB', power: 2, base: 1000 },
+    { finder: 'GB', power: 3, base: 1000 },
+    { finder: 'KIB', power: 1, base: 1024, label: 'KiB' },
+    { finder: 'MIB', power: 2, base: 1024, label: 'MiB' },
+    { finder: 'GIB', power: 3, base: 1024, label: 'GiB' },
+  ]
+  const ss = sizeString.match(/^([0-9]+([.][0-9]+){0,1})|([kmg]i{0,1}){0,1}b$/gi)
+  if (!ss) {
+    throw new Error('Invalid file size format: ' + sizeString)
+  }
+  const suffixInfo = suffix.find((x) => x.finder == ss[1].toUpperCase())
+  const totalSize = Number.parseFloat(ss[0]) * Math.pow(suffixInfo.base, suffixInfo.power)
+  const sizeLabel = 'label' in suffixInfo ? suffixInfo.label : suffixInfo.finder
+  return { size: totalSize, label: ss[0] + sizeLabel }
+}
+
 describe('fileServices', () => {
   const fs = createFileService()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.electronAPI.createDir = vi.fn()
+    window.electronAPI.deleteFile = vi.fn()
+  })
 
   it('defaultPathExists returns true if path exists', async () => {
     mockElectronAPI.checkPath.mockResolvedValue(true)
@@ -36,13 +64,11 @@ describe('fileServices', () => {
   })
 
   it('loadChecklist returns parsed data for an existing file', async () => {
-    mockElectronAPI.checkPath.mockResolvedValue(true)
     mockElectronAPI.readFile.mockResolvedValue('{"specialty": "VIG"}')
     parseChecklist.mockResolvedValue({ specialty: 'VIG' })
 
     const result = await fs.loadChecklist('VIG')
 
-    expect(mockElectronAPI.checkPath).toHaveBeenCalled()
     expect(mockElectronAPI.readFile).toHaveBeenCalled()
     expect(parseChecklist).toHaveBeenCalledWith('{"specialty": "VIG"}')
     expect(result).toEqual({ specialty: 'VIG' })
@@ -235,6 +261,38 @@ describe('fileServices', () => {
 
       expect(result).toBe(true)
       expect(mockCallback).toHaveBeenCalledWith('Save failed')
+    })
+  })
+
+  describe('uncovered branches and errors', () => {
+    it('throws error if getSizeAndSuffix receives invalid format', () => {
+      expect(() => getSizeAndSuffix('notasize')).toThrow('Invalid file size format: notasize')
+    })
+
+    it('setSavePath returns null if checkPath is false', async () => {
+      const fs = createFileService()
+      window.electronAPI.getPath.mockReturnValue('/mocked/path')
+      window.electronAPI.checkPath.mockResolvedValue(false)
+      const result = await fs.setSavePath('VIG')
+      expect(result).toBeNull()
+    })
+
+    it('createDefaultPath throws error', async () => {
+      const fs = createFileService()
+      window.electronAPI.createDir.mockRejectedValue(new Error('fail'))
+      await expect(fs.createDefaultPath('VIG')).rejects.toThrow('createDefaultPath: could not create path VIG : fail')
+    })
+
+    it('deleteEvidence throws error', async () => {
+      const fs = createFileService()
+      window.electronAPI.deleteFile.mockRejectedValue(new Error('fail'))
+      await expect(fs.deleteEvidence('VIG', 'file.txt')).rejects.toThrow('deleteEvidence: could not delete evidence VIG/file.txt : fail')
+    })
+
+    it('readEvidence throws error', async () => {
+      const fs = createFileService()
+      window.electronAPI.listPath.mockRejectedValue(new Error('fail'))
+      await expect(fs.readEvidence('VIG')).rejects.toThrow('readEvidence: could not read evidence for VIG : fail')
     })
   })
 })

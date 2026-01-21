@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, systemPreferences } from 'electron/main';
+import { app, BrowserWindow, dialog, ipcMain, systemPreferences,  } from 'electron/main';
 import { setupIpcHandles } from './ipcHandles.js';
 
 const isMac = os.platform() === "darwin";
@@ -18,7 +18,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(dirName, 'preload.js')
+      preload: join(dirName, 'preload.cjs')
     },
   });
   win.loadFile('dist/index.html');

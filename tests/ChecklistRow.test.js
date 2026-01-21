@@ -1,3 +1,31 @@
+// Global mocks for DOM APIs used in camera modal/photo tests
+beforeAll(() => {
+  // Mock getContext for all canvas elements
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    value: vi.fn(() => ({ drawImage: vi.fn() })),
+    writable: true,
+  })
+  // Mock toBlob for all canvas elements
+  Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
+    value: function(cb) { cb(new Blob(['test'], { type: 'image/jpeg' })) },
+    writable: true,
+  })
+  // Mock videoWidth and videoHeight for all video elements
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {
+    value: 100,
+    configurable: true,
+  })
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', {
+    value: 100,
+    configurable: true,
+  })
+  // Mock srcObject for all video elements
+  Object.defineProperty(HTMLVideoElement.prototype, 'srcObject', {
+    set(val) { this._srcObject = val },
+    get() { return this._srcObject },
+    configurable: true,
+  })
+})
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
@@ -361,6 +389,69 @@ describe('ChecklistRow.vue', () => {
         global: { plugins: [pinia] },
       })
       expect(wrapper.find('table.preview tr').exists()).toBe(false)
+    })
+  })
+
+  describe('Camera modal', () => {
+    it('opens camera modal and sets video stream', async () => {
+      const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] })
+      global.navigator.mediaDevices = { getUserMedia }
+      // Show the camera modal so the video ref is rendered
+      wrapper.vm.showCameraModal = true
+      await wrapper.vm.$nextTick?.()
+      // Replace $refs.video with a mock object
+      const videoMock = { srcObject: null }
+      wrapper.vm.$refs.video = videoMock
+      wrapper.vm.video = { value: videoMock }
+      await wrapper.vm.openCamera()
+      expect(wrapper.vm.showCameraModal).toBe(true)
+      expect(getUserMedia).toHaveBeenCalledWith({ video: true })
+      expect(videoMock.srcObject).toBeDefined()
+    })
+
+    it('closes camera modal and stops video tracks', async () => {
+      const stop = vi.fn()
+      // Spy on getTracks globally
+      const getTracksSpy = vi.fn(() => [{ stop }])
+      Object.defineProperty(HTMLVideoElement.prototype, 'srcObject', {
+        set(val) { this._srcObject = val },
+        get() { return { getTracks: getTracksSpy } },
+        configurable: true,
+      })
+      wrapper.vm.showCameraModal = true
+      await wrapper.vm.$nextTick?.()
+      wrapper.vm.closeCameraModal()
+      expect(wrapper.vm.showCameraModal).toBe(false)
+      expect(getTracksSpy).toHaveBeenCalled()
+      expect(stop).toHaveBeenCalled()
+    })
+
+    it('captures photo and updates evidence', async () => {
+      wrapper.vm.showCameraModal = true
+      await wrapper.vm.$nextTick?.()
+      // Spy on getContext globally and ensure it returns the correct drawImage spy
+      const drawImage = vi.fn()
+      const getContextSpy = vi.fn(() => ({ drawImage }))
+      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+        value: getContextSpy,
+        writable: true,
+      })
+      // toBlob is already globally mocked
+      const add = vi.fn().mockResolvedValue()
+      const addCount = vi.fn()
+      wrapper.vm.evidenceStore = mockEvidenceStore //{ add, addCount, files: {} }
+      wrapper.vm.sessionStore = mockSessionStore
+      wrapper.vm.toast = mockToast
+      wrapper.vm.props = wrapper.props()
+      wrapper.vm.props.session = { evidence: [] }
+      await wrapper.vm.capturePhoto()
+      expect(getContextSpy).toHaveBeenCalledWith('2d')
+      expect(drawImage).toHaveBeenCalled()
+      expect(mockEvidenceStore.add).toHaveBeenCalled()
+      expect(mockEvidenceStore.addCount).toHaveBeenCalled()
+      expect(mockSessionStore.updateSession).toHaveBeenCalled()
+      expect(mockToast.success).toHaveBeenCalledWith('Evidence updated')
+      expect(wrapper.vm.showCameraModal).toBe(false)
     })
   })
 })

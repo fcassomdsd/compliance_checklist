@@ -22,7 +22,7 @@ export function safeJoin(base, inputs) {
 
   // check for invalid strings (empty or with invalid characters)
   valid = pathLegs.reduce(
-    (prevValid, leg) => prevValid && (leg.length > 0 || leg.match('[/?.%*:|<>",;=]') === null),
+    (prevValid, leg) => prevValid && (leg.length == 0 || leg.match('[?%*:|<>",;=]') === null),
     valid
   )
   if (!valid) {
