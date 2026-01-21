@@ -34,6 +34,24 @@ test:
     - develop
     - merge_requests
 
+coverage:
+  stage: test
+  script:
+    - echo "📊 Running tests with coverage..."
+    - npm run test:coverage
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    expire_in: 30 days
+  only:
+    - develop
+    - merge_requests
+
 build:
   stage: build
   script:

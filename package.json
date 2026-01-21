@@ -13,7 +13,8 @@
     "build:win-portable": "electron-builder --win portable",
     "dist": "electron-builder",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "ajv": "^8.17.0",
@@ -27,6 +28,7 @@
     "@eslint/js": "^9.35.0",
     "@eslint/json": "^0.13.2",
     "@vitejs/plugin-vue": "^5.1.4",
+    "@vitest/coverage-v8": "^2.1.9",
     "@vue/test-utils": "^2.4.6",
     "electron": "^37.3.1",
     "electron-builder": "^26.0.12",
