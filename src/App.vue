@@ -112,6 +112,8 @@
   }
 
   onMounted(async () => {
+    // Load specialties from file
+    await store.loadSpecialties()
     // Check if the default path exists
     await store.checkDefaultPath()
   })

@@ -1,0 +1,7 @@
+[
+  { "code": "VIG", "name": "Vigilancia Radar" },
+  { "code": "COM", "name": "Comunicaciones de Radio" },
+  { "code": "RNA", "name": "Radioayudas" },
+  { "code": "EEM", "name": "Energia y Equipos MET" },
+  { "code": "FAU", "name": "Control de Fauna Silvestre" }
+]

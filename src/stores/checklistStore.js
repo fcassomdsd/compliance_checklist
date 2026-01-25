@@ -32,16 +32,21 @@ export const useChecklistStore = defineStore('checklist', () => {
   const modalCreateDPAction = 'create the default path'
   const createDPSuccess = 'Default path created successfully!'
 
-  // specialty data
-  const specialtyList = [
-    { code: 'VIG', name: 'Vigilancia Radar' },
-    { code: 'COM', name: 'Comunicaciones de Radio' },
-    { code: 'RNA', name: 'Radioayudas' },
-    { code: 'EEM', name: 'Energia y Equipos MET' },
-  ]
+  // specialty data - will be loaded from file
+  const specialtyList = ref([])
 
   // Actions
-  const loadChecklist = async () => {
+  const loadSpecialties = async () => {
+    try {
+      specialtyList.value = await fs.loadSpecialties()
+    } catch (error) {
+      toast.error(`Failed to load specialties: ${error.message}`)
+      // Provide empty array fallback
+      specialtyList.value = []
+    }
+  }
+
+  const loadChecklist = async () => {  
     // initialize state
     checklist.value = null
     checklistLoaded.value = false
@@ -78,7 +83,7 @@ export const useChecklistStore = defineStore('checklist', () => {
           break
         }
         case modalCreateDPTitle: {
-          specialtyList.forEach((x) => fs.createDefaultPath(x.code))
+          specialtyList.value.forEach((x) => fs.createDefaultPath(x.code))
           toast.success(createDPSuccess)
           break
         }
@@ -200,6 +205,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     explanationModal,
     accionModal,
     loadChecklist,
+    loadSpecialties,
     showFinalize,
     checkDefaultPath,
     confirmModal,

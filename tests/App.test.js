@@ -44,6 +44,7 @@ describe('App.vue', () => {
         'Finalizing the checklist will prevent further changes, and cannot be undone',
       modalFinalizeAction: 'finalize the current checklist',
       loadChecklist: vi.fn(),
+      loadSpecialties: vi.fn(),
       showFinalize: vi.fn(),
       confirmModal: vi.fn(),
       checkDefaultPath: vi.fn(),
