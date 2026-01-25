@@ -192,6 +192,16 @@ export const createFileService = () => {
     }
   }
 
+  const loadSpecialties = async () => {
+    try {
+      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, 'specialties.json')
+      const specialties = typeof fileContents === 'string' ? JSON.parse(fileContents) : fileContents
+      return specialties
+    } catch (error) {
+      throw new Error(`loadSpecialties: could not load specialties : ` + error.message)
+    }
+  }
+
   return {
     defaultPathExists,
     setSavePath,
@@ -203,5 +213,6 @@ export const createFileService = () => {
     readEvidence,
     saveExportFile,
     saveSession,
+    loadSpecialties,
   }
 }

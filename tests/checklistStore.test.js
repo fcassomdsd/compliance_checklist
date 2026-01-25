@@ -51,6 +51,7 @@ describe('Checklist Store', () => {
       setSavePath: vi.fn(),
       saveExportFile: vi.fn(),
       updateEvidenceCount: vi.fn(),
+      loadSpecialties: vi.fn(),
     }
     vi.mocked(createFileService).mockReturnValue(mockFs)
 
@@ -77,13 +78,36 @@ describe('Checklist Store', () => {
     expect(store.explanationModal).toEqual({ value: '' })
     expect(store.accionModal).toEqual({ value: '' })
 
-    // Verify specialtyList
-    expect(store.specialtyList).toEqual([
-      { code: 'VIG', name: 'Vigilancia Radar' },
-      { code: 'COM', name: 'Comunicaciones de Radio' },
-      { code: 'RNA', name: 'Radioayudas' },
-      { code: 'EEM', name: 'Energia y Equipos MET' },
-    ])
+    // Verify specialtyList starts empty (will be loaded via loadSpecialties)
+    expect(store.specialtyList).toEqual({ value: [] })
+  })
+
+  describe('loadSpecialties', () => {
+    it('loads specialties from file service', async () => {
+      const mockSpecialties = [
+        { code: 'VIG', name: 'Vigilancia Radar' },
+        { code: 'COM', name: 'Comunicaciones de Radio' },
+        { code: 'RNA', name: 'Radioayudas' },
+        { code: 'EEM', name: 'Energia y Equipos MET' },
+        { code: 'FAU', name: 'Control de Fauna Silvestre' },
+      ]
+      mockFs.loadSpecialties.mockResolvedValue(mockSpecialties)
+
+      await store.loadSpecialties()
+
+      expect(mockFs.loadSpecialties).toHaveBeenCalled()
+      expect(store.specialtyList.value).toEqual(mockSpecialties)
+      expect(mockToast.error).not.toHaveBeenCalled()
+    })
+
+    it('handles load errors gracefully', async () => {
+      mockFs.loadSpecialties.mockRejectedValue(new Error('Load failed'))
+
+      await store.loadSpecialties()
+
+      expect(store.specialtyList.value).toEqual([])
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to load specialties: Load failed')
+    })
   })
 
   describe('loadChecklist', () => {
@@ -163,6 +187,12 @@ describe('Checklist Store', () => {
 
     it('handles create default path modal', () => {
       store.tituloModal.value = 'Create default path'
+      store.specialtyList.value = [
+        { code: 'VIG', name: 'Vigilancia Radar' },
+        { code: 'COM', name: 'Comunicaciones de Radio' },
+        { code: 'RNA', name: 'Radioayudas' },
+        { code: 'EEM', name: 'Energia y Equipos MET' },
+      ]
       mockFs.createDefaultPath.mockImplementation((code) => true)
 
       store.confirmModal()
