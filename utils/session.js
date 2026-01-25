@@ -49,6 +49,18 @@ const sessionSchema = {
                 type: 'string',
               },
             },
+            audioComments: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+            },
+            audioNonConformity: {
+              type: 'array',
+              items: {
+                type: 'string',
+              },
+            },
           },
           additionalProperties: false,
           required: ['id'],
@@ -85,7 +97,7 @@ export function getEvidenceLinks(sessionObj) {
   let evidenceLinks = {}
 
   JSON.parse(sessionObj, (key, value) => {
-    if (key == 'evidence') {
+    if (key == 'evidence' || key == 'audioComments' || key == 'audioNonConformity') {
       value.forEach((x) => {
         if (!evidenceLinks[x]) {
           evidenceLinks[x] = { count: 1 }

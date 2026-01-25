@@ -32,11 +32,13 @@ import { createPinia, setActivePinia } from 'pinia'
 import ChecklistRow from '../src/components/ChecklistRow.vue'
 import { useSessionStore } from '../src/stores/sessionStore'
 import { useEvidenceStore } from '../src/stores/evidenceStore'
+import { useAudioStore } from '../src/stores/audioStore'
 import { useToast } from 'vue-toastification'
 
 // Mock dependencies
 vi.mock('../src/stores/sessionStore')
 vi.mock('../src/stores/evidenceStore')
+vi.mock('../src/stores/audioStore')
 vi.mock('vue-toastification', () => ({
   useToast: vi.fn(),
 }))
@@ -47,6 +49,7 @@ describe('ChecklistRow.vue', () => {
   let pinia
   let mockSessionStore
   let mockEvidenceStore
+  let mockAudioStore
   let mockToast
 
   beforeEach(() => {
@@ -73,6 +76,18 @@ describe('ChecklistRow.vue', () => {
       subtract: vi.fn(),
     }
     vi.mocked(useEvidenceStore).mockReturnValue(mockEvidenceStore)
+
+    // Mock audio store
+    mockAudioStore = {
+      files: {
+        'audio1.webm': { URL: 'blob:audio1.webm', count: 1 },
+        'audio2.webm': { URL: 'blob:audio2.webm', count: 1 },
+      },
+      add: vi.fn().mockResolvedValue('blob:audio1.webm'),
+      addCount: vi.fn(),
+      subtract: vi.fn().mockResolvedValue(true),
+    }
+    vi.mocked(useAudioStore).mockReturnValue(mockAudioStore)
 
     // Mock toast
     mockToast = { success: vi.fn(), error: vi.fn() }
@@ -452,6 +467,106 @@ describe('ChecklistRow.vue', () => {
       expect(mockSessionStore.updateSession).toHaveBeenCalled()
       expect(mockToast.success).toHaveBeenCalledWith('Evidence updated')
       expect(wrapper.vm.showCameraModal).toBe(false)
+    })
+  })
+
+  describe('Audio Recording', () => {
+    it('saves audio recording and updates store', async () => {
+      mockAudioStore.add.mockResolvedValue('blob:audio-new.webm')
+      
+      // Create a mock blob
+      const mockBlob = new Blob(['audio data'], { type: 'audio/webm' })
+      mockBlob.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8))
+      
+      await wrapper.vm.saveAudioRecording(mockBlob, 'comments')
+
+      expect(mockAudioStore.add).toHaveBeenCalled()
+      expect(mockAudioStore.addCount).toHaveBeenCalled()
+      expect(mockSessionStore.updateSession).toHaveBeenCalled()
+      expect(mockToast.success).toHaveBeenCalledWith('Audio recording saved')
+    })
+
+    it('handles audio save error', async () => {
+      mockAudioStore.add.mockRejectedValue(new Error('Save failed'))
+      
+      const mockBlob = new Blob(['audio data'], { type: 'audio/webm' })
+      mockBlob.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8))
+      
+      await wrapper.vm.saveAudioRecording(mockBlob, 'comments')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to save audio: Save failed')
+    })
+
+    it('plays audio from store URL', () => {
+      // Mock window.electronAPI.playAudio
+      window.electronAPI = { playAudio: vi.fn() }
+      
+      const fileName = 'audio1.webm'
+      wrapper.vm.playAudio(fileName)
+
+      expect(mockAudioStore.files[fileName].URL).toBe('blob:audio1.webm')
+    })
+
+    it('removes audio recording and updates store', async () => {
+      wrapper = mount(ChecklistRow, {
+        props: {
+          newTopic: false,
+          qnumber: 1,
+          row: {
+            id: 'checklist-1',
+            topic: 'Topic 1',
+            reference: 'REF1',
+            question: 'Question 1?',
+            verification: 'Verify 1',
+          },
+          session: {
+            compliance: 'Compliant',
+            audioComments: ['audio1.webm'],
+          },
+        },
+        global: { plugins: [pinia] },
+      })
+
+      mockAudioStore.subtract.mockResolvedValue(true)
+      
+      await wrapper.vm.removeAudio(0, 'comments')
+
+      expect(mockAudioStore.subtract).toHaveBeenCalledWith('VIG', 'audio1.webm')
+      expect(mockSessionStore.updateSession).toHaveBeenCalled()
+      expect(mockToast.success).toHaveBeenCalledWith('Audio recording removed')
+    })
+
+    it('handles audio removal error', async () => {
+      wrapper = mount(ChecklistRow, {
+        props: {
+          newTopic: false,
+          qnumber: 1,
+          row: {
+            id: 'checklist-1',
+            topic: 'Topic 1',
+            reference: 'REF1',
+            question: 'Question 1?',
+            verification: 'Verify 1',
+          },
+          session: {
+            compliance: 'Compliant',
+            audioComments: ['audio1.webm'],
+          },
+        },
+        global: { plugins: [pinia] },
+      })
+
+      mockAudioStore.subtract.mockRejectedValue(new Error('Delete failed'))
+      
+      await wrapper.vm.removeAudio(0, 'comments')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to delete audio: Delete failed')
+    })
+
+    it('does not save audio if recording is undefined', async () => {
+      await wrapper.vm.saveAudioRecording(undefined, 'audioComments')
+
+      expect(mockAudioStore.add).not.toHaveBeenCalled()
     })
   })
 })

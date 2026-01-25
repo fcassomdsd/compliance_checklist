@@ -202,6 +202,56 @@ export const createFileService = () => {
     }
   }
 
+  const saveAudio = async (specialty, fileName, buffer) => {
+    try {
+      if (buffer === undefined) {
+        throw new Error('Buffer is undefined')
+      }
+      const fileSize = buffer.byteLength
+      if (fileSize == 0) {
+        throw new Error('Audio file is empty')
+      }
+
+      const savedPath = await window.electronAPI.saveFile(
+        buffer,
+        DEFAULT_ROOT,
+        specialty,
+        'Audio',
+        fileName
+      )
+      return savedPath
+    } catch (error) {
+      throw new Error(
+        `saveAudio: could not save audio for ${specialty}/${fileName} : ` + error.message
+      )
+    }
+  }
+
+  const deleteAudio = async (specialty, fileName) => {
+    try {
+      const deleted = await window.electronAPI.deleteFile(
+        DEFAULT_ROOT,
+        specialty,
+        'Audio',
+        fileName
+      )
+      return deleted
+    } catch (error) {
+      throw new Error(
+        `deleteAudio: could not delete audio ${specialty}/${fileName} : ` + error.message
+      )
+    }
+  }
+
+  const readAudio = async (specialty) => {
+    try {
+      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, specialty, 'Audio')
+      return dirList
+    } catch (error) {
+      throw new Error(`readAudio: could not read audio for ${specialty} : ` + error.message)
+    }
+  }
+
   return {
     defaultPathExists,
     setSavePath,
@@ -214,5 +264,8 @@ export const createFileService = () => {
     saveExportFile,
     saveSession,
     loadSpecialties,
+    saveAudio,
+    deleteAudio,
+    readAudio,
   }
 }

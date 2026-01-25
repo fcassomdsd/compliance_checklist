@@ -3,10 +3,12 @@ import { useToast } from 'vue-toastification'
 import { defineStore } from 'pinia'
 import { createFileService } from '../fileServices.js'
 import { useEvidenceStore } from './evidenceStore.js'
+import { useAudioStore } from './audioStore.js'
 
 export const useSessionStore = defineStore('session', () => {
   const fs = createFileService()
   const evidence = useEvidenceStore()
+  const audio = useAudioStore()
   const toast = useToast()
 
   // State
@@ -23,6 +25,9 @@ export const useSessionStore = defineStore('session', () => {
 
     // clear out evidenceFiles
     evidence.reset()
+
+    // clear out audioFiles
+    audio.reset()
 
     // clear out session data
     for (const key of Object.keys(responses)) {
@@ -63,6 +68,10 @@ export const useSessionStore = defineStore('session', () => {
       // prepare evidence: load evidence and update counts with the session data
       await evidence.load(specialty)
       evidence.updateCount(responses)
+
+      // prepare audio: load audio and update counts with the session data
+      await audio.load(specialty)
+      audio.updateCount(responses)
 
       if (!summary.value['finalized']) {
         summary.value['finalized'] = false

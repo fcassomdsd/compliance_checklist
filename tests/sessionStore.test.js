@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 import { createFileService } from '../src/fileServices.js'
 import { useSessionStore } from '../src/stores/sessionStore.js'
 import { useEvidenceStore } from '../src/stores/evidenceStore.js'
+import { useAudioStore } from '../src/stores/audioStore.js'
 
 // Mock dependencies
 vi.mock('vue', () => ({
@@ -16,6 +17,7 @@ vi.mock('vue-toastification', () => ({
 }))
 vi.mock('../src/fileServices.js')
 vi.mock('../src/stores/evidenceStore.js')
+vi.mock('../src/stores/audioStore.js')
 
 // timers
 vi.useFakeTimers()
@@ -26,6 +28,7 @@ describe('Session Store', () => {
   let mockFs
   let mockToast
   let mockEvidence
+  let mockAudio
 
   beforeEach(() => {
     pinia = createPinia()
@@ -55,6 +58,13 @@ describe('Session Store', () => {
     }
     vi.mocked(useEvidenceStore).mockReturnValue(mockEvidence)
 
+    mockAudio = {
+      load: vi.fn(),
+      reset: vi.fn(),
+      updateCount: vi.fn(),
+    }
+    vi.mocked(useAudioStore).mockReturnValue(mockAudio)
+
     // Initialize store
     sessionStore = useSessionStore()
   })
@@ -73,6 +83,7 @@ describe('Session Store', () => {
 
       expect(mockFs.loadSession).not.toHaveBeenCalled()
       expect(mockEvidence.reset).toHaveBeenCalled()
+      expect(mockAudio.reset).toHaveBeenCalled()
     })
 
     it('loads session and evidence for valid specialty', async () => {
@@ -81,6 +92,7 @@ describe('Session Store', () => {
         responses: { 1: { id: '1' } },
       })
       mockEvidence.load.mockResolvedValue([{ name: 'file.txt', URL: '/path/file.txt', count: 1 }])
+      mockAudio.load.mockResolvedValue([{ name: 'audio.webm', URL: 'blob:audio.webm', count: 1 }])
 
       await sessionStore.loadSession('VIG')
 
@@ -93,6 +105,7 @@ describe('Session Store', () => {
 
       expect(mockFs.loadSession).toHaveBeenCalledWith('VIG')
       expect(mockEvidence.load).toHaveBeenCalledWith('VIG')
+      expect(mockAudio.load).toHaveBeenCalledWith('VIG')
     })
 
     it('correctly creates session summary when file doesnt exist', async () => {
@@ -151,6 +164,18 @@ describe('Session Store', () => {
 
       expect(mockEvidence.load).toHaveBeenCalledWith('VIG')
       expect(mockEvidence.updateCount).toHaveBeenCalledWith({ 1: { evidence: ['file.txt'] } })
+    })
+
+    it('updates audio counts after loading', async () => {
+      mockFs.loadSession.mockResolvedValue({
+        summary: { location: '/path' },
+        responses: { 1: { audioComments: ['audio.webm'] } },
+      })
+
+      await sessionStore.loadSession('VIG')
+
+      expect(mockAudio.load).toHaveBeenCalledWith('VIG')
+      expect(mockAudio.updateCount).toHaveBeenCalledWith({ 1: { audioComments: ['audio.webm'] } })
     })
 
     it('removes dangling non-conformity entries', async () => {
