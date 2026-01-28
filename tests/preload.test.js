@@ -47,9 +47,10 @@ describe('preload.js', () => {
     it('checkPath should invoke check-path with filePath and pathLegs', async () => {
       mockIpcRenderer.invoke.mockResolvedValue(true)
       await api.checkPath('/home/user', 'documents', 'file.txt')
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'check-path', '/home/user', ['documents', 'file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('check-path', '/home/user', [
+        'documents',
+        'file.txt',
+      ])
     })
 
     it('createDir should invoke create-dir with correct arguments', async () => {
@@ -57,11 +58,10 @@ describe('preload.js', () => {
 
       await api.createDir('/home/user', 'documents', 'subfolder')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'create-dir',
-        '/home/user',
-        ['documents', 'subfolder']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('create-dir', '/home/user', [
+        'documents',
+        'subfolder',
+      ])
     })
 
     it('deleteFile should invoke delete-file with correct arguments', async () => {
@@ -69,11 +69,7 @@ describe('preload.js', () => {
 
       await api.deleteFile('/home/user', 'file.txt')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'delete-file',
-        '/home/user',
-        ['file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('delete-file', '/home/user', ['file.txt'])
     })
 
     it('getPath should invoke get-path with correct arguments', async () => {
@@ -81,11 +77,10 @@ describe('preload.js', () => {
 
       await api.getPath('/home/user', 'documents', 'file.txt')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'get-path',
-        '/home/user',
-        ['documents', 'file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('get-path', '/home/user', [
+        'documents',
+        'file.txt',
+      ])
     })
 
     it('getStats should invoke get-stats with correct arguments', async () => {
@@ -94,11 +89,7 @@ describe('preload.js', () => {
 
       await api.getStats('/home/user', 'file.txt')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'get-stats',
-        '/home/user',
-        ['file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('get-stats', '/home/user', ['file.txt'])
     })
 
     it('listPath should invoke list-path with correct arguments', async () => {
@@ -106,11 +97,7 @@ describe('preload.js', () => {
 
       await api.listPath('/home/user', 'documents')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'list-path',
-        '/home/user',
-        ['documents']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('list-path', '/home/user', ['documents'])
     })
 
     it('readFile should invoke read-file with correct arguments', async () => {
@@ -119,11 +106,7 @@ describe('preload.js', () => {
 
       await api.readFile('/home/user', 'file.txt')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'read-file',
-        '/home/user',
-        ['file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('read-file', '/home/user', ['file.txt'])
     })
 
     it('saveFile should invoke save-file with fileData, filePath, and pathLegs', async () => {
@@ -132,12 +115,9 @@ describe('preload.js', () => {
 
       await api.saveFile(fileData, '/home/user', 'file.txt')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'save-file',
-        fileData,
-        '/home/user',
-        ['file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('save-file', fileData, '/home/user', [
+        'file.txt',
+      ])
     })
   })
 
@@ -165,11 +145,7 @@ describe('preload.js', () => {
 
       await api.checkPath('/home/user')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'check-path',
-        '/home/user',
-        []
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('check-path', '/home/user', [])
     })
 
     it('should handle multiple pathLegs', async () => {
@@ -177,11 +153,12 @@ describe('preload.js', () => {
 
       await api.getPath('/home', 'user', 'documents', 'projects', 'file.txt')
 
-      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith(
-        'get-path',
-        '/home',
-        ['user', 'documents', 'projects', 'file.txt']
-      )
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('get-path', '/home', [
+        'user',
+        'documents',
+        'projects',
+        'file.txt',
+      ])
     })
   })
 })

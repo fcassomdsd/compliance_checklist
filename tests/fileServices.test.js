@@ -14,6 +14,8 @@ const mockElectronAPI = {
   readFile: vi.fn(),
   listPath: vi.fn(),
   saveFile: vi.fn(),
+  getFullPath: vi.fn(),
+  generatePDF: vi.fn(),
 }
 window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')
@@ -164,6 +166,82 @@ describe('fileServices', () => {
     })
   })
 
+  describe('saveFindingsReport', async () => {
+    it('calls generatePDF with correct parameters', async () => {
+      mockElectronAPI.getFullPath.mockResolvedValue(
+        '/path/to/report_reporte_hallazgos_2024-01-15.pdf'
+      )
+      mockElectronAPI.generatePDF.mockResolvedValue(
+        '/path/to/report_reporte_hallazgos_2024-01-15.pdf'
+      )
+
+      const checklist = { questions: [] }
+      const session = { responses: {} }
+
+      const result = await fs.saveFindingsReport(checklist, session, 'VIG')
+
+      expect(mockElectronAPI.getFullPath).toHaveBeenCalled()
+      expect(mockElectronAPI.generatePDF).toHaveBeenCalledWith(
+        expect.objectContaining({
+          checklistString: JSON.stringify(checklist),
+          sessionString: JSON.stringify(session),
+          specialty: 'VIG',
+        })
+      )
+      expect(result).toBeDefined()
+    })
+
+    it('includes current date in filename', async () => {
+      const expectedPath = '/path/to/reporte_hallazgos_2024-01-15.pdf'
+      mockElectronAPI.getFullPath.mockResolvedValue(expectedPath)
+      mockElectronAPI.generatePDF.mockResolvedValue(expectedPath)
+
+      const checklist = { questions: [] }
+      const session = { responses: {} }
+
+      await fs.saveFindingsReport(checklist, session, 'VIG')
+
+      const callArgs = mockElectronAPI.generatePDF.mock.calls[0][0]
+      expect(callArgs.outputPath).toContain('reporte_hallazgos')
+    })
+
+    it('handles missing checklist', async () => {
+      mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
+
+      await expect(fs.saveFindingsReport(null, { responses: {} }, 'VIG')).rejects.toThrow(
+        'saveFindingsReport: could not generate PDF'
+      )
+    })
+
+    it('handles missing session', async () => {
+      mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
+
+      await expect(fs.saveFindingsReport({ questions: [] }, null, 'VIG')).rejects.toThrow(
+        'saveFindingsReport: could not generate PDF'
+      )
+    })
+
+    it('handles missing specialty', async () => {
+      mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
+
+      await expect(
+        fs.saveFindingsReport({ questions: [] }, { responses: {} }, null)
+      ).rejects.toThrow('saveFindingsReport: could not generate PDF')
+    })
+
+    it('handles generatePDF errors', async () => {
+      mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
+      mockElectronAPI.generatePDF.mockRejectedValue(new Error('PDF generation failed'))
+
+      const checklist = { questions: [] }
+      const session = { responses: {} }
+
+      await expect(fs.saveFindingsReport(checklist, session, 'VIG')).rejects.toThrow(
+        'saveFindingsReport: could not generate PDF'
+      )
+    })
+  })
+
   describe('saveSession', async () => {
     it('calls saveFile with correct arguments', async () => {
       const mockSessionSummary = {
@@ -280,19 +358,25 @@ describe('fileServices', () => {
     it('createDefaultPath throws error', async () => {
       const fs = createFileService()
       window.electronAPI.createDir.mockRejectedValue(new Error('fail'))
-      await expect(fs.createDefaultPath('VIG')).rejects.toThrow('createDefaultPath: could not create path VIG : fail')
+      await expect(fs.createDefaultPath('VIG')).rejects.toThrow(
+        'createDefaultPath: could not create path VIG : fail'
+      )
     })
 
     it('deleteEvidence throws error', async () => {
       const fs = createFileService()
       window.electronAPI.deleteFile.mockRejectedValue(new Error('fail'))
-      await expect(fs.deleteEvidence('VIG', 'file.txt')).rejects.toThrow('deleteEvidence: could not delete evidence VIG/file.txt : fail')
+      await expect(fs.deleteEvidence('VIG', 'file.txt')).rejects.toThrow(
+        'deleteEvidence: could not delete evidence VIG/file.txt : fail'
+      )
     })
 
     it('readEvidence throws error', async () => {
       const fs = createFileService()
       window.electronAPI.listPath.mockRejectedValue(new Error('fail'))
-      await expect(fs.readEvidence('VIG')).rejects.toThrow('readEvidence: could not read evidence for VIG : fail')
+      await expect(fs.readEvidence('VIG')).rejects.toThrow(
+        'readEvidence: could not read evidence for VIG : fail'
+      )
     })
   })
 })

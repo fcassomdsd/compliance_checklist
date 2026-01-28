@@ -6,7 +6,7 @@ const mockToast = vi.fn()
 const mockDefineStore = vi.fn(() => vi.fn())
 
 const mockAppInstance = {
-  use: vi.fn(function() {
+  use: vi.fn(function () {
     return this
   }),
   mount: vi.fn(),
@@ -63,13 +63,14 @@ describe('main.js', () => {
   describe('Plugin registration', () => {
     it('should use Pinia store', async () => {
       const useCallArgs = mockAppInstance.use.mock.calls
-      expect(useCallArgs.some(args => args[0] === mockCreatePinia.mock.results[0].value))
-        .toBe(true)
+      expect(useCallArgs.some((args) => args[0] === mockCreatePinia.mock.results[0].value)).toBe(
+        true
+      )
     })
 
     it('should use Toast plugin', async () => {
       const useCallArgs = mockAppInstance.use.mock.calls
-      expect(useCallArgs.some(args => args[0] === mockToast)).toBe(true)
+      expect(useCallArgs.some((args) => args[0] === mockToast)).toBe(true)
     })
 
     it('should call app.use() in correct order - Pinia first, then Toast', async () => {
@@ -83,7 +84,7 @@ describe('main.js', () => {
   describe('Toast configuration', () => {
     it('should pass Toast options with 3000ms timeout', async () => {
       const useCallArgs = mockAppInstance.use.mock.calls
-      const toastCall = useCallArgs.find(args => args[0] === mockToast)
+      const toastCall = useCallArgs.find((args) => args[0] === mockToast)
       expect(toastCall).toBeDefined()
       expect(toastCall[1]).toEqual({
         timeout: 3000,

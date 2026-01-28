@@ -6,9 +6,9 @@ describe('checklist.js', () => {
   it('parses a valid checklist object successfully', async () => {
     const validJson = JSON.stringify({
       specialtyName: 'VIG',
-      location : 'Location 1',
+      location: 'Location 1',
       inspection: '0224',
-      startDate: '2024-01-01',  
+      startDate: '2024-01-01',
       questions: [
         {
           id: '1',

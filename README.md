@@ -8,12 +8,12 @@ Maximize efficiency and ensure data integrity for your operational safety inspec
 
 ## 🚀 Features
 
-* 🖥️ **Desktop First:** Cross-platform application (Windows, Linux, macOS) powered by Electron.
-* ✅ **Guaranteed Data Integrity:** Real-time **JSON schema validation** using **Ajv** ensures all checklists meet regulatory standards before saving.
-* 💾 **Robust State Management:** Modular, reactive state handling for checklists, evidence, and sessions via **Pinia**.
-* 🪵 **Structured Auditing:** Integrated **Winston** logging for comprehensive and structured application and inspection activity logs.
-* 🔔 **Non-Intrusive Feedback:** User notifications and confirmations delivered via **Vue-Toastification**.
-* ⚙️ **Node.js Integration:** Seamless file system and native OS functionality access via the Node.js backend.
+- 🖥️ **Desktop First:** Cross-platform application (Windows, Linux, macOS) powered by Electron.
+- ✅ **Guaranteed Data Integrity:** Real-time **JSON schema validation** using **Ajv** ensures all checklists meet regulatory standards before saving.
+- 💾 **Robust State Management:** Modular, reactive state handling for checklists, evidence, and sessions via **Pinia**.
+- 🪵 **Structured Auditing:** Integrated **Winston** logging for comprehensive and structured application and inspection activity logs.
+- 🔔 **Non-Intrusive Feedback:** User notifications and confirmations delivered via **Vue-Toastification**.
+- ⚙️ **Node.js Integration:** Seamless file system and native OS functionality access via the Node.js backend.
 
 ---
 
@@ -21,13 +21,13 @@ Maximize efficiency and ensure data integrity for your operational safety inspec
 
 The project follows a modular approach for clear separation of concerns:
 
-| Directory | Purpose |
-| :--- | :--- |
-| `/src/components` | Reusable Vue components (e.g., `ChecklistTable`, `ChecklistRow`). |
-| `/src/stores` | Pinia modules for application state management (e.g., `checklistStore`, `evidenceStore`, `sessionStore`). |
-| `/src/utils` | Utility modules for common logic (e.g., `fileOps.js` for file I/O, validation helpers). |
-| `/logs` | Directory where Winston saves structured application and inspection logs. |
-| `/tests` | Unit and integration tests. |
+| Directory         | Purpose                                                                                                   |
+| :---------------- | :-------------------------------------------------------------------------------------------------------- |
+| `/src/components` | Reusable Vue components (e.g., `ChecklistTable`, `ChecklistRow`).                                         |
+| `/src/stores`     | Pinia modules for application state management (e.g., `checklistStore`, `evidenceStore`, `sessionStore`). |
+| `/src/utils`      | Utility modules for common logic (e.g., `fileOps.js` for file I/O, validation helpers).                   |
+| `/logs`           | Directory where Winston saves structured application and inspection logs.                                 |
+| `/tests`          | Unit and integration tests.                                                                               |
 
 ---
 
@@ -35,8 +35,8 @@ The project follows a modular approach for clear separation of concerns:
 
 ### Prerequisites
 
-* Node.js **18+**
-* npm or yarn
+- Node.js **18+**
+- npm or yarn
 
 ### Installation & Development
 

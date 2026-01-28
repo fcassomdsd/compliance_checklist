@@ -183,7 +183,7 @@ describe('App.vue', () => {
 
   it('renders general comments button enabled when checklist loaded', () => {
     mockStore.checklistLoaded = true
-    mockStore.checklist = {inspection: 'INS', startDate:'2025-09-01', location: '/loc'}
+    mockStore.checklist = { inspection: 'INS', startDate: '2025-09-01', location: '/loc' }
     wrapper = mount(App, { global: { plugins: [pinia] } })
     const button = wrapper.find('#genCommentsToggle')
     expect(button.attributes('disabled')).toBeUndefined()
@@ -199,12 +199,12 @@ describe('App.vue', () => {
 
   it('shows and hides general comments on button click', async () => {
     mockStore.checklistLoaded = true
-    mockStore.checklist = {inspection:'INS', startDate:'2025-09-01', location:'/loc'}
+    mockStore.checklist = { inspection: 'INS', startDate: '2025-09-01', location: '/loc' }
     wrapper = mount(App, { global: { plugins: [pinia] } })
     expect(wrapper.find('div[class="general-comments"]').exists()).toBe(false)
     const button = wrapper.find('#genCommentsToggle')
     await button.trigger('click')
-    expect(button.text()).toBe("Hide General Comments")
+    expect(button.text()).toBe('Hide General Comments')
     expect(wrapper.find('div[class="general-comments"]').exists()).toBe(true)
   })
 

@@ -7,7 +7,9 @@ beforeAll(() => {
   })
   // Mock toBlob for all canvas elements
   Object.defineProperty(HTMLCanvasElement.prototype, 'toBlob', {
-    value: function(cb) { cb(new Blob(['test'], { type: 'image/jpeg' })) },
+    value: function (cb) {
+      cb(new Blob(['test'], { type: 'image/jpeg' }))
+    },
     writable: true,
   })
   // Mock videoWidth and videoHeight for all video elements
@@ -21,8 +23,12 @@ beforeAll(() => {
   })
   // Mock srcObject for all video elements
   Object.defineProperty(HTMLVideoElement.prototype, 'srcObject', {
-    set(val) { this._srcObject = val },
-    get() { return this._srcObject },
+    set(val) {
+      this._srcObject = val
+    },
+    get() {
+      return this._srcObject
+    },
     configurable: true,
   })
 })
@@ -429,8 +435,12 @@ describe('ChecklistRow.vue', () => {
       // Spy on getTracks globally
       const getTracksSpy = vi.fn(() => [{ stop }])
       Object.defineProperty(HTMLVideoElement.prototype, 'srcObject', {
-        set(val) { this._srcObject = val },
-        get() { return { getTracks: getTracksSpy } },
+        set(val) {
+          this._srcObject = val
+        },
+        get() {
+          return { getTracks: getTracksSpy }
+        },
         configurable: true,
       })
       wrapper.vm.showCameraModal = true
@@ -473,11 +483,11 @@ describe('ChecklistRow.vue', () => {
   describe('Audio Recording', () => {
     it('saves audio recording and updates store', async () => {
       mockAudioStore.add.mockResolvedValue('blob:audio-new.webm')
-      
+
       // Create a mock blob
       const mockBlob = new Blob(['audio data'], { type: 'audio/webm' })
       mockBlob.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8))
-      
+
       await wrapper.vm.saveAudioRecording(mockBlob, 'comments')
 
       expect(mockAudioStore.add).toHaveBeenCalled()
@@ -488,10 +498,10 @@ describe('ChecklistRow.vue', () => {
 
     it('handles audio save error', async () => {
       mockAudioStore.add.mockRejectedValue(new Error('Save failed'))
-      
+
       const mockBlob = new Blob(['audio data'], { type: 'audio/webm' })
       mockBlob.arrayBuffer = vi.fn().mockResolvedValue(new ArrayBuffer(8))
-      
+
       await wrapper.vm.saveAudioRecording(mockBlob, 'comments')
 
       expect(mockToast.error).toHaveBeenCalledWith('Failed to save audio: Save failed')
@@ -500,7 +510,7 @@ describe('ChecklistRow.vue', () => {
     it('plays audio from store URL', () => {
       // Mock window.electronAPI.playAudio
       window.electronAPI = { playAudio: vi.fn() }
-      
+
       const fileName = 'audio1.webm'
       wrapper.vm.playAudio(fileName)
 
@@ -528,7 +538,7 @@ describe('ChecklistRow.vue', () => {
       })
 
       mockAudioStore.subtract.mockResolvedValue(true)
-      
+
       await wrapper.vm.removeAudio(0, 'comments')
 
       expect(mockAudioStore.subtract).toHaveBeenCalledWith('VIG', 'audio1.webm')
@@ -557,7 +567,7 @@ describe('ChecklistRow.vue', () => {
       })
 
       mockAudioStore.subtract.mockRejectedValue(new Error('Delete failed'))
-      
+
       await wrapper.vm.removeAudio(0, 'comments')
 
       expect(mockToast.error).toHaveBeenCalledWith('Failed to delete audio: Delete failed')

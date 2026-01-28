@@ -50,6 +50,7 @@ describe('Checklist Store', () => {
       readEvidence: vi.fn(),
       setSavePath: vi.fn(),
       saveExportFile: vi.fn(),
+      saveFindingsReport: vi.fn().mockResolvedValue('report.pdf'),
       updateEvidenceCount: vi.fn(),
       loadSpecialties: vi.fn(),
     }
@@ -66,6 +67,11 @@ describe('Checklist Store', () => {
 
     // Initialize store
     store = useChecklistStore()
+
+    // Setup window.electronAPI mock
+    window.electronAPI = {
+      openFile: vi.fn(),
+    }
   })
 
   it('initializes state correctly', () => {
@@ -322,22 +328,24 @@ describe('Checklist Store', () => {
     })
 
     it('creates export string correctly', async () => {
-      const exportedString =
-        '"property"|"Location"|"Location 1"\n' +
-        '"property"|"Start Date"|"2024-01-01"\n' +
-        '"property"|"Specialty"|"Sistemas de Vigilancia"\n' +
-        '"property"|"Inspection"|"0224"\n' +
-        '"property"|"Total Questions"|"6"\n' +
-        'topic 2\n' +
-        '4|"reference 4"|"question 4"|"Non-compliant"|"Non-conformity details 1"\n' +
-        'topic 3\n' +
-        '5|\"reference 5\"|\"question 5\"|\"Non-compliant\"|\"Non-conformity details 2\"'
+      mockFs.saveFindingsReport = vi.fn().mockResolvedValue('report.pdf')
 
-      store.exportChecklist()
+      await store.exportChecklist()
 
       expect(mockToast.error).not.toHaveBeenCalled()
-      await expect(mockFs.saveExportFile).toHaveBeenCalledWith(exportedString, 'VIG')
-      expect(mockToast.success).toHaveBeenCalledWith('Checklist exported')
+
+      // The store creates a sessionObj with summary and responses
+      const expectedSessionObj = {
+        summary: mockSession.summary,
+        responses: mockSession.responses,
+      }
+      expect(mockFs.saveFindingsReport).toHaveBeenCalledWith(
+        store.checklist.value,
+        expectedSessionObj,
+        'VIG'
+      )
+      expect(mockToast.success).toHaveBeenCalledWith('Report generated successfully')
+      expect(store.generatedReportPath.value).toBe('report.pdf')
     })
 
     it('handles an emtpy checklist', async () => {
@@ -345,8 +353,40 @@ describe('Checklist Store', () => {
 
       store.exportChecklist()
 
-      await expect(mockFs.saveExportFile).not.toBeCalledWith('abc', 'VIG')
       expect(mockToast.error).toHaveBeenCalledWith('Empty checklist not exported')
     })
   })
+
+  describe('viewGeneratedReport', () => {
+    it('opens the generated report file', async () => {
+      // Setup: set a generated report path
+      store.generatedReportPath.value = 'path/to/report.pdf'
+      window.electronAPI.openFile = vi.fn().mockResolvedValue({ success: true })
+
+      await store.viewGeneratedReport()
+
+      expect(window.electronAPI.openFile).toHaveBeenCalledWith('path/to/report.pdf')
+      expect(mockToast.error).not.toHaveBeenCalled()
+    })
+
+    it('shows error when no report has been generated', async () => {
+      store.generatedReportPath.value = ''
+      window.electronAPI.openFile = vi.fn()
+
+      await store.viewGeneratedReport()
+
+      expect(window.electronAPI.openFile).not.toHaveBeenCalled()
+      expect(mockToast.error).toHaveBeenCalledWith(expect.stringContaining('No report has been generated'))
+    })
+
+    it('handles errors when opening file fails', async () => {
+      store.generatedReportPath.value = 'path/to/report.pdf'
+      window.electronAPI.openFile = vi.fn().mockRejectedValue(new Error('File not found'))
+
+      await store.viewGeneratedReport()
+
+      expect(mockToast.error).toHaveBeenCalledWith(expect.stringContaining('Could not open report'))
+    })
+  })
 })
+

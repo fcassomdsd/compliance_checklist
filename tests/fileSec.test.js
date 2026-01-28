@@ -46,15 +46,21 @@ describe('fileSec', () => {
     it('throws if root is not / on unix', () => {
       // This test is not reliably mockable in Node.js without a more advanced mock, so skip it
       // or just assert that the function throws for a clearly invalid root
-      expect(() => safePath('not/absolute/path')).toThrow('safePath: Not absolute path: not/absolute/path')
+      expect(() => safePath('not/absolute/path')).toThrow(
+        'safePath: Not absolute path: not/absolute/path'
+      )
     })
 
     it('throws if path contains .. after root', () => {
-      expect(() => safePath('/root/../file.txt')).toThrow('safePath: Illegal path name: /root/../file.txt')
+      expect(() => safePath('/root/../file.txt')).toThrow(
+        'safePath: Illegal path name: /root/../file.txt'
+      )
     })
 
     it('throws if path contains invalid characters after root', () => {
-      expect(() => safePath('/root/bad|name.txt')).toThrow('safePath: Illegal path name: /root/bad|name.txt')
+      expect(() => safePath('/root/bad|name.txt')).toThrow(
+        'safePath: Illegal path name: /root/bad|name.txt'
+      )
     })
   })
 
@@ -67,10 +73,10 @@ describe('fileSec', () => {
 
     it('throws on path traversal', () => {
       expect(() => safeJoin('/base', ['../file.txt'])).toThrow(
-        'safeJoin: Illegal path name: /base,../file.txt'
+        'safeJoin: Illegal path name (includes "..")'
       )
       expect(() => safeJoin('/base/../base2', ['file.txt'])).toThrow(
-        'safeJoin: Illegal path name: /base/../base2,file.txt'
+        'safeJoin: Illegal path name (includes "..")'
       )
     })
 
@@ -80,46 +86,48 @@ describe('fileSec', () => {
     })
 
     it('throws on non-string base', () => {
-      expect(() => safeJoin(123, ['sub', 'file.txt'])).toThrow(
-        'safeJoin: Illegal path name: 123 ; sub,file.txt'
-      )
-      expect(() => safeJoin(null, ['sub', 'file.txt'])).toThrow(
-        'safeJoin: Illegal path name: null ; sub,file.txt'
-      )
-      expect(() => safeJoin(undefined, ['sub', 'file.txt'])).toThrow(
-        'safeJoin: Illegal path name: undefined ; sub,file.txt'
-      )
+      expect(() => safeJoin(123, ['sub', 'file.txt'])).toThrow('safeJoin: Illegal base name')
+      expect(() => safeJoin(null, ['sub', 'file.txt'])).toThrow('safeJoin: Illegal base name')
+      expect(() => safeJoin(undefined, ['sub', 'file.txt'])).toThrow('safeJoin: Illegal base name')
     })
 
     it('throws on non-string input', () => {
-      expect(() => safeJoin('/base', 123)).toThrow('safeJoin: Illegal path name: /base ; 123')
-      expect(() => safeJoin('/base', null)).toThrow('safeJoin: Illegal path name: /base ; null')
-      expect(() => safeJoin('/base', undefined)).toThrow(
-        'safeJoin: Illegal path name: /base ; undefined'
-      )
+      expect(() => safeJoin('/base', 123)).toThrow('safeJoin: Illegal path legs')
+      expect(() => safeJoin('/base', null)).toThrow('safeJoin: Illegal path legs')
+      expect(() => safeJoin('/base', undefined)).toThrow('safeJoin: Illegal path legs')
     })
 
     describe('safeJoin edge cases', () => {
       it('throws if any path leg is not a string', () => {
-        expect(() => safeJoin('/base', ['sub', 123])).toThrow('safeJoin: Illegal path name: /base,sub,123')
-        // The implementation returns 'safeJoin: Illegal path name: /base,sub,' for null, so match that
-        expect(() => safeJoin('/base', ['sub', null])).toThrow('safeJoin: Illegal path name: /base,sub,')
+        expect(() => safeJoin('/base', ['sub', 123])).toThrow(
+          'safeJoin: Illegal path leg data type'
+        )
+        // The implementation returns 'safeJoin: Illegal path leg data type' for null too
+        expect(() => safeJoin('/base', ['sub', null])).toThrow(
+          'safeJoin: Illegal path leg data type'
+        )
       })
 
       it('throws if any path leg contains ..', () => {
-        expect(() => safeJoin('/base', ['sub', '..'])).toThrow('safeJoin: Illegal path name: /base,sub,..')
+        expect(() => safeJoin('/base', ['sub', '..'])).toThrow(
+          'safeJoin: Illegal path name (includes "..")'
+        )
       })
 
       it('throws if any path leg is empty or has invalid characters', () => {
         // For empty string, safeJoin returns /base (does not throw)
         expect(safeJoin('/base', [''])).toBe('/base')
         // For invalid characters, safeJoin throws error
-        expect(() => safeJoin('/base', ['sub', 'bad|name'])).toThrow('safeJoin: Illegal path name: /base,sub,bad|name')
+        expect(() => safeJoin('/base', ['sub', 'bad|name'])).toThrow(
+          'safeJoin: Illegal path name (includes invalid characters)'
+        )
       })
 
       it('throws if resolved path does not start with base', () => {
-        // The implementation returns a different error message for path traversal
-        expect(() => safeJoin('/base', ['../../etc/passwd'])).toThrow('safeJoin: Illegal path name: /base,../../etc/passwd')
+        // The implementation throws for path traversal (..)
+        expect(() => safeJoin('/base', ['../../etc/passwd'])).toThrow(
+          'safeJoin: Illegal path name (includes "..")'
+        )
       })
     })
   })

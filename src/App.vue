@@ -38,10 +38,19 @@
         >
           Report Findings
         </button>
+        <button
+          id="viewReportBtn"
+          :disabled="!store.generatedReportPath"
+          @click="store.viewGeneratedReport()"
+        >
+          View Report
+        </button>
 
         <!-- General comments toggle -->
-        <button id="genCommentsToggle" @click="showGenComments = !showGenComments"
-        :disabled="!store.checklistLoaded"
+        <button
+          id="genCommentsToggle"
+          @click="showGenComments = !showGenComments"
+          :disabled="!store.checklistLoaded"
         >
           {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
         </button>
@@ -57,7 +66,11 @@
         @input="onGeneralCommentsInput($event)"
       ></textarea>
       <div>
-        <button id="clearGeneralComments" @click="clearGeneralComments()" :disabled="sessionStore.summary.finalized">
+        <button
+          id="clearGeneralComments"
+          @click="clearGeneralComments()"
+          :disabled="sessionStore.summary.finalized"
+        >
           Clear
         </button>
       </div>

@@ -160,7 +160,7 @@ describe('Audio Store', () => {
     test('when file exists but is not in files object', async () => {
       // shouldn't happen.  File was copied while running.  This is a problem
       const buffer = new ArrayBuffer(8)
-      
+
       await expect(audio.add('VIG', 'unaccounted.webm', buffer)).rejects.toThrow(
         'audioStore.add: could not add audio: audio.add: detected untracked file: unaccounted.webm'
       )
