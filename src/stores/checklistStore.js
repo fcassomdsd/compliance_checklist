@@ -18,6 +18,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   const tituloModal = ref('')
   const explanationModal = ref('')
   const accionModal = ref('')
+  const generatedReportPath = ref('')
 
   // modal window data
   const modalFinalizeTitle = 'Finalize Checklist'
@@ -46,7 +47,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     }
   }
 
-  const loadChecklist = async () => {  
+  const loadChecklist = async () => {
     // initialize state
     checklist.value = null
     checklistLoaded.value = false
@@ -111,86 +112,29 @@ export const useChecklistStore = defineStore('checklist', () => {
 
   const exportChecklist = async () => {
     try {
-      const out = []
-
-      const makeLine = (val) => {
-        let rawLine = val || ''
-
-        rawLine = rawLine.toString().replaceAll(/\n/gm, '<br>')
-        rawLine = rawLine.toString().replaceAll('"', '""')
-
-        return rawLine
-      }
-
       if (checklist.value.questions.length == 0) {
         throw new Error('Empty checklist not exported')
       }
 
-      let propertyLine=[]
-
-      propertyLine = [
-        '"property"',
-        '"Location"',
-        checklist.value.location
-          ? '"' + makeLine(checklist.value.location) + '"' : '""',
-      ]
-      out.push(propertyLine.join('|'))
-      propertyLine = [
-        '"property"',
-        '"Start Date"',
-        checklist.value.startDate
-          ? '"' + makeLine(checklist.value.startDate) + '"' : '""',
-      ]
-      out.push(propertyLine.join('|'))
-      propertyLine = [
-        '"property"',
-        '"Specialty"',
-        checklist.value.specialtyName
-          ? '"' + makeLine(checklist.value.specialtyName) + '"' : '""', 
-      ]
-      out.push(propertyLine.join('|')) 
-      propertyLine = [
-        '"property"',
-        '"Inspection"',
-        '"' + makeLine(checklist.value.inspection) + '"',
-      ]
-      out.push(propertyLine.join('|'))
-      propertyLine = [
-        '"property"',
-        '"Total Questions"', 
-        '"' + makeLine(checklist.value.questions.length) + '"',
-      ]
-      out.push(propertyLine.join('|'))
-      let prevTopic = ''
-      const validCompliance = ['Non-compliant']
-      const validQuestions = checklist.value.questions.entries()
-      for (const [index, row] of validQuestions) {
-        if (
-          sessionStore.responses[index + 1] !== undefined &&
-          validCompliance.includes(sessionStore.responses[index + 1].compliance)
-        ) {
-          if (prevTopic != row.topic) {
-            out.push(row.topic)
-          }
-          prevTopic = row.topic
-          const qnumber = index + 1
-          const session = sessionStore.responses[qnumber] || {}
-          const line = [
-            qnumber,
-            '"' + makeLine(row.reference) + '"',
-            '"' + makeLine(row.question) + '"',
-            '"' + makeLine(session.compliance || '') + '"',
-            '"' + makeLine(session.nonConformity || '') + '"',
-          ]
-          out.push(line.join('|'))
-        }
-      }
-      
-      const exportedString = out.join('\n')
-      await fs.saveExportFile(exportedString, specialty.value)
-      toast.success('Checklist exported')
+      // Generate PDF report of findings
+      const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
+      const reportPath = await fs.saveFindingsReport(checklist.value, sessionObj, specialty.value)
+      generatedReportPath.value = reportPath
+      toast.success('Report generated successfully')
     } catch (error) {
+      generatedReportPath.value = ''
       toast.error(error.message)
+    }
+  }
+
+  const viewGeneratedReport = async () => {
+    try {
+      if (!generatedReportPath.value) {
+        throw new Error('No report has been generated yet')
+      }
+      await window.electronAPI.openFile(generatedReportPath.value)
+    } catch (error) {
+      toast.error('Could not open report: ' + error.message)
     }
   }
 
@@ -204,11 +148,13 @@ export const useChecklistStore = defineStore('checklist', () => {
     tituloModal,
     explanationModal,
     accionModal,
+    generatedReportPath,
     loadChecklist,
     loadSpecialties,
     showFinalize,
     checkDefaultPath,
     confirmModal,
     exportChecklist,
+    viewGeneratedReport,
   }
 })

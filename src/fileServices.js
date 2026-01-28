@@ -252,6 +252,29 @@ export const createFileService = () => {
     }
   }
 
+  const saveFindingsReport = async (checklist, session, specialty) => {
+    try {
+      if (!checklist || !session || !specialty) {
+        throw new Error('Missing required parameters: checklist, session, specialty')
+      }
+      const fileName = `reporte_hallazgos_${new Date().toISOString().split('T')[0]}.pdf`
+      const filePath = await window.electronAPI.getFullPath(DEFAULT_ROOT, specialty, fileName)
+      const checklistString = JSON.stringify(checklist)
+      const sessionString = JSON.stringify(session)
+      const result = await window.electronAPI.generatePDF({
+        checklistString,
+        sessionString,
+        specialty,
+        outputPath: filePath,
+      })
+      return result
+    } catch (error) {
+      throw new Error(
+        `saveFindingsReport: could not generate PDF` + (error.message ? `: ${error.message}` : '')
+      )
+    }
+  }
+
   return {
     defaultPathExists,
     setSavePath,
@@ -267,5 +290,6 @@ export const createFileService = () => {
     saveAudio,
     deleteAudio,
     readAudio,
+    saveFindingsReport,
   }
 }

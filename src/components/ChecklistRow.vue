@@ -37,17 +37,25 @@
             :class="{ recording: recordingNonConformity }"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-              <path d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"/>
-              <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z"/>
-              <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z"/>
+              <path
+                d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+              />
+              <path
+                d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"
+              />
+              <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z" />
+              <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z" />
             </svg>
           </button>
           <div class="audio-list">
-            <div v-for="(audio, index) in session.audioNonConformity || []" :key="index" class="audio-item">
+            <div
+              v-for="(audio, index) in session.audioNonConformity || []"
+              :key="index"
+              class="audio-item"
+            >
               <button @click="playAudio(audio)" title="Play recording">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z"/>
+                  <path d="M8 5v14l11-7z" />
                 </svg>
               </button>
               <span>{{ audio }}</span>
@@ -57,7 +65,9 @@
                 title="Delete recording"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                  <path
+                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
+                  />
                 </svg>
               </button>
             </div>
@@ -80,17 +90,25 @@
           :class="{ recording: recordingComments }"
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-            <path d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"/>
-            <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z"/>
-            <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z"/>
+            <path
+              d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+            />
+            <path
+              d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"
+            />
+            <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z" />
+            <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z" />
           </svg>
         </button>
         <div class="audio-list">
-          <div v-for="(audio, index) in session.audioComments || []" :key="index" class="audio-item">
+          <div
+            v-for="(audio, index) in session.audioComments || []"
+            :key="index"
+            class="audio-item"
+          >
             <button @click="playAudio(audio)" title="Play recording">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z"/>
+                <path d="M8 5v14l11-7z" />
               </svg>
             </button>
             <span>{{ audio }}</span>
@@ -100,7 +118,9 @@
               title="Delete recording"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/>
+                <path
+                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
+                />
               </svg>
             </button>
           </div>

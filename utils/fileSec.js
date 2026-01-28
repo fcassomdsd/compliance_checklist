@@ -1,23 +1,27 @@
 import path from 'node:path'
 
 export function safeJoin(base, inputs) {
-  if (typeof base != 'string' || base.length == 0 || !Array.isArray(inputs)) {
-    throw new Error(`safeJoin: Illegal path name: ${base} ; ${inputs} `)
+  if (typeof base != 'string' || base.length == 0) {
+    throw new Error(`safeJoin: Illegal base name: ${base} `)
+  }
+
+  if (!Array.isArray(inputs) && typeof inputs !== 'string') {
+    throw new Error(`safeJoin: Illegal path legs: ${inputs} `)
   }
 
   let valid = true
-  const pathLegs = [base, ...inputs]
+  const pathLegs = [base, ...(Array.isArray(inputs) ? inputs : [inputs])]
 
   // check for string type
   valid = pathLegs.reduce((prevValid, leg) => prevValid && typeof leg == 'string', valid)
   if (!valid) {
-    throw new Error('safeJoin: Illegal path name: ' + pathLegs.toString())
+    throw new Error('safeJoin: Illegal path leg data type: ' + pathLegs.toString())
   }
 
   // check for '..'
   valid = pathLegs.reduce((prevValid, leg) => prevValid && !leg.includes('..'), valid)
   if (!valid) {
-    throw new Error('safeJoin: Illegal path name: ' + pathLegs.toString())
+    throw new Error('safeJoin: Illegal path name (includes ".."): ' + pathLegs.toString())
   }
 
   // check for invalid strings (empty or with invalid characters)
@@ -26,12 +30,14 @@ export function safeJoin(base, inputs) {
     valid
   )
   if (!valid) {
-    throw new Error('safeJoin: Illegal path name: ' + pathLegs.toString())
+    throw new Error(
+      'safeJoin: Illegal path name (includes invalid characters): ' + pathLegs.toString()
+    )
   }
 
-  const newPath = path.resolve(base, ...inputs)
+  const newPath = path.resolve(base, ...(Array.isArray(inputs) ? inputs : [inputs]))
   if (!newPath.startsWith(base)) {
-    throw new Error('safeJoin: Illegal path name: ' + base + ' ; ' + inputs.toString())
+    throw new Error('safeJoin: Illegal path name (traversal): ' + base + ' ; ' + inputs.toString())
   } else {
     return newPath
   }

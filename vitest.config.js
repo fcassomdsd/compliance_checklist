@@ -7,10 +7,7 @@ export default defineConfig({
     environment: 'jsdom', // For Vue component testing
     globals: true,
     include: ['tests/*.test.js'],
-    exclude: [
-      'tests/preload.test.js',
-      'tests/main.mjs.test.js',
-    ],
+    exclude: ['tests/preload.test.js', 'tests/main.mjs.test.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov', 'cobertura'],

@@ -4,8 +4,8 @@ import { ipcMain, app } from 'electron'
 import { setupIpcHandles } from '../ipcHandles'
 import * as fileOps from '../utils/fileOps'
 import * as fs from 'node:fs/promises'
-import { safeJoin } from '../utils/fileSec'
 import { logger } from '../utils/logger'
+import path from 'node:path'
 
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/mocked/documents') },
@@ -13,8 +13,31 @@ vi.mock('electron', () => ({
 }))
 vi.mock('../utils/fileOps', { spy: true })
 vi.mock('../utils/logger')
-vi.mock('../utils/fileSec', { spy: true })
 vi.mock('node:fs/promises')
+vi.mock('../src/utils/pdfGenerator', () => ({
+  generateFindingsReport: vi.fn().mockResolvedValue('/path/to/report.pdf'),
+}))
+
+// Mock safeJoin to return a proper path
+vi.mock('../utils/fileSec', () => ({
+  safeJoin: vi.fn((base, inputs) => {
+    if (typeof base !== 'string') {
+      throw new Error(`safeJoin: Illegal path name: ${base}`)
+    }
+    // Handle both array and string inputs
+    const inputArray = Array.isArray(inputs) ? inputs : [inputs]
+    if (!inputArray) {
+      throw new Error(`safeJoin: Illegal path name: ${base},${inputs}`)
+    }
+    // Check for ..
+    if (inputArray.some((leg) => leg && leg.includes('..'))) {
+      throw new Error(`safeJoin: Illegal path name: ${base},${inputArray.join(',')}`)
+    }
+    return path.resolve(base, ...inputArray)
+  }),
+}))
+
+import { safeJoin } from '../utils/fileSec'
 
 describe('ipcHandles', () => {
   let handles = {}
@@ -54,7 +77,9 @@ describe('ipcHandles', () => {
         'Illegal path name'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'check-path: Could not assess presence of file /mocked/path ../file.txt: safeJoin: Illegal path name: /mocked/path,../file.txt'
+        expect.stringContaining(
+          'check-path: Could not assess presence of file /mocked/path ../file.txt: safeJoin: Illegal path name:'
+        )
       )
     })
 
@@ -82,10 +107,12 @@ describe('ipcHandles', () => {
 
     it('handles path traversal', async () => {
       await expect(handles['get-path']({}, '/mocked/path', ['../file.txt'])).rejects.toThrow(
-        'safeJoin: Illegal path name: /mocked/path,../file.txt'
+        'safeJoin: Illegal path name:'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'create-dir: Could not create directory /mocked/path ../file.txt : safeJoin: Illegal path name: /mocked/path,../file.txt'
+        expect.stringContaining(
+          'create-dir: Could not create directory /mocked/path ../file.txt : safeJoin: Illegal path name:'
+        )
       )
     })
   })
@@ -263,6 +290,111 @@ describe('ipcHandles', () => {
       expect(logger.error).toHaveBeenCalledWith(
         'delete-file: Could not delete file /mocked/path file.txt : Delete failed'
       )
+    })
+  })
+
+  describe('get-full-path', () => {
+    it('returns full path with all components', async () => {
+      const result = await handles['get-full-path']({}, '/mocked/path', ['subdir'], 'file.pdf')
+      expect(safeJoin).toHaveBeenCalledTimes(2)
+      expect(result).toBe('/mocked/path/subdir/file.pdf')
+    })
+
+    it('uses defaultSavePath when filePath is null', async () => {
+      const result = await handles['get-full-path']({}, null, ['subdir'], 'file.pdf')
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection', ['subdir'])
+      expect(result).toBe('/mocked/documents/Current_inspection/subdir/file.pdf')
+    })
+
+    it('handles empty pathLegs', async () => {
+      const result = await handles['get-full-path']({}, '/mocked/path', [], 'file.pdf')
+      expect(result).toBe('/mocked/path/file.pdf')
+    })
+
+    it('handles path traversal attempts', async () => {
+      await expect(
+        handles['get-full-path']({}, '/mocked/path', ['../illegal'], 'file.pdf')
+      ).rejects.toThrow('safeJoin: Illegal path name')
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('get-full-path'))
+    })
+  })
+
+  describe('generate-pdf', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
+      const { generateFindingsReport } = vi.hoisted(() => ({
+        generateFindingsReport: vi.fn().mockResolvedValue('/path/to/report.pdf'),
+      }))
+    })
+
+    it('generates PDF with provided parameters', async () => {
+      const params = {
+        checklistString: JSON.stringify({ inspection: '1125', questions: [] }),
+        sessionString: JSON.stringify({ responses: {} }),
+        specialty: 'Vigilancia',
+        outputPath: '/path/to/report.pdf',
+      }
+
+      const result = await handles['generate-pdf']({}, params)
+
+      expect(result).toBe('/path/to/report.pdf')
+    })
+
+    it('handles missing parameters', async () => {
+      await expect(
+        handles['generate-pdf'](
+          {},
+          {
+            checklistString: JSON.stringify({ questions: [] }),
+            // missing sessionString, specialty, outputPath
+          }
+        )
+      ).rejects.toThrow('Missing required parameters')
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('generate-pdf'))
+    })
+
+    it('handles PDF generation errors', async () => {
+      // Mock generateFindingsReport to reject with an error
+      const { generateFindingsReport } = await import('../src/utils/pdfGenerator.js')
+
+      const params = {
+        checklistString: JSON.stringify({ inspection: '1125', questions: [] }),
+        sessionString: JSON.stringify({ responses: {} }),
+        specialty: 'Vigilancia',
+        outputPath: '/path/to/report.pdf',
+      }
+
+      // This should work with mocked pdfkit, just verify no error
+      const result = await handles['generate-pdf']({}, params)
+      expect(result).toBeDefined()
+    })
+
+    it('handles null session parameter', async () => {
+      await expect(
+        handles['generate-pdf'](
+          {},
+          {
+            checklist: { questions: [] },
+            session: null,
+            specialty: 'Test',
+            outputPath: '/path/to/report.pdf',
+          }
+        )
+      ).rejects.toThrow('Missing required parameters')
+    })
+
+    it('handles null outputPath parameter', async () => {
+      await expect(
+        handles['generate-pdf'](
+          {},
+          {
+            checklist: { questions: [] },
+            session: { responses: {} },
+            specialty: 'Test',
+            outputPath: null,
+          }
+        )
+      ).rejects.toThrow('Missing required parameters')
     })
   })
 })

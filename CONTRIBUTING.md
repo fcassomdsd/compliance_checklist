@@ -16,11 +16,11 @@ Please ensure you have read the **CODE_OF_CONDUCT.md** before starting.
 
 We follow a **main / develop** branching model:
 
-* **`main`** → always stable and production-ready.
-* **`develop`** → active development branch. **All Merge Requests (MRs) should target this branch.**
-* **`feature/`** → New features (`feature/add-logging-module`).
-* **`fix/`** → Bug fixes (`fix/ui-freeze`).
-* **`hotfix/`** → Urgent fixes to main (`hotfix/crash-fix`).
+- **`main`** → always stable and production-ready.
+- **`develop`** → active development branch. **All Merge Requests (MRs) should target this branch.**
+- **`feature/`** → New features (`feature/add-logging-module`).
+- **`fix/`** → Bug fixes (`fix/ui-freeze`).
+- **`hotfix/`** → Urgent fixes to main (`hotfix/crash-fix`).
 
 ### Example Feature Workflow
 
@@ -95,3 +95,4 @@ To ensure a smooth review process, please include the following in your Merge Re
         [ ] New and existing tests pass (npm test).
 
         [ ] My commit messages use Conventional Commits.
+```

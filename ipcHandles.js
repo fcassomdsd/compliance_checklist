@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { shell } from 'electron'
 import path from 'node:path'
 import { Buffer } from 'node:buffer'
 import {
@@ -12,6 +13,7 @@ import {
 } from './utils/fileOps.js'
 import { safeJoin } from './utils/fileSec.js'
 import { logger } from './utils/logger.js'
+import { generateFindingsReport } from './src/utils/pdfGenerator.js'
 
 // Moved outside the setup function as it's a constant
 //const defaultSavePath = '/home/fernando/Documents/Current_inspection'; //path.join(app.getPath('documents'), 'Current_inspection');
@@ -44,6 +46,19 @@ export function setupIpcHandles(ipcMain) {
     } catch (err) {
       logger.error(
         `create-dir: Could not create directory ${filePath} ${pathLegs.toString()} : ${err.message}`
+      )
+      throw err
+    }
+  })
+
+  ipcMain.handle('get-full-path', async (event, filePath, pathLegs, fileName) => {
+    try {
+      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPathWithLegs = safeJoin(dirPath, pathLegs)
+      return safeJoin(dirPathWithLegs, fileName)
+    } catch (err) {
+      logger.error(
+        `get-full-path: Could not get full path ${filePath} ${pathLegs} ${fileName}: ${err.message}`
       )
       throw err
     }
@@ -133,6 +148,30 @@ export function setupIpcHandles(ipcMain) {
       throw err
     }
   })
-}
 
-export default setupIpcHandles
+  ipcMain.handle('generate-pdf', async (event, { checklistString, sessionString, specialty, outputPath }) => {
+    try {
+      if (!checklistString || !sessionString || !specialty || !outputPath) {
+        throw new Error('Missing required parameters: checklistString, sessionString, specialty, outputPath')
+      }
+      const result = await generateFindingsReport({ checklistString, sessionString, specialty, outputPath })
+      return result
+    } catch (err) {
+      logger.error(`generate-pdf: Could not generate PDF: ${err.message}`)
+      throw err
+    }
+  })
+
+  ipcMain.handle('open-file', async (event, filePath) => {
+    try {
+      if (!filePath) {
+        throw new Error('Missing required parameter: filePath')
+      }
+      await shell.openPath(filePath)
+      return { success: true }
+    } catch (err) {
+      logger.error(`open-file: Could not open file ${filePath}: ${err.message}`)
+      throw err
+    }
+  })
+}

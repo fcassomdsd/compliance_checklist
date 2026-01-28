@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">77.94% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>68/68</span>
+                <span class='fraction'>53/68</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/5</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">77.94% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>68/68</span>
+                <span class='fraction'>53/68</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -194,21 +194,21 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 &nbsp;
@@ -266,22 +266,22 @@ const checklistSchema = {
 &nbsp;
 const validateChecklist = ajv.compile(checklistSchema)
 &nbsp;
-export function parseChecklist(contents) {
-  try {
-    const json = JSON.parse(contents)
-    if (!validateChecklist(json)) {
-      const errors =
-        validateChecklist.errors
-          ?.map((err) =&gt; `Invalid checklist data at ${err.instancePath}: ${err.message}`)
-          .join('; ') <span class="branch-0 cbranch-no" title="branch not covered" >|| 'Unknown validation error'</span>
-      throw new Error(`Checklist validation failed: ${errors}`)
-    }
-    return json
-  } catch (e) {
-    console.log(`Failed to parse checklist :`, e)
-    throw e
-  }
-}
+export <span class="fstat-no" title="function not covered" >function parseChecklist(contents) {</span>
+<span class="cstat-no" title="statement not covered" >  try {</span>
+<span class="cstat-no" title="statement not covered" >    const json = JSON.parse(contents)</span>
+<span class="cstat-no" title="statement not covered" >    if (!validateChecklist(json)) {</span>
+<span class="cstat-no" title="statement not covered" >      const errors =</span>
+<span class="cstat-no" title="statement not covered" >        validateChecklist.errors</span>
+<span class="cstat-no" title="statement not covered" >          ?.map((err) =&gt; `Invalid checklist data at ${err.instancePath}: ${err.message}`)</span>
+<span class="cstat-no" title="statement not covered" >          .join('; ') || 'Unknown validation error'</span>
+<span class="cstat-no" title="statement not covered" >      throw new Error(`Checklist validation failed: ${errors}`)</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    return json</span>
+<span class="cstat-no" title="statement not covered" >  } catch (e) {</span>
+<span class="cstat-no" title="statement not covered" >    console.log(`Failed to parse checklist :`, e)</span>
+<span class="cstat-no" title="statement not covered" >    throw e</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -289,7 +289,7 @@ export function parseChecklist(contents) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-01-25T19:37:30.070Z
+                at 2026-01-27T01:51:09.899Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
