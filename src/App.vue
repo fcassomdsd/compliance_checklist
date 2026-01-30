@@ -96,7 +96,7 @@
   import { useChecklistStore } from './stores/checklistStore'
   import { useSessionStore } from './stores/sessionStore'
   import { useToast } from 'vue-toastification'
-  import logo from './images/compliance-logo.png'
+  import logo from './assets/images/compliance-logo.png'
 
   // Access the Pinia store
   const store = useChecklistStore()
@@ -120,7 +120,7 @@
         await sessionStore.loadSession(store.specialty)
       }
     } catch (error) {
-      toast.error('Could not load checklist or session: ' + error.message)
+      toast.error('Could not load session: ' + error.message)
     }
   }
 

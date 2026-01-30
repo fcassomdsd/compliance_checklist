@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { createFileService } from '../fileServices.js'
-import { getEvidenceLinks } from '../../utils/session.js'
+import { createFileService } from '../utils/fileServices.js'
+import { getEvidenceLinks } from '../utils/session.js'
 
 export const useEvidenceStore = defineStore('evidence', () => {
   const fs = createFileService()

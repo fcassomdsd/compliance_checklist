@@ -1,16 +1,16 @@
 {
   "name": "compliance-app",
   "version": "1.0.0a",
-  "main": "main.mjs",
+  "main": "electron/main.mjs",
   "type": "module",
   "scripts": {
     "start": "electron .",
     "dev": "vite",
-    "lint": "eslint --ext .js,.vue,.cjs,.mjs src",
-    "lint:fix": "eslint --fix --ext .js,.vue,.cjs,.mjs src",
+    "lint": "eslint --ext .js,.vue,.cjs,.mjs src electron",
+    "lint:fix": "eslint --fix --ext .js,.vue,.cjs,.mjs src electron",
     "format": "prettier --write \"**/*.{js,vue,json,css,scss,md,yml}\"",
     "build": "vite build",
-    "build:win-portable": "electron-builder --win portable",
+    "build:win-portable": "electron-builder --x64 --win portable",
     "dist": "electron-builder",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -57,7 +57,7 @@
           ]
         }
       ],
-      "icon": "./src/images/complianceApp.ico"
+      "icon": "public/images/complianceApp.ico"
     },
     "directories": {
       "output": "dist-portable",
@@ -65,15 +65,15 @@
     },
     "files": [
       "dist/**/*",
-      "main.mjs",
-      "preload.js",
-      "ipcHandles.js",
-      "utils/**/*"
+      "electron/main.mjs",
+      "electron/preload.cjs",
+      "electron/ipc/ipcHandles.js",
+      "electron/utils/**/*"
     ],
     "extraResources": [
       {
-        "from": "src/images/",
-        "to": "images/",
+        "from": "public/images/",
+        "to": "assets/images/",
         "filter": [
           "**/*"
         ]

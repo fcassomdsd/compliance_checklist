@@ -193,9 +193,9 @@
   import { useEvidenceStore } from '../stores/evidenceStore'
   import { useAudioStore } from '../stores/audioStore'
   import { useToast } from 'vue-toastification'
-  import trash from '../images/trash.png'
-  import cameraIcon from '../images/camera.png'
-  import fileUpload from '../images/fileUpload.png'
+  import trash from '../assets/images/trash.png'
+  import cameraIcon from '../assets/images/camera.png'
+  import fileUpload from '../assets/images/fileUpload.png'
 
   const props = defineProps({
     newTopic: { type: Boolean },

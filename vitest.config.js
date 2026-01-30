@@ -6,19 +6,20 @@ export default defineConfig({
   test: {
     environment: 'jsdom', // For Vue component testing
     globals: true,
-    include: ['tests/*.test.js'],
-    exclude: ['tests/preload.test.js', 'tests/main.mjs.test.js'],
+    include: ['src/__tests__/*.test.js', 'electron/__tests__/*.test.js'],
+    exclude: ['electron/__tests__/preload.test.js', 'electron/__tests__/main.mjs.test.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov', 'cobertura'],
       exclude: [
         'node_modules/',
-        'tests/',
+        'src/__tests__/',
+        'electron/__tests__/',
         '*eslint*',
         'alfresco/',
         'dist/',
-        'preload.cjs',
-        'main.mjs',
+        'electron/preload.cjs',
+        'electron/main.mjs',
         '**/*.config.js',
       ],
       lines: 70,
