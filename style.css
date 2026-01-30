@@ -7,7 +7,7 @@
   --text-dark: #333333; /* Dark gray for main text */
   --text-light: #f9f9f9; /* Off-white for light text */
   --border-color: #cfd8dc; /* Light gray for borders */
-  --shadow-color: rgba(0,0,0,0.1); /* Subtle shadow */
+  --shadow-color: rgba(0, 0, 0, 0.1); /* Subtle shadow */
 }
 
 body {
@@ -137,7 +137,8 @@ button:hover:not(:disabled) {
   border-bottom-right-radius: 12px;
 }
 
-th, td {
+th,
+td {
   border: 1px solid var(--border-color);
   padding: 1rem;
   vertical-align: top;
@@ -161,8 +162,27 @@ textarea {
   padding: 0.5rem;
 }
 
-input[type="file"] {
+textarea.compliance {
+  padding: 0;
+}
+
+div.non-conformity {
+  border: 1px solid var(--border-color);
+  padding: 0;
+  vertical-align: top;
+  border-left: none;
+  border-right: none;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  margin-right: 0.8rem;
+}
+
+input[type='file'] {
   margin-top: 0.5rem;
+}
+
+table.preview {
+  border-collapse: collapse;
 }
 
 .preview td {

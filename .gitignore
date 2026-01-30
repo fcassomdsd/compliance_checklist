@@ -1,11 +1,10 @@
 node_modules/
+coverage/
 logs/
 dist/
 dist-*/
-package-lock.json
 *~
 .~lock*
 *old
 *ods
 *txt
-eslint*

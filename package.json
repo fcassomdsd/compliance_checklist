@@ -1,20 +1,27 @@
 {
   "name": "compliance-app",
   "version": "1.0.0a",
-  "main": "main.mjs",
+  "main": "electron/main.mjs",
   "type": "module",
   "scripts": {
     "start": "electron .",
     "dev": "vite",
+    "lint": "eslint --ext .js,.vue,.cjs,.mjs src electron",
+    "lint:fix": "eslint --fix --ext .js,.vue,.cjs,.mjs src electron",
+    "format": "prettier --write \"**/*.{js,vue,json,css,scss,md,yml}\"",
     "build": "vite build",
-    "build:win-portable": "electron-builder --win portable",
+    "build:win-portable": "electron-builder --x64 --win portable",
     "dist": "electron-builder",
     "test": "vitest",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
     "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.1",
+    "pdfkit": "^0.17.2",
     "pinia": "^2.2.2",
+    "prettier": "^3.6.2",
     "vue-toastification": "^2.0.0-rc.5",
     "winston": "^3.13.0"
   },
@@ -22,6 +29,7 @@
     "@eslint/js": "^9.35.0",
     "@eslint/json": "^0.13.2",
     "@vitejs/plugin-vue": "^5.1.4",
+    "@vitest/coverage-v8": "^2.1.9",
     "@vue/test-utils": "^2.4.6",
     "electron": "^37.3.1",
     "electron-builder": "^26.0.12",
@@ -49,7 +57,11 @@
           ]
         }
       ],
+<<<<<<< HEAD
       "icon": "./src/images/complianceApp.ico"
+=======
+      "icon": "public/images/complianceApp.ico"
+>>>>>>> develop
     },
     "directories": {
       "output": "dist-portable",
@@ -57,15 +69,22 @@
     },
     "files": [
       "dist/**/*",
+<<<<<<< HEAD
       "main.mjs",
       "preload.js",
       "ipcHandles.js",
       "utils/**/*"
+=======
+      "electron/main.mjs",
+      "electron/preload.cjs",
+      "electron/ipc/ipcHandles.js",
+      "electron/utils/**/*"
+>>>>>>> develop
     ],
     "extraResources": [
       {
-        "from": "src/images/",
-        "to": "images/",
+        "from": "public/images/",
+        "to": "assets/images/",
         "filter": [
           "**/*"
         ]

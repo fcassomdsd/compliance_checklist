@@ -14,139 +14,588 @@
           type="radio"
           :name="`compliance-${qnumber}`"
           :value="radioBtn"
-          :disabled="store.sessionSummary.finalized"
+          :disabled="sessionStore.summary.finalized"
           :checked="session.compliance === radioBtn"
           @change="radioChange($event)"
-        /> {{ radioBtn }}<br>
+        />
+        {{ radioBtn }}
+        <br />
       </label>
+      <div class="non-conformity" :hidden="session.compliance != 'Non-compliant'">
+        <textarea
+          :name="`nonConformity-${qnumber}`"
+          :value="session.nonConformity"
+          :disabled="sessionStore.summary.finalized"
+          placeholder="Describa la no conformidad"
+          @input="nonConformityChange($event)"
+        ></textarea>
+        <div class="audio-controls">
+          <button
+            :title="`${recordingNonConformity ? 'Stop' : 'Start'} Recording Non-conformity`"
+            :disabled="sessionStore.summary.finalized"
+            @click="toggleAudioRecordingNonConformity"
+            :class="{ recording: recordingNonConformity }"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path
+                d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+              />
+              <path
+                d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"
+              />
+              <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z" />
+              <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z" />
+            </svg>
+          </button>
+          <div class="audio-list">
+            <div
+              v-for="(audio, index) in session.audioNonConformity || []"
+              :key="index"
+              class="audio-item"
+            >
+              <button @click="playAudio(audio)" title="Play recording">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+              <span>{{ audio }}</span>
+              <button
+                @click="removeAudio(index, 'nonConformity')"
+                :disabled="sessionStore.summary.finalized"
+                title="Delete recording"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </td>
     <td class="comments">
       <textarea
         :name="`comments-${qnumber}`"
         :value="session.comments"
-        :disabled="store.sessionSummary.finalized"
+        :disabled="sessionStore.summary.finalized"
         @input="textAreaChange($event)"
       ></textarea>
+      <div class="audio-controls">
+        <button
+          :title="`${recordingComments ? 'Stop' : 'Start'} Recording Comments`"
+          :disabled="sessionStore.summary.finalized"
+          @click="toggleAudioRecordingComments"
+          :class="{ recording: recordingComments }"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+            />
+            <path
+              d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"
+            />
+            <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z" />
+            <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z" />
+          </svg>
+        </button>
+        <div class="audio-list">
+          <div
+            v-for="(audio, index) in session.audioComments || []"
+            :key="index"
+            class="audio-item"
+          >
+            <button @click="playAudio(audio)" title="Play recording">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <span>{{ audio }}</span>
+            <button
+              @click="removeAudio(index, 'comments')"
+              :disabled="sessionStore.summary.finalized"
+              title="Delete recording"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </td>
     <td class="evidence">
-      <input
-        style="width : 100%"
-        type="file"
-        class="evidence-upload"
-        :name="`evidence-${qnumber}`"
-        :disabled="store.sessionSummary.finalized"
-        multiple
-        @change="evidenceChange($event)"
-      />
-      <table class="preview"  :id="`evidencetable-${qnumber}`">
+      <div class="upload-buttons">
+        <input
+          :id="`fileInput-${qnumber}`"
+          style="width: 100%"
+          type="file"
+          hidden
+          class="evidence-upload"
+          :name="`evidence-${qnumber}`"
+          :disabled="sessionStore.summary.finalized"
+          multiple
+          @change="evidenceChange($event)"
+        />
+        <input
+          type="image"
+          :src="fileUpload"
+          height="30"
+          width="30"
+          :disabled="sessionStore.summary.finalized"
+          @click="evidenceUpload(qnumber)"
+        />
+        <input
+          type="image"
+          :id="`cameraInput-${qnumber}`"
+          :src="cameraIcon"
+          height="30"
+          width="30"
+          :disabled="sessionStore.summary.finalized"
+          @click="openCamera"
+        />
+      </div>
+      <table class="preview" :id="`evidencetable-${qnumber}`">
         <tr v-for="(evidence, index) in session.evidence" :key="index">
           <td>
-            <input type="image" :src="trash" height="15" width="15" :disabled="store.sessionSummary.finalized" @click="removeEvidence(index, evidence)" />
+            <input
+              type="image"
+              :src="trash"
+              height="15"
+              width="15"
+              :disabled="sessionStore.summary.finalized"
+              @click="removeEvidence(index, evidence)"
+            />
           </td>
-          <td :class="{ 'missing' : (evidenceStore.files[evidence]?.URL == '')}">
-            <a :href="evidenceStore.files[evidence]?.URL" target="_blank">{{ evidenceStore.files[evidence]?.count }}{{
-               evidence
-            }}</a>
+          <td :class="{ missing: evidenceStore.files[evidence]?.URL == '' }">
+            <a :href="evidenceStore.files[evidence]?.URL" download target="_blank">
+              {{ evidenceStore.files[evidence]?.count }}{{ evidence }}
+            </a>
           </td>
         </tr>
       </table>
     </td>
   </tr>
+  <div v-if="showCameraModal" class="camera-modal">
+    <video ref="video" autoplay></video>
+    <canvas ref="canvas" style="display: none"></canvas>
+    <button @click="capturePhoto">Capture</button>
+    <button @click="closeCameraModal">Cancel</button>
+  </div>
 </template>
 
 <script setup>
-import { ref} from 'vue';
-import { useChecklistStore } from '../stores/checklistStore';
-import { useEvidenceStore } from '../stores/evidenceStore';
-import { useToast } from 'vue-toastification';
-import trash from '../images/trash.png';
+  import { ref } from 'vue'
+  import { useSessionStore } from '../stores/sessionStore'
+  import { useEvidenceStore } from '../stores/evidenceStore'
+  import { useAudioStore } from '../stores/audioStore'
+  import { useToast } from 'vue-toastification'
+  import trash from '../assets/images/trash.png'
+  import cameraIcon from '../assets/images/camera.png'
+  import fileUpload from '../assets/images/fileUpload.png'
 
-const props = defineProps({
-  newTopic : { type : Boolean },
-  qnumber : { type : Number },
-  row : { type : Object},
-  session : { type : Object }
- });
+  const props = defineProps({
+    newTopic: { type: Boolean },
+    qnumber: { type: Number },
+    row: { type: Object },
+    session: { type: Object },
+  })
 
-const toast = useToast();
-const radioButtons = ref([
-   "Not applicable",
-   "Compliant",
-   "Partial Compliance",
-   "Non-compliant",
-]);
+  const toast = useToast()
+  const radioButtons = ref(['Not applicable', 'Compliant', 'Non-compliant'])
 
-const radioColors = ref({
-   "Not applicable" : "border : 3px solid #aaaaaa",
-   "Compliant"      : "border : 3px solid #55FF55",
-   "Partial Compliance" : "border : 3px solid #FFFF00",
-   "Non-compliant" : "border : 3px solid #FF5555"
-});
+  const radioColors = ref({
+    'Not applicable': 'border : 3px solid #aaaaaa',
+    Compliant: 'border : 3px solid #55FF55',
+    'Non-compliant': 'border : 3px solid #FF5555',
+  })
 
-// Access the Pinia store
-const store = useChecklistStore();
-const evidenceStore = useEvidenceStore();
-
-const radioChange = (event) => {
-  store.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value);
-};
-
-const textAreaChange = (event) => {
-  store.updateSession(props.qnumber, props.row.id, 'comments', event.target.value);
-};
-
-const evidenceChange = async (event) => {
-
-  const files = event.target.files;
-  const table = props.session.evidence || [];
-
-  for (const file of files) {
-
-    try {
-
-      // update the evidence file record
-      await evidenceStore.add(store.specialty, file);
-
-      const inTable = table.some((item) => item === file.name);
-
-      if (inTable) { // it's already there
-        if (evidenceStore.files[file.name].count == 0) { // it's a missing file. update count
-          evidenceStore.addCount(file.name);
-        }
-      } else {
-        evidenceStore.addCount(file.name);
-        table.push(file.name);
-      }
-    } catch (error) {
-      console.log("evidenceChanged failed: " + error);
-      toast.error(error.message);
-    }
-      
+  const evidenceUpload = (qnumber) => {
+    const inputControl = document.getElementById('fileInput-' + qnumber)
+    inputControl.click()
   }
-  
-  store.updateSession(props.qnumber, props.row.id, 'evidence', table);
-  toast.success("Evidence updated");
-};
 
-const removeEvidence = async (index, evidence) => {
+  const showCameraModal = ref(false)
+  const video = ref(null)
+  const canvas = ref(null)
+
+  // Audio recording state
+  const recordingComments = ref(false)
+  const recordingNonConformity = ref(false)
+  let mediaRecorder = null
+  let audioChunks = []
+
+  // Access the Pinia stores
+  const sessionStore = useSessionStore()
+  const evidenceStore = useEvidenceStore()
+  const audioStore = useAudioStore()
+
+  const radioChange = (event) => {
+    sessionStore.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value)
+  }
+
+  const textAreaChange = (event) => {
+    sessionStore.updateSession(props.qnumber, props.row.id, 'comments', event.target.value)
+  }
+
+  const nonConformityChange = (event) => {
+    sessionStore.updateSession(props.qnumber, props.row.id, 'nonConformity', event.target.value)
+  }
+
+  const toggleAudioRecordingComments = async () => {
+    if (recordingComments.value) {
+      stopAudioRecording()
+    } else {
+      startAudioRecording('comments')
+    }
+  }
+
+  const toggleAudioRecordingNonConformity = async () => {
+    if (recordingNonConformity.value) {
+      stopAudioRecording()
+    } else {
+      startAudioRecording('nonConformity')
+    }
+  }
+
+  const startAudioRecording = async (field) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaRecorder = new MediaRecorder(stream)
+      audioChunks = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' })
+        await saveAudioRecording(audioBlob, field)
+        // Stop all tracks
+        stream.getTracks().forEach((track) => track.stop())
+      }
+
+      mediaRecorder.start()
+      if (field === 'comments') {
+        recordingComments.value = true
+      } else {
+        recordingNonConformity.value = true
+      }
+      toast.info('Recording started...')
+    } catch (error) {
+      toast.error('Could not access microphone: ' + error.message)
+    }
+  }
+
+  const stopAudioRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop()
+      recordingComments.value = false
+      recordingNonConformity.value = false
+    }
+  }
+
+  const saveAudioRecording = async (blob, field) => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      const fileName = `audio-${props.qnumber}-${field}-${timestamp}.webm`
+
+      // Convert blob to buffer
+      const buffer = await blob.arrayBuffer()
+
+      // Save audio file through the audio store
+      await audioStore.add(sessionStore.summary.specialty, fileName, new Uint8Array(buffer))
+
+      // Add to audio list in session
+      const audioFieldName = field === 'comments' ? 'audioComments' : 'audioNonConformity'
+      const currentAudioList = props.session[audioFieldName] || []
+      currentAudioList.push(fileName)
+
+      // Update count in audio store
+      audioStore.addCount(fileName)
+
+      sessionStore.updateSession(props.qnumber, props.row.id, audioFieldName, currentAudioList)
+      toast.success('Audio recording saved')
+    } catch (error) {
+      toast.error('Failed to save audio: ' + error.message)
+    }
+  }
+
+  const playAudio = async (fileName) => {
+    try {
+      // Get the audio file URL from the store
+      const audioURL = audioStore.files[fileName]?.URL
+      if (!audioURL) {
+        toast.error('Audio file not found')
+        return
+      }
+
+      // Create audio element and play it
+      const audio = new Audio(audioURL)
+      await audio.play()
+    } catch (error) {
+      toast.error('Failed to play audio: ' + error.message)
+    }
+  }
+
+  const removeAudio = async (index, field) => {
+    const audioFieldName = field === 'comments' ? 'audioComments' : 'audioNonConformity'
+    const currentAudioList = props.session[audioFieldName] || []
+    const fileName = currentAudioList[index]
 
     try {
-      await evidenceStore.subtract(store.specialty, evidence);
-    } catch(error) {
-      console.log("evidenceChanged failed: " + error);
-      toast.error(error.message);
+      // Delete through the audio store
+      await audioStore.subtract(sessionStore.summary.specialty, fileName)
+
+      // Remove from list
+      const updatedAudioList = currentAudioList.filter((_, i) => i !== index)
+      sessionStore.updateSession(props.qnumber, props.row.id, audioFieldName, updatedAudioList)
+      toast.success('Audio recording removed')
+    } catch (error) {
+      toast.error('Failed to delete audio: ' + error.message)
+    }
+  }
+
+  const evidenceChange = async (event) => {
+    const files = event.target.files
+    const table = props.session.evidence || []
+
+    for (const file of files) {
+      try {
+        // update the evidence file record
+        await evidenceStore.add(sessionStore.summary.specialty, file)
+
+        const inTable = table.some((item) => item === file.name)
+
+        if (inTable) {
+          // it's already there
+          if (evidenceStore.files[file.name].count == 0) {
+            // it's a missing file. update count
+            evidenceStore.addCount(file.name)
+          }
+        } else {
+          evidenceStore.addCount(file.name)
+          table.push(file.name)
+        }
+      } catch (error) {
+        console.log('evidenceChanged failed: ' + error)
+        toast.error(error.message)
+      }
     }
 
-  const updatedEvidence = props.session.evidence.filter((_, i) => i !== index);
-  store.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence);
-};
+    sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', table)
+    toast.success('Evidence updated')
+  }
 
+  const removeEvidence = async (index, evidence) => {
+    try {
+      await evidenceStore.subtract(sessionStore.summary.specialty, evidence)
+    } catch (error) {
+      console.log('evidenceChanged failed: ' + error)
+      toast.error(error.message)
+    }
+
+    const updatedEvidence = props.session.evidence.filter((_, i) => i !== index)
+    sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence)
+  }
+
+  const openCamera = async () => {
+    showCameraModal.value = true
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+    video.value.srcObject = stream
+  }
+
+  const capturePhoto = async () => {
+    const context = canvas.value.getContext('2d')
+    canvas.value.width = video.value.videoWidth
+    canvas.value.height = video.value.videoHeight
+    context.drawImage(video.value, 0, 0)
+    const blob = await new Promise((resolve) => canvas.value.toBlob(resolve, 'image/jpeg'))
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const file = new File([blob], `evidence-${props.qnumber}-${timestamp}.jpg`, {
+      type: 'image/jpeg',
+    })
+    const table = props.session.evidence || []
+    await evidenceStore.add(sessionStore.summary.specialty, file)
+    if (!table.some((item) => item === file.name)) {
+      evidenceStore.addCount(file.name)
+      table.push(file.name)
+    }
+    sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', table)
+    toast.success('Evidence updated')
+    closeCameraModal()
+  }
+
+  const closeCameraModal = () => {
+    showCameraModal.value = false
+    if (video.value.srcObject) {
+      video.value.srcObject.getTracks().forEach((track) => track.stop())
+    }
+  }
 </script>
 
 <style scoped>
+  .missing a {
+    color: red;
+  }
 
-.missing a {
-  color: red;
-}
+  .camera-button {
+    border: none;
+    color: white;
+    padding: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(30, 136, 229, 0.2);
+  }
 
+  .camera-button:disabled {
+    background-color: #90caf9;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .camera-button:hover:not(:disabled) {
+    background-color: #1565c0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(30, 136, 229, 0.3);
+  }
+
+  .upload-buttons {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: space-evenly;
+  }
+
+  .upload-buttons input {
+    box-shadow: 0 4px 8px rgba(30, 136, 229, 0.2);
+  }
+
+  .upload-buttons input:hover:not(:disabled) {
+    background-color: #1565c0;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(30, 136, 229, 0.3);
+  }
+
+  .upload-buttons input:disabled {
+    background-color: #b0eaf9;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .camera-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  video {
+    width: 80%;
+    max-width: 640px;
+  }
+
+  .audio-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .audio-controls button {
+    background: #1e88e5;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(30, 136, 229, 0.2);
+  }
+
+  .audio-controls button:hover:not(:disabled) {
+    background: #1565c0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(30, 136, 229, 0.3);
+  }
+
+  .audio-controls button:disabled {
+    background: #90caf9;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .audio-controls button.recording {
+    background: #d32f2f;
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .audio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .audio-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f5f5;
+    padding: 6px 8px;
+    border-radius: 3px;
+    font-size: 0.85rem;
+  }
+
+  .audio-item button {
+    background: none;
+    border: none;
+    padding: 2px;
+    color: #1e88e5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+  }
+
+  .audio-item button:hover {
+    color: #1565c0;
+  }
+
+  .audio-item button:disabled {
+    color: #90caf9;
+    cursor: not-allowed;
+  }
+
+  .audio-item span {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 </style>

@@ -1,0 +1,65 @@
+image: node:latest
+stages:
+  - lint
+  - test
+  - build
+
+variables:
+  NODE_ENV: test
+  CI: 'true'
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+before_script:
+  - npm ci
+
+lint:
+  stage: lint
+  script:
+    - echo "🔍 Running ESLint..."
+    - npm run lint
+  only:
+    - develop
+    - merge_requests
+
+test:
+  stage: test
+  script:
+    - echo "🧪 Running tests..."
+    - npm test
+  only:
+    - develop
+    - merge_requests
+
+coverage:
+  stage: test
+  script:
+    - echo "📊 Running tests with coverage..."
+    - npm run test:coverage
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  artifacts:
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    expire_in: 30 days
+  only:
+    - develop
+    - merge_requests
+
+build:
+  stage: build
+  script:
+    - echo "🏗️ Building application..."
+    - npm run build
+  only:
+    - main
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
