@@ -1,7 +1,7 @@
 import { ref, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
 import { defineStore } from 'pinia'
-import { createFileService } from '../fileServices.js'
+import { createFileService } from '../utils/fileServices.js'
 import { useEvidenceStore } from './evidenceStore.js'
 import { useAudioStore } from './audioStore.js'
 

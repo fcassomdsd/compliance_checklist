@@ -1,0 +1,126 @@
+src/fileServices.js:import { parseChecklist } from '../utils/checklist.js'
+src/fileServices.js:import { parseSession } from '../utils/session.js'
+src/main.js~:import { createApp } from 'vue';
+src/main.js~:import { createPinia } from 'pinia';
+src/main.js~:import Toast from "vue-toastification";
+src/main.js~:import "vue-toastification/dist/index.css";
+src/main.js~:import createElectronService from "./electronServices.js";
+src/main.js~:import App from './App.vue';
+src/App.vue~:import { onMounted } from 'vue';
+src/App.vue~:import ChecklistTable from './components/ChecklistTable.vue';
+src/App.vue~:import ModalWindow from './components/ModalWindow.vue';
+src/App.vue~:import { useChecklistStore } from './stores/checklistStore';
+src/App.vue~:import { useSessionStore } from './stores/sessionStore';
+src/App.vue~:import { useToast } from 'vue-toastification';
+src/App.vue~:import logo from './images/compliance-logo.png'
+src/main.js:import { createApp } from 'vue'
+src/main.js:import { createPinia } from 'pinia'
+src/main.js:import Toast from 'vue-toastification'
+src/main.js:import 'vue-toastification/dist/index.css'
+src/main.js:import App from './App.vue'
+src/stores/evidenceStore.js~:import { ref } from 'vue';
+src/stores/evidenceStore.js~:import { defineStore } from 'pinia';
+src/stores/evidenceStore.js~:import { createFileService } from '../fileServices.js';
+src/stores/evidenceStore.js~:import { getEvidenceLinks } from '../../utils/session.js';
+src/stores/evidenceStore.js:import { ref } from 'vue'
+src/stores/evidenceStore.js:import { defineStore } from 'pinia'
+src/stores/evidenceStore.js:import { createFileService } from '../fileServices.js'
+src/stores/evidenceStore.js:import { getEvidenceLinks } from '../../utils/session.js'
+src/stores/checklistStore.js:import { defineStore } from 'pinia'
+src/stores/checklistStore.js:import { ref } from 'vue'
+src/stores/checklistStore.js:import { useToast } from 'vue-toastification'
+src/stores/checklistStore.js:import { createFileService } from '../fileServices.js'
+src/stores/checklistStore.js:import { useSessionStore } from './sessionStore.js'
+src/stores/audioStore.js:import { ref } from 'vue'
+src/stores/audioStore.js:import { defineStore } from 'pinia'
+src/stores/audioStore.js:import { createFileService } from '../fileServices.js'
+src/stores/audioStore.js:import { getEvidenceLinks } from '../../utils/session.js'
+src/stores/sessionStore.js:import { ref, reactive } from 'vue'
+src/stores/sessionStore.js:import { useToast } from 'vue-toastification'
+src/stores/sessionStore.js:import { defineStore } from 'pinia'
+src/stores/sessionStore.js:import { createFileService } from '../fileServices.js'
+src/stores/sessionStore.js:import { useEvidenceStore } from './evidenceStore.js'
+src/stores/sessionStore.js:import { useAudioStore } from './audioStore.js'
+src/stores/checklistStore.js~:import { defineStore } from 'pinia';
+src/stores/checklistStore.js~:import { ref } from 'vue';
+src/stores/checklistStore.js~:import { useToast } from 'vue-toastification';
+src/stores/checklistStore.js~:import { createFileService } from '../fileServices.js';
+src/stores/checklistStore.js~:import { useSessionStore } from './sessionStore.js';
+src/stores/sessionStore.js~:import { ref, reactive } from 'vue';
+src/stores/sessionStore.js~:import { useToast } from 'vue-toastification';
+src/stores/sessionStore.js~:import { defineStore } from 'pinia';
+src/stores/sessionStore.js~:import { createFileService } from '../fileServices.js';
+src/stores/sessionStore.js~:import { useEvidenceStore } from './evidenceStore.js';
+src/App.vue:  import { onMounted, ref } from 'vue'
+src/App.vue:  import ChecklistTable from './components/ChecklistTable.vue'
+src/App.vue:  import ModalWindow from './components/ModalWindow.vue'
+src/App.vue:  import { useChecklistStore } from './stores/checklistStore'
+src/App.vue:  import { useSessionStore } from './stores/sessionStore'
+src/App.vue:  import { useToast } from 'vue-toastification'
+src/App.vue:  import logo from './assets/images/compliance-logo.png'
+src/components/ChecklistRow.vue:  import { ref } from 'vue'
+src/components/ChecklistRow.vue:  import { useSessionStore } from '../stores/sessionStore'
+src/components/ChecklistRow.vue:  import { useEvidenceStore } from '../stores/evidenceStore'
+src/components/ChecklistRow.vue:  import { useAudioStore } from '../stores/audioStore'
+src/components/ChecklistRow.vue:  import { useToast } from 'vue-toastification'
+src/components/ChecklistRow.vue:  import trash from '../assets/images/trash.png'
+src/components/ChecklistRow.vue:  import cameraIcon from '../assets/images/camera.png'
+src/components/ChecklistRow.vue:  import fileUpload from '../assets/images/fileUpload.png'
+src/components/ChecklistRow.vue~:import { ref } from 'vue';
+src/components/ChecklistRow.vue~:import { useSessionStore } from '../stores/sessionStore';
+src/components/ChecklistRow.vue~:import { useEvidenceStore } from '../stores/evidenceStore';
+src/components/ChecklistRow.vue~:import { useToast } from 'vue-toastification';
+src/components/ChecklistRow.vue~:import trash from '../images/trash.png';
+src/components/ChecklistRow.vue~:import cameraIcon from '../images/camera.png';
+src/components/ChecklistRow.vue~:import fileUpload from '../images/fileUpload.png';
+src/components/ChecklistTable.vue~:import ChecklistRow from './ChecklistRow.vue';
+src/components/ChecklistTable.vue~:import { useChecklistStore } from '../stores/checklistStore';
+src/components/ChecklistTable.vue~:import { useSessionStore } from '../stores/sessionStore';
+src/components/ChecklistTable.vue:  import ChecklistRow from './ChecklistRow.vue'
+src/components/ChecklistTable.vue:  import { useChecklistStore } from '../stores/checklistStore'
+src/components/ChecklistTable.vue:  import { useSessionStore } from '../stores/sessionStore'
+src/fileServices.js~:import { parseChecklist } from '../utils/checklist.js';
+src/fileServices.js~:import { parseSession } from '../utils/session.js';
+utils/fileSec.js:import path from 'node:path'
+utils/fileSec.js~:import path from "node:path";
+utils/checklist.js:import Ajv from 'ajv'
+utils/checklist.js:import addFormats from 'ajv-formats'
+utils/session.js:import Ajv from 'ajv'
+utils/checklist.js~:import Ajv from 'ajv';
+utils/logger.js~:import winston from 'winston';
+utils/fileOps.js~:import * as fs from 'node:fs/promises';
+utils/fileOps.js~:import * as path from 'node:path';
+utils/fileOps.js~:import { logger } from './logger.js';
+utils/fileOps.js~:import { safePath } from './fileSec.js';
+utils/logger.js:import winston from 'winston'
+utils/pdfGenerator.js:import PDFDocument from 'pdfkit'
+utils/pdfGenerator.js:import fs from 'fs'
+utils/pdfGenerator.js:        const logoUrl = new URL('/images/compliance-logo.png', import.meta.url).href
+utils/session.js~:import Ajv from 'ajv';
+utils/fileOps.js:import * as fs from 'node:fs/promises'
+utils/fileOps.js:import * as path from 'node:path'
+utils/fileOps.js:import { logger } from './logger.js'
+utils/fileOps.js:import { safePath } from './fileSec.js'
+eslint.config.mjs:import js from "@eslint/js";
+eslint.config.mjs:import globals from "globals";
+eslint.config.mjs:import pluginVue from "eslint-plugin-vue";
+eslint.config.mjs:import json from "@eslint/json";
+eslint.config.mjs:import { defineConfig } from "eslint/config";
+ipcHandles.js:import { app } from 'electron'
+ipcHandles.js:import { shell } from 'electron'
+ipcHandles.js:import path from 'node:path'
+ipcHandles.js:import { Buffer } from 'node:buffer'
+ipcHandles.js:import {
+ipcHandles.js:import { safeJoin } from './utils/fileSec.js'
+ipcHandles.js:import { logger } from './utils/logger.js'
+ipcHandles.js:import { generateFindingsReport } from './utils/pdfGenerator.js'
+main.mjs:import os from 'node:os';
+main.mjs:import { dirname, join } from 'node:path';
+main.mjs:import { fileURLToPath } from 'node:url';
+main.mjs:import { app, BrowserWindow, dialog, ipcMain, systemPreferences,  } from 'electron/main';
+main.mjs:import { setupIpcHandles } from './ipcHandles.js';
+main.mjs:const fileName = fileURLToPath(import.meta.url);
+vite.config.js:import { defineConfig } from 'vite'
+vite.config.js:import vue from '@vitejs/plugin-vue'
+vitest.config.js:import { defineConfig } from 'vitest/config'
+vitest.config.js:import vue from '@vitejs/plugin-vue'

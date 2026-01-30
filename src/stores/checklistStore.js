@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
-import { createFileService } from '../fileServices.js'
+import { createFileService } from '../utils/fileServices.js'
 import { useSessionStore } from './sessionStore.js'
 
 export const useChecklistStore = defineStore('checklist', () => {
@@ -74,7 +74,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     accionModal.value = modalFinalizeAction
     showModal.value = true
   }
-  const confirmModal = () => {
+  const confirmModal = async () => {
     try {
       showModal.value = false
       switch (tituloModal.value) {
@@ -84,7 +84,10 @@ export const useChecklistStore = defineStore('checklist', () => {
           break
         }
         case modalCreateDPTitle: {
-          specialtyList.value.forEach((x) => fs.createDefaultPath(x.code))
+          // Call the IPC handler to create the default root with user.config.json
+          await fs.createDefaultRoot()
+          // Reload specialties after creating the default root
+          await loadSpecialties()
           toast.success(createDPSuccess)
           break
         }
