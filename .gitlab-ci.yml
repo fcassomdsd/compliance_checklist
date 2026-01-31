@@ -66,7 +66,10 @@ build:
 
 build:portable:windows:
   stage: build
-  image: mcr.microsoft.com/windows/nanoserver:ltsc2022
+  tags:
+    - saas-windows-medium-amd64
+  before_script:
+    - npm install  # Essential: Windows needs its own native binaries
   script:
     - echo "🪟 Building Windows portable..."
     - npm run build
@@ -78,16 +81,3 @@ build:portable:windows:
       - dist-portable/win-unpacked/
     expire_in: 1 week
 
-build:portable:macos:
-  stage: build
-  image: node:latest
-  script:
-    - echo "🍎 Building macOS portable..."
-    - npm run build
-    - npx electron-builder --mac dmg
-  only:
-    - main
-  artifacts:
-    paths:
-      - dist/
-    expire_in: 1 week
