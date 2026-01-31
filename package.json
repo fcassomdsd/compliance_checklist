@@ -11,6 +11,7 @@
     "format": "prettier --write \"**/*.{js,vue,json,css,scss,md,yml}\"",
     "build": "vite build",
     "build:win-portable": "electron-builder --x64 --win portable",
+    "build:mac-portable": "electron-builder --mac dmg",
     "dist": "electron-builder",
     "test": "vitest",
     "test:ui": "vitest --ui",

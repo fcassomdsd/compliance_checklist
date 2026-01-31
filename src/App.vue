@@ -31,10 +31,6 @@
         >
           Finalize inspection
         </button>
-<<<<<<< HEAD
-        <button id="exportBtn" :disabled="(!store.sessionSummary.finalized || !store.checklistLoaded)" @click="store.exportChecklist()">
-            Report Findings
-=======
         <button
           id="exportBtn"
           :disabled="!sessionStore.summary.finalized || !store.checklistLoaded"
@@ -57,7 +53,6 @@
           :disabled="!store.checklistLoaded"
         >
           {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
->>>>>>> develop
         </button>
       </div>
     </div>

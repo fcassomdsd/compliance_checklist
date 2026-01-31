@@ -36,74 +36,6 @@ export const useChecklistStore = defineStore('checklist', () => {
   // specialty data - will be loaded from file
   const specialtyList = ref([])
 
-<<<<<<< HEAD
-            if (!sessionSummary.value['finalized']) {
-              sessionSummary.value["finalized"] = false;
-            }
-            currentPath.value = await fs.setSavePath(specialty.value);
-            fs.saveSession(
-              specialty.value,
-              sessionSummary.value,
-              sessionData,
-              displayToast);
-            toast.success("Checklist and session loaded");
-        } catch (error) {
-            toast.error(error.message); // Or use toast notification
-            checklistLoaded.value = false;
-        }
-    };
-    
-    const updateSession = (rowId, checklistId, field, value) => {
-        if (!sessionData[rowId]) sessionData[rowId] = {};
-        sessionData[rowId][field] = value;
-        sessionData[rowId]["id"] = checklistId;
-        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
-    };
-    
-    function displayToast(msg) {
-      toast.error(msg);
-    }
-    
-    const showFinalize = () => {
-        tituloModal.value = modalFinalizeTitle;
-        explanationModal.value = modalFinalizeExplanation;
-        accionModal.value = modalFinalizeAction;
-        showModal.value = true;
-    };
-    const confirmModal = () => {
-       try {
-        showModal.value = false;
-        switch(tituloModal.value) {
-          case modalFinalizeTitle: {
-            finalize();
-            toast.success(finalizeSuccess);
-            break;
-          }
-          case modalCreateDPTitle: {
-            specialtyList.forEach( (x) => fs.createDefaultPath(x.code));            
-            toast.success(createDPSuccess);
-            break;
-          }
-          default: {
-            break;          
-          }
-        }
-      } catch (error) {
-        console.log(error);
-        toast.error(`Error in ${tituloModal.value} : ${error.message}`);
-      }
-    };
-    const checkDefaultPath = async () => {
-      try {
-        if (!await fs.defaultPathExists()) {
-          tituloModal.value = modalCreateDPTitle;
-          explanationModal.value = modalCreateDPExplanation;
-          accionModal.value = modalCreateDPAction;
-          showModal.value = true;
-        }  
-      } catch (error) {
-        toast.error(error.message);  
-=======
   // Actions
   const loadSpecialties = async () => {
     try {
@@ -128,90 +60,11 @@ export const useChecklistStore = defineStore('checklist', () => {
 
         currentPath.value = await fs.setSavePath(specialty.value)
         toast.success('Checklist loaded')
->>>>>>> develop
       }
     } catch (error) {
       toast.error(error.message)
       checklistLoaded.value = false
     }
-<<<<<<< HEAD
-    
-    const finalize = () => {
-        sessionSummary.value["finalized"] = true;
-        fs.saveSession(specialty.value, sessionSummary.value, sessionData, displayToast);
-    }; 
-    
-    const exportChecklist = async () => {
-
-      try {
-        const out = [];
-
-        const makeLine = (val) => {
-          let rawLine = (val || '');
-
-          rawLine = rawLine.toString().replaceAll(/\n/gm, '<br>');
-          rawLine = rawLine.toString().replaceAll('"', '""');
-
-          return rawLine;        
-        }        
-
-        if (checklist.value.questions.length == 0) {
-          throw new Error("Empty checklist not exported");        
-        }
-
-        let prevTopic = '';
-        const validCompliance = ["Non-compliant","Partial Compliance"];
-        const validQuestions = checklist.value.questions.entries();       
-        for (const [index, row] of validQuestions) {
-          if ( (sessionData[index+1] !== undefined) && validCompliance.includes(sessionData[index+1].compliance)) {
-            if (prevTopic != row.topic) {
-              out.push(row.topic);
-            } 
-            prevTopic = row.topic;
-            const qnumber = index + 1;
-            const session = sessionData[qnumber] || {};
-            const line = [
-              qnumber,
-              '"' + makeLine(row.reference) + '"',
-              '"' + makeLine(row.question) + '"',
-              '"' + makeLine((session.compliance || '')) + '"',
-              '"' + makeLine((session.comments || '')) + '"'
-            ];
-            out.push(line.join('|'));
-          }
-        }
-
-        const csvContent = out.join('\n');
-        await fs.saveExportFile(csvContent, specialty.value);
-        toast.success('Checklist exported');
-      } catch (error) {
-        toast.error(error.message);
-      }
-
-    };           
-    
-    return {
-        specialty,
-        specialtyList,
-        checklist,
-        checklistLoaded,
-        currentPath,
-        sessionData,
-        sessionSummary,
-        showModal,
-        tituloModal,
-        explanationModal,
-        accionModal,
-        loadChecklistAndSession,
-        updateSession,
-        showFinalize,
-        checkDefaultPath,
-        confirmModal,
-        exportChecklist,
-        finalize
-    };
-});
-=======
     return checklistLoaded.value
   }
 
@@ -308,4 +161,3 @@ export const useChecklistStore = defineStore('checklist', () => {
     viewGeneratedReport,
   }
 })
->>>>>>> develop
