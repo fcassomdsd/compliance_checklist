@@ -78,6 +78,6 @@ build:portable:windows:
     - main
   artifacts:
     paths:
-      - dist-portable/win-unpacked/
+      - dist-portable\win-unpacked\
     expire_in: 1 week
 
