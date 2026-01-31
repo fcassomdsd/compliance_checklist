@@ -66,7 +66,7 @@ build:
 
 build:portable:windows:
   stage: build
-  image: mcr.microsoft.com/windows/servercore:ltsc2019
+  image: mcr.microsoft.com/windows/nanoserver:ltsc2022
   script:
     - echo "🪟 Building Windows portable..."
     - npm run build
