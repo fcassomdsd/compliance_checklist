@@ -44,51 +44,5 @@
   },
   "test": {
     "environment": "jsdom"
-  },
-  "build": {
-    "appId": "com.AviationI.aviationchecklist",
-    "productName": "Aviation Safety Oversight Checklist",
-    "win": {
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-<<<<<<< HEAD
-      "icon": "./src/images/complianceApp.ico"
-=======
-      "icon": "public/images/complianceApp.ico"
->>>>>>> develop
-    },
-    "directories": {
-      "output": "dist-portable",
-      "buildResources": "resources"
-    },
-    "files": [
-      "dist/**/*",
-<<<<<<< HEAD
-      "main.mjs",
-      "preload.js",
-      "ipcHandles.js",
-      "utils/**/*"
-=======
-      "electron/main.mjs",
-      "electron/preload.cjs",
-      "electron/ipc/ipcHandles.js",
-      "electron/utils/**/*"
->>>>>>> develop
-    ],
-    "extraResources": [
-      {
-        "from": "public/images/",
-        "to": "assets/images/",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ]
   }
 }
