@@ -63,3 +63,31 @@ build:
     paths:
       - dist/
     expire_in: 1 week
+
+build:portable:windows:
+  stage: build
+  image: mcr.microsoft.com/windows/servercore:ltsc2019
+  script:
+    - echo "🪟 Building Windows portable..."
+    - npm run build
+    - npm run build:win-portable
+  only:
+    - main
+  artifacts:
+    paths:
+      - dist-portable/win-unpacked/
+    expire_in: 1 week
+
+build:portable:macos:
+  stage: build
+  image: node:latest
+  script:
+    - echo "🍎 Building macOS portable..."
+    - npm run build
+    - npx electron-builder --mac dmg
+  only:
+    - main
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
