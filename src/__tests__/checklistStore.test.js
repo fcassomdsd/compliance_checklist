@@ -391,5 +391,150 @@ describe('Checklist Store', () => {
       expect(mockToast.error).toHaveBeenCalledWith(expect.stringContaining('Could not open report'))
     })
   })
+
+  describe('importChecklist', () => {
+    beforeEach(() => {
+      mockFs.getChecklistImportState = vi.fn()
+      mockFs.fetchChecklistFromApi = vi.fn()
+      mockFs.ensureSpecialtyEntry = vi.fn()
+      mockFs.saveChecklist = vi.fn()
+      mockFs.loadSpecialties = vi.fn()
+    })
+
+    it('imports checklist successfully when no session exists', async () => {
+      const mockImportedChecklist = {
+        specialtyName: 'Imported Specialty',
+        inspection: '0224',
+        location: 'Test Location',
+        startDate: '2024-01-01',
+        questions: [{ id: 'q1', topic: 'T1', reference: 'R1', question: 'Q1?', verification: 'V1' }]
+      }
+
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: false,
+        hasSession: false,
+        sessionFinalized: null
+      })
+      mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
+      mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
+      mockFs.saveChecklist.mockResolvedValue(undefined)
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Imported Specialty' }])
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG')
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
+      expect(mockFs.ensureSpecialtyEntry).toHaveBeenCalledWith('VIG', 'Imported Specialty')
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist)
+      expect(mockFs.loadSpecialties).toHaveBeenCalled()
+      expect(store.specialty.value).toBe('VIG')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG')
+      expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('imports checklist when session is finalized (re-import)', async () => {
+      const mockImportedChecklist = {
+        specialtyName: 'Re-imported Specialty',
+        inspection: '0224',
+        location: 'Test Location',
+        startDate: '2024-01-01',
+        questions: [{ id: 'q1', topic: 'T1', reference: 'R1', question: 'Q1?', verification: 'V1' }]
+      }
+
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: true,
+        hasSession: true,
+        sessionFinalized: true
+      })
+      mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
+      mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
+      mockFs.saveChecklist.mockResolvedValue(undefined)
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Re-imported Specialty' }])
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
+      expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('blocks import when active session exists', async () => {
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: true,
+        hasSession: true,
+        sessionFinalized: false
+      })
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockFs.fetchChecklistFromApi).not.toHaveBeenCalled()
+      expect(mockToast.error).toHaveBeenCalledWith('Cannot import checklist while an active session is in progress')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('handles missing inspection parameter', async () => {
+      await store.importChecklist('', 'VIG')
+
+      expect(mockFs.getChecklistImportState).not.toHaveBeenCalled()
+      expect(mockToast.error).toHaveBeenCalledWith('Inspection and specialty are required')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('handles missing specialty parameter', async () => {
+      await store.importChecklist('0224', '')
+
+      expect(mockFs.getChecklistImportState).not.toHaveBeenCalled()
+      expect(mockToast.error).toHaveBeenCalledWith('Inspection and specialty are required')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('handles API fetch errors', async () => {
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: false,
+        hasSession: false,
+        sessionFinalized: null
+      })
+      mockFs.fetchChecklistFromApi.mockRejectedValue(new Error('API is down'))
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockToast.error).toHaveBeenCalledWith('API is down')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('sets isImporting flag during import', async () => {
+      const mockImportedChecklist = {
+        specialtyName: 'Test',
+        inspection: '0224',
+        location: 'Test',
+        startDate: '2024-01-01',
+        questions: []
+      }
+
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: false,
+        hasSession: false,
+        sessionFinalized: null
+      })
+      mockFs.fetchChecklistFromApi.mockImplementation(async () => {
+        expect(store.isImporting.value).toBe(true)
+        return mockImportedChecklist
+      })
+      mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
+      mockFs.saveChecklist.mockResolvedValue(undefined)
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Test' }])
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(store.isImporting.value).toBe(false)
+    })
+  })
 })
 

@@ -55,6 +55,29 @@
           {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
         </button>
       </div>
+
+      <div class="import-controls">
+        <label>Import Checklist:</label>
+        <input
+          id="importInspection"
+          v-model="importInspection"
+          type="text"
+          placeholder="Inspection code (e.g. 0224)"
+        />
+        <input
+          id="importSpecialty"
+          v-model="importSpecialty"
+          type="text"
+          placeholder="Specialty code (e.g. VIG)"
+        />
+        <button
+          id="importChecklistBtn"
+          :disabled="store.isImporting"
+          @click="onImportChecklist"
+        >
+          {{ store.isImporting ? 'Importing...' : 'Import Checklist' }}
+        </button>
+      </div>
     </div>
 
     <!-- General comments area -->
@@ -105,6 +128,8 @@
 
   // Local UI state for toggling general comments
   const showGenComments = ref(false)
+  const importInspection = ref('')
+  const importSpecialty = ref('')
 
   const onGeneralCommentsInput = (event) => {
     sessionStore.updateGeneralComments(event.target.value)
@@ -124,11 +149,23 @@
     }
   }
 
+  const onImportChecklist = async () => {
+    const inspection = importInspection.value.trim()
+    const specialtyCode = importSpecialty.value.trim()
+
+    if (!inspection || !specialtyCode) {
+      toast.error('Inspection and specialty are required to import')
+      return
+    }
+
+    await store.importChecklist(inspection, specialtyCode)
+  }
+
   onMounted(async () => {
-    // Load specialties from file
-    await store.loadSpecialties()
     // Check if the default path exists
     await store.checkDefaultPath()
+    // Load specialties from file
+    await store.loadSpecialties()
   })
 </script>
 
@@ -181,6 +218,19 @@
     background-size: 1em;
     font-size: 1.1rem;
   }
+  .import-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .import-controls input {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    min-width: 200px;
+  }
   .general-comments {
     margin: 1rem 0;
   }
@@ -204,6 +254,12 @@
       align-items: stretch;
     }
     .controls-container select {
+      width: 100%;
+    }
+    .import-controls {
+      width: 100%;
+    }
+    .import-controls input {
       width: 100%;
     }
   }

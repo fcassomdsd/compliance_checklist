@@ -270,4 +270,68 @@ describe('App.vue', () => {
       expect(mockStore.checkDefaultPath).toHaveBeenCalled()
     })
   })
+
+  describe('import checklist controls', () => {
+    beforeEach(() => {
+      mockStore.importChecklist = vi.fn()
+      mockStore.isImporting = false
+
+      // Remount with import functionality
+      wrapper = mount(App, {
+        global: {
+          plugins: [pinia],
+        },
+      })
+    })
+
+    it('renders import controls', () => {
+      const importControls = wrapper.find('.import-controls')
+      expect(importControls.exists()).toBe(true)
+
+      const inspectionInput = wrapper.find('#importInspection')
+      expect(inspectionInput.exists()).toBe(true)
+      expect(inspectionInput.attributes('placeholder')).toContain('Inspection code')
+
+      const specialtyInput = wrapper.find('#importSpecialty')
+      expect(specialtyInput.exists()).toBe(true)
+      expect(specialtyInput.attributes('placeholder')).toContain('Specialty code')
+
+      const importButton = wrapper.find('#importChecklistBtn')
+      expect(importButton.exists()).toBe(true)
+      expect(importButton.text()).toBe('Import Checklist')
+    })
+
+    it('calls importChecklist with correct parameters on button click', async () => {
+      const inspectionInput = wrapper.find('#importInspection')
+      const specialtyInput = wrapper.find('#importSpecialty')
+      const importButton = wrapper.find('#importChecklistBtn')
+
+      await inspectionInput.setValue('0224')
+      await specialtyInput.setValue('VIG')
+      await importButton.trigger('click')
+
+      expect(mockStore.importChecklist).toHaveBeenCalledWith('0224', 'VIG')
+    })
+
+    it('shows importing state on button when isImporting is true', async () => {
+      mockStore.isImporting = true
+      wrapper = mount(App, { global: { plugins: [pinia] } })
+
+      const importButton = wrapper.find('#importChecklistBtn')
+      expect(importButton.text()).toBe('Importing...')
+      expect(importButton.attributes('disabled')).toBeDefined()
+    })
+
+    it('trims whitespace from input values before calling importChecklist', async () => {
+      const inspectionInput = wrapper.find('#importInspection')
+      const specialtyInput = wrapper.find('#importSpecialty')
+      const importButton = wrapper.find('#importChecklistBtn')
+
+      await inspectionInput.setValue('  0224  ')
+      await specialtyInput.setValue('  VIG  ')
+      await importButton.trigger('click')
+
+      expect(mockStore.importChecklist).toHaveBeenCalledWith('0224', 'VIG')
+    })
+  })
 })
