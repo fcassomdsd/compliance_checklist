@@ -19,6 +19,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   const explanationModal = ref('')
   const accionModal = ref('')
   const generatedReportPath = ref('')
+  const isImporting = ref(false)
 
   // modal window data
   const modalFinalizeTitle = 'Finalize Checklist'
@@ -130,6 +131,38 @@ export const useChecklistStore = defineStore('checklist', () => {
     }
   }
 
+  const importChecklist = async (inspection, specialtyCode) => {
+    try {
+      if (!inspection || !specialtyCode) {
+        throw new Error('Inspection and specialty are required')
+      }
+
+      isImporting.value = true
+
+      const importState = await fs.getChecklistImportState(specialtyCode)
+      if (importState.hasChecklist && importState.hasSession && importState.sessionFinalized === false) {
+        throw new Error('Cannot import checklist while an active session is in progress')
+      }
+
+      const importedChecklist = await fs.fetchChecklistFromApi(inspection, specialtyCode)
+      await fs.ensureSpecialtyEntry(specialtyCode, importedChecklist.specialtyName || specialtyCode)
+      await fs.saveChecklist(specialtyCode, importedChecklist)
+
+      await loadSpecialties()
+      specialty.value = specialtyCode
+
+      if (await loadChecklist()) {
+        await sessionStore.loadSession(specialtyCode)
+      }
+
+      toast.success('Checklist imported successfully')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      isImporting.value = false
+    }
+  }
+
   const viewGeneratedReport = async () => {
     try {
       if (!generatedReportPath.value) {
@@ -152,6 +185,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     explanationModal,
     accionModal,
     generatedReportPath,
+    isImporting,
     loadChecklist,
     loadSpecialties,
     showFinalize,
@@ -159,5 +193,6 @@ export const useChecklistStore = defineStore('checklist', () => {
     confirmModal,
     exportChecklist,
     viewGeneratedReport,
+    importChecklist,
   }
 })

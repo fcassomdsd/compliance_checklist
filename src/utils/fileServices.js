@@ -148,6 +148,112 @@ export const createFileService = () => {
     }
   }
 
+  const getChecklistImportState = async (specialty) => {
+    try {
+      if (typeof specialty != 'string' || specialty.length == 0) {
+        throw new Error('Invalid specialty value: ' + specialty)
+      }
+
+      const hasChecklist = await window.electronAPI.checkPath(
+        DEFAULT_ROOT,
+        specialty,
+        'checklist.json'
+      )
+      const hasSession = await window.electronAPI.checkPath(
+        DEFAULT_ROOT,
+        specialty,
+        'session.json'
+      )
+
+      let sessionFinalized = null
+      if (hasSession) {
+        const sessionContents = await window.electronAPI.readFile(
+          DEFAULT_ROOT,
+          specialty,
+          'session.json'
+        )
+        const sessionObj = parseSession(sessionContents)
+        sessionFinalized = Boolean(sessionObj?.summary?.finalized)
+      }
+
+      return { hasChecklist, hasSession, sessionFinalized }
+    } catch (error) {
+      throw new Error(
+        `getChecklistImportState: could not check import state for ${specialty} : ${error.message}`
+      )
+    }
+  }
+
+  const fetchChecklistFromApi = async (inspection, specialty) => {
+    try {
+      if (!inspection || !specialty) {
+        throw new Error('Missing required parameters: inspection, specialty')
+      }
+
+      const url = new URL('http://localhost:1880/checklist')
+      url.searchParams.set('inspection', inspection)
+      url.searchParams.set('specialty', specialty)
+
+      const response = await fetch(url.toString())
+      if (!response.ok) {
+        throw new Error(`Import failed with status ${response.status}`)
+      }
+
+      const data = await response.json()
+      return parseChecklist(JSON.stringify(data))
+    } catch (error) {
+      throw new Error(`fetchChecklistFromApi: could not fetch checklist: ${error.message}`)
+    }
+  }
+
+  const ensureSpecialtyEntry = async (specialty, specialtyName) => {
+    try {
+      if (!specialty) {
+        throw new Error('Missing specialty code')
+      }
+
+      let config = { specialties: [] }
+      const hasConfig = await window.electronAPI.checkPath(DEFAULT_ROOT, 'user.config.json')
+      if (hasConfig) {
+        const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, 'user.config.json')
+        config = typeof fileContents === 'string' ? JSON.parse(fileContents) : fileContents
+      }
+
+      if (!Array.isArray(config.specialties)) {
+        config.specialties = []
+      }
+
+      const exists = config.specialties.some((entry) => entry.code === specialty)
+      if (!exists) {
+        config.specialties.push({
+          code: specialty,
+          name: specialtyName || specialty,
+        })
+        await window.electronAPI.saveFile(
+          JSON.stringify(config, null, 2),
+          DEFAULT_ROOT,
+          'user.config.json'
+        )
+      }
+    } catch (error) {
+      throw new Error(`ensureSpecialtyEntry: could not update specialties: ${error.message}`)
+    }
+  }
+
+  const saveChecklist = async (specialty, checklistObj) => {
+    try {
+      if (!specialty || !checklistObj) {
+        throw new Error('Missing required parameters: specialty, checklistObj')
+      }
+
+      await window.electronAPI.createDir(DEFAULT_ROOT, specialty, 'Evidence')
+      const payload = JSON.stringify(checklistObj, null, 2)
+      await window.electronAPI.saveFile(payload, DEFAULT_ROOT, specialty, 'checklist.json')
+    } catch (error) {
+      throw new Error(`saveChecklist: could not save checklist: ${error.message}`)
+    }
+  }
+
   const loadSession = async (specialty) => {
     try {
       const found = await window.electronAPI.checkPath(DEFAULT_ROOT, specialty, 'session.json')
@@ -360,6 +466,10 @@ export const createFileService = () => {
     saveEvidence,
     deleteEvidence,
     loadChecklist,
+    getChecklistImportState,
+    fetchChecklistFromApi,
+    ensureSpecialtyEntry,
+    saveChecklist,
     loadSession,
     readEvidence,
     saveExportFile,

@@ -624,4 +624,211 @@ describe('fileServices', () => {
       expect(result.label).toBe('100kB')
     })
   })
+
+  describe('import checklist features', () => {
+    it('getChecklistImportState returns state when checklist and session exist', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath
+        .mockResolvedValueOnce(true) // checklist exists
+        .mockResolvedValueOnce(true) // session exists
+      window.electronAPI.readFile.mockResolvedValue(JSON.stringify({
+        summary: { specialty: 'VIG', finalized: false },
+        responses: {}
+      }))
+
+      const result = await fs.getChecklistImportState('VIG')
+
+      expect(result).toEqual({
+        hasChecklist: true,
+        hasSession: true,
+        sessionFinalized: false
+      })
+    })
+
+    it('getChecklistImportState returns state when checklist exists but no session', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath
+        .mockResolvedValueOnce(true) // checklist exists
+        .mockResolvedValueOnce(false) // session does not exist
+
+      const result = await fs.getChecklistImportState('VIG')
+
+      expect(result).toEqual({
+        hasChecklist: true,
+        hasSession: false,
+        sessionFinalized: null
+      })
+    })
+
+    it('getChecklistImportState returns state when nothing exists', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath
+        .mockResolvedValueOnce(false) // checklist does not exist
+        .mockResolvedValueOnce(false) // session does not exist
+
+      const result = await fs.getChecklistImportState('VIG')
+
+      expect(result).toEqual({
+        hasChecklist: false,
+        hasSession: false,
+        sessionFinalized: null
+      })
+    })
+
+    it('getChecklistImportState throws error for invalid specialty', async () => {
+      const fs = createFileService()
+
+      await expect(fs.getChecklistImportState('')).rejects.toThrow(
+        'getChecklistImportState: could not check import state for  : Invalid specialty value:'
+      )
+    })
+
+    it('fetchChecklistFromApi fetches and validates checklist from API', async () => {
+      const fs = createFileService()
+      const mockChecklist = {
+        specialtyName: 'Test Specialty',
+        inspection: '0224',
+        location: 'Test Location',
+        startDate: '2024-01-01',
+        questions: [
+          {
+            id: 'q1',
+            topic: 'Topic 1',
+            reference: 'REF001',
+            question: 'Test question?',
+            verification: 'Test verification'
+          }
+        ]
+      }
+
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue(mockChecklist)
+      }))
+
+      parseChecklist.mockReturnValue(mockChecklist)
+
+      const result = await fs.fetchChecklistFromApi('0224', 'VIG')
+
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspection=0224&specialty=VIG')
+      expect(result).toEqual(mockChecklist)
+    })
+
+    it('fetchChecklistFromApi throws error for missing parameters', async () => {
+      const fs = createFileService()
+
+      await expect(fs.fetchChecklistFromApi('', 'VIG')).rejects.toThrow(
+        'fetchChecklistFromApi: could not fetch checklist: Missing required parameters'
+      )
+
+      await expect(fs.fetchChecklistFromApi('0224', '')).rejects.toThrow(
+        'fetchChecklistFromApi: could not fetch checklist: Missing required parameters'
+      )
+    })
+
+    it('fetchChecklistFromApi throws error for non-OK response', async () => {
+      const fs = createFileService()
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404
+      }))
+
+      await expect(fs.fetchChecklistFromApi('0224', 'VIG')).rejects.toThrow(
+        'fetchChecklistFromApi: could not fetch checklist: Import failed with status 404'
+      )
+    })
+
+    it('ensureSpecialtyEntry adds new specialty to config', async () => {
+      const fs = createFileService()
+      const existingConfig = {
+        specialties: [
+          { code: 'VIG', name: 'Vigilancia' }
+        ]
+      }
+
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(existingConfig))
+      window.electronAPI.saveFile.mockResolvedValue(undefined)
+
+      await fs.ensureSpecialtyEntry('OPS', 'Operaciones')
+
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('"code": "OPS"'),
+        null,
+        'user.config.json'
+      )
+    })
+
+    it('ensureSpecialtyEntry does not duplicate existing specialty', async () => {
+      const fs = createFileService()
+      const existingConfig = {
+        specialties: [
+          { code: 'VIG', name: 'Vigilancia' }
+        ]
+      }
+
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(existingConfig))
+      window.electronAPI.saveFile.mockResolvedValue(undefined)
+
+      await fs.ensureSpecialtyEntry('VIG', 'Vigilancia')
+
+      expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
+    })
+
+    it('ensureSpecialtyEntry creates config if it does not exist', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(false)
+      window.electronAPI.saveFile.mockResolvedValue(undefined)
+
+      await fs.ensureSpecialtyEntry('OPS', 'Operaciones')
+
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('"code": "OPS"'),
+        null,
+        'user.config.json'
+      )
+    })
+
+    it('ensureSpecialtyEntry throws error for missing specialty code', async () => {
+      const fs = createFileService()
+
+      await expect(fs.ensureSpecialtyEntry('', 'Name')).rejects.toThrow(
+        'ensureSpecialtyEntry: could not update specialties: Missing specialty code'
+      )
+    })
+
+    it('saveChecklist saves checklist to file', async () => {
+      const fs = createFileService()
+      const mockChecklist = {
+        specialtyName: 'Test',
+        questions: []
+      }
+
+      window.electronAPI.createDir.mockResolvedValue(undefined)
+      window.electronAPI.saveFile.mockResolvedValue(undefined)
+
+      await fs.saveChecklist('VIG', mockChecklist)
+
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        JSON.stringify(mockChecklist, null, 2),
+        null,
+        'VIG',
+        'checklist.json'
+      )
+    })
+
+    it('saveChecklist throws error for missing parameters', async () => {
+      const fs = createFileService()
+
+      await expect(fs.saveChecklist('', {})).rejects.toThrow(
+        'saveChecklist: could not save checklist: Missing required parameters'
+      )
+
+      await expect(fs.saveChecklist('VIG', null)).rejects.toThrow(
+        'saveChecklist: could not save checklist: Missing required parameters'
+      )
+    })
+  })
 })
