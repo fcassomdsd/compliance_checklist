@@ -6,12 +6,16 @@ import ChecklistTable from '../components/ChecklistTable.vue'
 import ModalWindow from '../components/ModalWindow.vue'
 import { useChecklistStore } from '../stores/checklistStore.js'
 import { useSessionStore } from '../stores/sessionStore'
+import { useToast } from 'vue-toastification'
 
 // Mock dependencies
 vi.mock('../components/ChecklistTable.vue')
 vi.mock('../components/ModalWindow.vue')
 vi.mock('../stores/checklistStore.js')
 vi.mock('../stores/sessionStore.js')
+vi.mock('vue-toastification', () => ({
+  useToast: vi.fn(),
+}))
 vi.mock('../assets/images/compliance-logo.png', () => ({ default: 'mock-logo-url' }))
 
 describe('App.vue', () => {
@@ -19,6 +23,7 @@ describe('App.vue', () => {
   let pinia
   let mockStore
   let mockSession
+  let mockToast
 
   beforeEach(() => {
     pinia = createPinia()
@@ -47,6 +52,8 @@ describe('App.vue', () => {
       confirmModal: vi.fn(),
       checkDefaultPath: vi.fn(),
       exportChecklist: vi.fn(),
+      viewGeneratedReport: vi.fn(),
+      importChecklist: vi.fn(),
       // default empty checklist object; tests will override when needed
       checklist: null,
     }
@@ -56,9 +63,13 @@ describe('App.vue', () => {
     mockSession = {
       summary: { finalized: false, generalComments: '' },
       loadSession: vi.fn(),
+      updateGeneralComments: vi.fn(),
       finalize: vi.fn(),
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
+
+    mockToast = { error: vi.fn(), success: vi.fn() }
+    vi.mocked(useToast).mockReturnValue(mockToast)
 
     // Mount component
     wrapper = mount(App, {
@@ -85,6 +96,23 @@ describe('App.vue', () => {
     mockStore.checklist = { inspection: 'INS', startDate: '2025-09-01', location: '/mock/location' }
     wrapper = mount(App, { global: { plugins: [pinia] } })
     expect(wrapper.text()).toContain('Location: /mock/location')
+  })
+
+  it('displays providerName from checklist', () => {
+    mockStore.checklist = {
+      inspection: 'INS',
+      startDate: '2025-09-01',
+      location: '/mock/location',
+      providerName: 'DTIC IDAC',
+    }
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    expect(wrapper.text()).toContain('Provider: DTIC IDAC')
+  })
+
+  it('displays empty providerName when not set', () => {
+    mockStore.checklist = { inspection: 'INS', startDate: '2025-09-01', location: '/loc' }
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    expect(wrapper.text()).toContain('Provider:')
   })
 
   it('renders specialty options from store', () => {
@@ -179,6 +207,15 @@ describe('App.vue', () => {
     expect(mockStore.exportChecklist).toHaveBeenCalled()
   })
 
+  it('calls viewGeneratedReport on view report button click', async () => {
+    mockStore.generatedReportPath = '/tmp/report.pdf'
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    const button = wrapper.find('#viewReportBtn')
+    expect(button.attributes('disabled')).toBeUndefined()
+    await button.trigger('click')
+    expect(mockStore.viewGeneratedReport).toHaveBeenCalledTimes(1)
+  })
+
   it('renders general comments button enabled when checklist loaded', () => {
     mockStore.checklistLoaded = true
     mockStore.checklist = { inspection: 'INS', startDate: '2025-09-01', location: '/loc' }
@@ -204,6 +241,23 @@ describe('App.vue', () => {
     await button.trigger('click')
     expect(button.text()).toBe('Hide General Comments')
     expect(wrapper.find('div[class="general-comments"]').exists()).toBe(true)
+  })
+
+  it('updates general comments on input', async () => {
+    mockStore.checklistLoaded = true
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    await wrapper.find('#genCommentsToggle').trigger('click')
+    const textarea = wrapper.find('#generalComments')
+    await textarea.setValue('New general note')
+    expect(mockSession.updateGeneralComments).toHaveBeenCalledWith('New general note')
+  })
+
+  it('clears general comments on clear button click', async () => {
+    mockStore.checklistLoaded = true
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    await wrapper.find('#genCommentsToggle').trigger('click')
+    await wrapper.find('#clearGeneralComments').trigger('click')
+    expect(mockSession.updateGeneralComments).toHaveBeenCalledWith('')
   })
 
   it('passes props to ModalWindow', () => {
@@ -268,7 +322,15 @@ describe('App.vue', () => {
       await wrapper.vm.$nextTick()
 
       expect(mockStore.checkDefaultPath).toHaveBeenCalled()
+      expect(mockStore.loadSpecialties).toHaveBeenCalled()
     })
+  })
+
+  it('shows toast when loadChecklistAndSession catches an error', async () => {
+    mockStore.loadChecklist.mockRejectedValue(new Error('load failed'))
+    const select = wrapper.find('select')
+    await select.setValue('VIG')
+    expect(mockToast.error).toHaveBeenCalledWith('Could not load session: load failed')
   })
 
   describe('import checklist controls', () => {
@@ -332,6 +394,13 @@ describe('App.vue', () => {
       await importButton.trigger('click')
 
       expect(mockStore.importChecklist).toHaveBeenCalledWith('0224', 'VIG')
+    })
+
+    it('shows validation toast when import fields are empty', async () => {
+      const importButton = wrapper.find('#importChecklistBtn')
+      await importButton.trigger('click')
+      expect(mockStore.importChecklist).not.toHaveBeenCalled()
+      expect(mockToast.error).toHaveBeenCalledWith('Inspection and specialty are required to import')
     })
   })
 })

@@ -5,7 +5,22 @@
   <tr>
     <td hidden>{{ row.id }}</td>
     <td :id="`qnumber-${qnumber}`">{{ qnumber }}</td>
-    <td>{{ row.reference }}</td>
+    <td class="reference">
+      <div v-if="row.reference?.normativa?.reglamento">
+        <span class="ref-label">STD</span><br />
+        <button
+          class="normativa-link"
+          title="Click to view ICAO reference and full text"
+          @click="openNormativa(row.reference.normativa)"
+        >
+          {{ row.reference.normativa.reglamento }} {{ row.reference.normativa.articulo }}
+        </button>
+      </div>
+      <div v-if="row.reference?.guidance">
+        <span class="ref-label">GM</span><br />
+        <span>{{ row.reference.guidance }}</span>
+      </div>
+    </td>
     <td class="question">{{ row.question }}</td>
     <td class="verification">{{ row.verification }}</td>
     <td class="compliance" :style="radioColors[session.compliance]">
@@ -185,6 +200,14 @@
     <button @click="capturePhoto">Capture</button>
     <button @click="closeCameraModal">Cancel</button>
   </div>
+  <div v-if="showNormativaModal" class="normativa-modal-overlay" @click.self="showNormativaModal = false">
+    <div class="normativa-modal">
+      <h3>{{ selectedNormativa?.reglamento }} {{ selectedNormativa?.articulo }}</h3>
+      <p><strong>ICAO Reference:</strong> {{ selectedNormativa?.ICAOref }}</p>
+      <p class="normativa-texto">{{ selectedNormativa?.texto }}</p>
+      <button @click="showNormativaModal = false">Close</button>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -221,6 +244,15 @@
   const showCameraModal = ref(false)
   const video = ref(null)
   const canvas = ref(null)
+
+  // Normativa detail modal state
+  const showNormativaModal = ref(false)
+  const selectedNormativa = ref(null)
+
+  const openNormativa = (normativa) => {
+    selectedNormativa.value = normativa
+    showNormativaModal.value = true
+  }
 
   // Audio recording state
   const recordingComments = ref(false)
@@ -597,5 +629,74 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .ref-label {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .normativa-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #1e88e5;
+    cursor: pointer;
+    font-size: inherit;
+    text-align: left;
+    text-decoration: underline;
+  }
+
+  .normativa-link:hover {
+    color: #1565c0;
+  }
+
+  .normativa-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+  }
+
+  .normativa-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    width: 480px;
+    max-width: 90vw;
+    padding: 24px;
+  }
+
+  .normativa-modal h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .normativa-texto {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    color: #444;
+    margin-top: 8px;
+  }
+
+  .normativa-modal button {
+    margin-top: 16px;
+    background-color: #1e88e5;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .normativa-modal button:hover {
+    background-color: #1565c0;
   }
 </style>

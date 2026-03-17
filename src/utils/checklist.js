@@ -13,12 +13,28 @@ const checklistSchema = {
     inspection: {
       type: 'string',
     },
+    inspectionId: {
+      type: 'string',
+    },
     location: {
+      type: 'string',
+    },
+    locationId: {
       type: 'string',
     },
     startDate: {
       type: 'string',
       format: 'date',
+    },
+    endDate: {
+      type: 'string',
+      format: 'date',
+    },
+    providerId: {
+      type: 'string',
+    },
+    providerName: {
+      type: 'string',
     },
     questions: {
       type: 'array',
@@ -26,7 +42,22 @@ const checklistSchema = {
         type: 'object',
         properties: {
           reference: {
-            type: 'string',
+            type: 'object',
+            properties: {
+              normativa: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  reglamento: { type: 'string' },
+                  articulo: { type: 'string' },
+                  texto: { type: 'string' },
+                  ICAOref: { type: 'string' },
+                },
+                additionalProperties: false,
+              },
+              guidance: { type: 'string' },
+            },
+            additionalProperties: false,
           },
           question: {
             type: 'string',

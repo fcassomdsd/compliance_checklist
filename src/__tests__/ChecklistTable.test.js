@@ -28,19 +28,19 @@ describe('ChecklistTable.vue', () => {
         questions: [
           {
             topic: 'Topic 1',
-            reference: 'REF1',
+            reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1' }, guidance: 'GM 1' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
           {
             topic: 'Topic 1',
-            reference: 'REF2',
+            reference: { normativa: {}, guidance: 'GM 2' },
             question: 'Question 2?',
             verification: 'Verify 2',
           },
           {
             topic: 'Topic 2',
-            reference: 'REF3',
+            reference: { normativa: { reglamento: 'RAD 20', articulo: '20.1' }, guidance: 'GM 3' },
             question: 'Question 3?',
             verification: 'Verify 3',
           },
@@ -106,7 +106,7 @@ describe('ChecklistTable.vue', () => {
       qnumber: 1,
       row: {
         topic: 'Topic 1',
-        reference: 'REF1',
+        reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1' }, guidance: 'GM 1' },
         question: 'Question 1?',
         verification: 'Verify 1',
       },
@@ -117,7 +117,7 @@ describe('ChecklistTable.vue', () => {
       qnumber: 2,
       row: {
         topic: 'Topic 1',
-        reference: 'REF2',
+        reference: { normativa: {}, guidance: 'GM 2' },
         question: 'Question 2?',
         verification: 'Verify 2',
       },
@@ -128,7 +128,7 @@ describe('ChecklistTable.vue', () => {
       qnumber: 3,
       row: {
         topic: 'Topic 2',
-        reference: 'REF3',
+        reference: { normativa: { reglamento: 'RAD 20', articulo: '20.1' }, guidance: 'GM 3' },
         question: 'Question 3?',
         verification: 'Verify 3',
       },
