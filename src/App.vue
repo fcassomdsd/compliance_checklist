@@ -11,6 +11,7 @@
       <span>Inspection: {{ store.checklist?.inspection || '' }}</span>
       <span>Start: {{ store.checklist?.startDate || '' }}</span>
       <span>Location: {{ store.checklist?.location || '' }}</span>
+  <span>Provider: {{ store.checklist?.providerName || '' }}</span>
 
       <div>
         <label>Specialty:</label>

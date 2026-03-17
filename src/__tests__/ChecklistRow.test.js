@@ -97,7 +97,7 @@ describe('ChecklistRow.vue', () => {
     vi.mocked(useAudioStore).mockReturnValue(mockAudioStore)
 
     // Mock toast
-    mockToast = { success: vi.fn(), error: vi.fn() }
+    mockToast = { success: vi.fn(), error: vi.fn(), info: vi.fn() }
     vi.mocked(useToast).mockReturnValue(mockToast)
 
     // Mount component with default props
@@ -108,7 +108,7 @@ describe('ChecklistRow.vue', () => {
         row: {
           id: 'checklist-1',
           topic: 'Topic 1',
-          reference: 'REF1',
+          reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
           question: 'Question 1?',
           verification: 'Verify 1',
         },
@@ -136,7 +136,7 @@ describe('ChecklistRow.vue', () => {
         row: {
           id: 'checklist-1',
           topic: 'Topic 1',
-          reference: 'REF1',
+          reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
           question: 'Question 1?',
           verification: 'Verify 1',
         },
@@ -159,9 +159,78 @@ describe('ChecklistRow.vue', () => {
   it('renders row data correctly', () => {
     expect(wrapper.find('td[id="qnumber-1"]').text()).toBe('1')
     expect(wrapper.find('td:nth-child(1)').isVisible()).toBeFalsy
-    expect(wrapper.find('td:nth-child(3)').text()).toBe('REF1')
+    const refCell = wrapper.find('td.reference')
+    expect(refCell.text()).toContain('STD')
+    expect(refCell.text()).toContain('RAD 10 10.1')
+    expect(refCell.text()).toContain('GM')
+    expect(refCell.text()).toContain('Manual 1.2')
     expect(wrapper.find('td.question').text()).toBe('Question 1?')
     expect(wrapper.find('td.verification').text()).toBe('Verify 1')
+  })
+
+  describe('Reference column', () => {
+    it('shows STD block with clickable normativa link when normativa has fields', () => {
+      const refCell = wrapper.find('td.reference')
+      expect(refCell.find('.ref-label').text()).toBe('STD')
+      const normBtn = refCell.find('button.normativa-link')
+      expect(normBtn.exists()).toBe(true)
+      expect(normBtn.text()).toBe('RAD 10 10.1')
+      expect(normBtn.attributes('title')).toBe('Click to view ICAO reference and full text')
+    })
+
+    it('shows GM block when guidance is present', () => {
+      const refCell = wrapper.find('td.reference')
+      const labels = refCell.findAll('.ref-label')
+      const gmLabel = labels.find((l) => l.text() === 'GM')
+      expect(gmLabel).toBeTruthy()
+      expect(refCell.text()).toContain('Manual 1.2')
+    })
+
+    it('hides STD block when normativa has no reglamento', () => {
+      wrapper = mount(ChecklistRow, {
+        props: {
+          newTopic: false,
+          qnumber: 1,
+          row: {
+            id: 'checklist-1',
+            topic: 'Topic 1',
+            reference: { normativa: {}, guidance: 'GM only' },
+            question: 'Question 1?',
+            verification: 'Verify 1',
+          },
+          session: {},
+        },
+        global: { plugins: [pinia] },
+      })
+      const refCell = wrapper.find('td.reference')
+      expect(refCell.find('button.normativa-link').exists()).toBe(false)
+      expect(refCell.text()).toContain('GM')
+      expect(refCell.text()).toContain('GM only')
+    })
+
+    it('opens normativa modal on normativa link click', async () => {
+      expect(wrapper.find('.normativa-modal-overlay').exists()).toBe(false)
+      await wrapper.find('button.normativa-link').trigger('click')
+      const modal = wrapper.find('.normativa-modal-overlay')
+      expect(modal.exists()).toBe(true)
+      expect(modal.text()).toContain('RAD 10 10.1')
+      expect(modal.text()).toContain('A10 PI 1.1')
+      expect(modal.text()).toContain('Sample texto')
+    })
+
+    it('closes normativa modal on close button click', async () => {
+      await wrapper.find('button.normativa-link').trigger('click')
+      expect(wrapper.find('.normativa-modal-overlay').exists()).toBe(true)
+      await wrapper.find('.normativa-modal button').trigger('click')
+      expect(wrapper.find('.normativa-modal-overlay').exists()).toBe(false)
+    })
+
+    it('closes normativa modal on overlay click', async () => {
+      await wrapper.find('button.normativa-link').trigger('click')
+      expect(wrapper.find('.normativa-modal-overlay').exists()).toBe(true)
+      await wrapper.find('.normativa-modal-overlay').trigger('click')
+      expect(wrapper.find('.normativa-modal-overlay').exists()).toBe(false)
+    })
   })
 
   describe('Compliance', () => {
@@ -242,6 +311,17 @@ describe('ChecklistRow.vue', () => {
   })
 
   describe('Evidence', () => {
+    it('triggers hidden file input click from evidenceUpload helper', () => {
+      const click = vi.fn()
+      const getElementById = vi.spyOn(document, 'getElementById').mockReturnValue({ click })
+
+      wrapper.vm.evidenceUpload(1)
+
+      expect(getElementById).toHaveBeenCalledWith('fileInput-1')
+      expect(click).toHaveBeenCalledTimes(1)
+      getElementById.mockRestore()
+    })
+
     it('renders evidence file input', () => {
       const fileInput = wrapper.find('input[type="file"]')
       expect(fileInput.exists()).toBe(true)
@@ -275,7 +355,7 @@ describe('ChecklistRow.vue', () => {
           row: {
             id: 'checklist-1',
             topic: 'Topic 1',
-            reference: 'REF1',
+            reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
@@ -319,7 +399,7 @@ describe('ChecklistRow.vue', () => {
           row: {
             id: 'checklist-1',
             topic: 'Topic 1',
-            reference: 'REF1',
+            reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
@@ -402,7 +482,7 @@ describe('ChecklistRow.vue', () => {
           row: {
             id: 'checklist-1',
             topic: 'Topic 1',
-            reference: 'REF1',
+            reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
@@ -415,10 +495,16 @@ describe('ChecklistRow.vue', () => {
   })
 
   describe('Camera modal', () => {
+    it('closes camera modal gracefully when no stream is attached', async () => {
+      wrapper.vm.showCameraModal = true
+      await wrapper.vm.$nextTick?.()
+      wrapper.vm.closeCameraModal()
+      expect(wrapper.vm.showCameraModal).toBe(false)
+    })
+
     it('opens camera modal and sets video stream', async () => {
       const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] })
-      // eslint-disable-next-line no-undef
-      global.navigator.mediaDevices = { getUserMedia }
+      globalThis.navigator.mediaDevices = { getUserMedia }
       // Show the camera modal so the video ref is rendered
       wrapper.vm.showCameraModal = true
       await wrapper.vm.$nextTick?.()
@@ -481,6 +567,91 @@ describe('ChecklistRow.vue', () => {
   })
 
   describe('Audio Recording', () => {
+    it('starts and stops comments recording through toggle helper', async () => {
+      const stopTrack = vi.fn()
+      const stream = { getTracks: () => [{ stop: stopTrack }] }
+      const getUserMedia = vi.fn().mockResolvedValue(stream)
+      globalThis.navigator.mediaDevices = { getUserMedia }
+
+      class MockMediaRecorder {
+        constructor() {
+          this.state = 'inactive'
+          this.ondataavailable = null
+          this.onstop = null
+        }
+
+        start() {
+          this.state = 'recording'
+        }
+
+        stop() {
+          this.state = 'inactive'
+          if (this.onstop) {
+            this.onstop()
+          }
+        }
+      }
+
+      globalThis.MediaRecorder = MockMediaRecorder
+
+      await wrapper.vm.toggleAudioRecordingComments()
+      expect(getUserMedia).toHaveBeenCalledWith({ audio: true })
+      expect(wrapper.vm.recordingComments).toBe(true)
+      expect(mockToast.info).toHaveBeenCalledWith('Recording started...')
+
+      await wrapper.vm.toggleAudioRecordingComments()
+      expect(wrapper.vm.recordingComments).toBe(false)
+    })
+
+    it('starts and stops non-conformity recording through toggle helper', async () => {
+      const stream = { getTracks: () => [{ stop: vi.fn() }] }
+      const getUserMedia = vi.fn().mockResolvedValue(stream)
+      globalThis.navigator.mediaDevices = { getUserMedia }
+
+      class MockMediaRecorder {
+        constructor() {
+          this.state = 'inactive'
+          this.ondataavailable = null
+          this.onstop = null
+        }
+
+        start() {
+          this.state = 'recording'
+        }
+
+        stop() {
+          this.state = 'inactive'
+          if (this.onstop) {
+            this.onstop()
+          }
+        }
+      }
+
+      globalThis.MediaRecorder = MockMediaRecorder
+
+      await wrapper.vm.toggleAudioRecordingNonConformity()
+      expect(getUserMedia).toHaveBeenCalledWith({ audio: true })
+      expect(wrapper.vm.recordingNonConformity).toBe(true)
+
+      await wrapper.vm.toggleAudioRecordingNonConformity()
+      expect(wrapper.vm.recordingNonConformity).toBe(false)
+    })
+
+    it('shows an error when audio file is missing from store', async () => {
+      await wrapper.vm.playAudio('missing.webm')
+      expect(mockToast.error).toHaveBeenCalledWith('Audio file not found')
+    })
+
+    it('shows an error when microphone access fails', async () => {
+      globalThis.navigator.mediaDevices = {
+        getUserMedia: vi.fn().mockRejectedValue(new Error('Mic blocked')),
+      }
+
+      await wrapper.vm.startAudioRecording('comments')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Could not access microphone: Mic blocked')
+    })
+
     it('saves audio recording and updates store', async () => {
       mockAudioStore.add.mockResolvedValue('blob:audio-new.webm')
 
@@ -525,7 +696,7 @@ describe('ChecklistRow.vue', () => {
           row: {
             id: 'checklist-1',
             topic: 'Topic 1',
-            reference: 'REF1',
+            reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
@@ -554,7 +725,7 @@ describe('ChecklistRow.vue', () => {
           row: {
             id: 'checklist-1',
             topic: 'Topic 1',
-            reference: 'REF1',
+            reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
