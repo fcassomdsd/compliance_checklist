@@ -51,6 +51,7 @@ describe('Checklist Store', () => {
       setSavePath: vi.fn(),
       saveExportFile: vi.fn(),
       saveFindingsReport: vi.fn().mockResolvedValue('report.pdf'),
+      exportInspectionPayload: vi.fn().mockResolvedValue({ zipPath: 'payload.zip' }),
       updateEvidenceCount: vi.fn(),
       loadSpecialties: vi.fn(),
       createDefaultRoot: vi.fn(),
@@ -357,6 +358,23 @@ describe('Checklist Store', () => {
       store.exportChecklist()
 
       expect(mockToast.error).toHaveBeenCalledWith('Empty checklist not exported')
+    })
+
+    it('exports and uploads payload through separate action', async () => {
+      mockFs.exportInspectionPayload = vi.fn().mockResolvedValue({ zipPath: 'payload.zip' })
+
+      await store.exportUploadPayload()
+
+      const expectedSessionObj = {
+        summary: mockSession.summary,
+        responses: mockSession.responses,
+      }
+      expect(mockFs.exportInspectionPayload).toHaveBeenCalledWith(
+        store.checklist.value,
+        expectedSessionObj,
+        'VIG'
+      )
+      expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
     })
   })
 

@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveFile: (fileData, filePath, ...pathLegs) =>
     ipcRenderer.invoke('save-file', fileData, filePath, pathLegs),
   generatePDF: (params) => ipcRenderer.invoke('generate-pdf', params),
+  exportInspectionPayload: (params) => ipcRenderer.invoke('export-inspection-payload', params),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
 })
 

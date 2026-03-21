@@ -403,6 +403,27 @@ export const createFileService = () => {
     }
   }
 
+  const exportInspectionPayload = async (checklist, session, specialty) => {
+    try {
+      if (!checklist || !session || !specialty) {
+        throw new Error('Missing required parameters: checklist, session, specialty')
+      }
+
+      const result = await window.electronAPI.exportInspectionPayload({
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty,
+      })
+
+      return result
+    } catch (error) {
+      throw new Error(
+        `exportInspectionPayload: could not export and upload payload` +
+          (error.message ? `: ${error.message}` : '')
+      )
+    }
+  }
+
   const createDefaultRoot = async () => {
     // Ensure the default root exists
     await window.electronAPI.createDir(DEFAULT_ROOT)
@@ -479,6 +500,7 @@ export const createFileService = () => {
     deleteAudio,
     readAudio,
     saveFindingsReport,
+    exportInspectionPayload,
     createDefaultRoot,
   }
 }

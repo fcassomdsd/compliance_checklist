@@ -131,6 +131,20 @@ export const useChecklistStore = defineStore('checklist', () => {
     }
   }
 
+  const exportUploadPayload = async () => {
+    try {
+      if (checklist.value.questions.length == 0) {
+        throw new Error('Empty checklist not exported')
+      }
+
+      const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
+      await fs.exportInspectionPayload(checklist.value, sessionObj, specialty.value)
+      toast.success('Payload exported and uploaded successfully')
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
   const importChecklist = async (inspection, specialtyCode) => {
     try {
       if (!inspection || !specialtyCode) {
@@ -192,6 +206,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     checkDefaultPath,
     confirmModal,
     exportChecklist,
+    exportUploadPayload,
     viewGeneratedReport,
     importChecklist,
   }

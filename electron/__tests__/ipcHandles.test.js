@@ -394,4 +394,86 @@ describe('ipcHandles', () => {
       ).rejects.toThrow('Missing required parameters')
     })
   })
+
+  describe('export-inspection-payload', () => {
+    beforeEach(() => {
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
+      vi.spyOn(fileOps, 'fileExists').mockResolvedValue(false)
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/payload.zip')
+    })
+
+    it('creates zip and posts payload to API', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const checklist = {
+        inspection: '0224',
+        providerId: 'provider-1',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
+      }
+      const session = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          1: {
+            id: 'q1',
+            compliance: 'Non-compliant',
+            nonConformity: 'Issue found',
+          },
+        },
+      }
+
+      const result = await handles['export-inspection-payload']({}, {
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+      })
+
+      expect(fileOps.saveFile).toHaveBeenCalled()
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'http://127.0.0.1:8000/inspection-import',
+        expect.objectContaining({ method: 'POST' })
+      )
+      expect(result).toEqual(
+        expect.objectContaining({
+          uploadStatus: 200,
+          findingsCount: 1,
+        })
+      )
+    })
+
+    it('throws when import API returns non-OK', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: vi.fn().mockResolvedValue('bad request'),
+      })
+
+      const checklist = {
+        inspection: '0224',
+        providerId: 'provider-1',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
+      }
+      const session = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: { 1: { id: 'q1', compliance: 'Non-compliant', nonConformity: 'Issue found' } },
+      }
+
+      await expect(
+        handles['export-inspection-payload']({}, {
+          checklistString: JSON.stringify(checklist),
+          sessionString: JSON.stringify(session),
+          specialty: 'VIG',
+        })
+      ).rejects.toThrow('Import API failed with status 400')
+    })
+  })
 })

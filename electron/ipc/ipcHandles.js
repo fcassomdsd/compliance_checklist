@@ -1,7 +1,11 @@
 import { app } from 'electron'
 import { shell } from 'electron'
 import path from 'node:path'
+import fs from 'node:fs/promises'
 import { Buffer } from 'node:buffer'
+import JSZip from 'jszip'
+import Ajv2020 from 'ajv/dist/2020.js'
+import addFormats from 'ajv-formats'
 import {
   fileExists,
   ensureDir,
@@ -15,9 +19,390 @@ import { safeJoin } from '../utils/fileSec.js'
 import { logger } from '../utils/logger.js'
 import { generateFindingsReport } from '../utils/pdfGenerator.js'
 
+const ajv = new Ajv2020({ allErrors: true })
+addFormats(ajv)
+
+const checklistSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'Checklist',
+  type: 'object',
+  required: ['schemaVersion', 'checklist', 'items'],
+  properties: {
+    schemaVersion: {
+      type: 'string',
+    },
+    checklist: {
+      type: 'object',
+      required: ['inspectionId', 'inspectionCode', 'domain', 'providerId'],
+      properties: {
+        inspectionId: { type: 'string' },
+        inspectionCode: {
+          type: 'string',
+          pattern: '^[A-Z0-9]{4}-\\d{4}-\\d{2}$',
+        },
+        locationId: { type: 'string' },
+        locationName: { type: 'string' },
+        checklistId: {
+          type: 'string',
+          pattern: '^CHK-[A-Z0-9]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
+        },
+        domain: { type: 'string' },
+        providerId: { type: 'string' },
+        providerName: { type: 'string' },
+        inspectors: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+      },
+    },
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['itemId', 'itemCode', 'compliance'],
+        properties: {
+          itemId: { type: 'string' },
+          itemCode: {
+            type: 'string',
+            pattern: '^[A-Z]{3}-\\d{4}$',
+          },
+          requirement: { type: 'string' },
+          verificationMethod: { type: 'string' },
+          comment: { type: 'string' },
+          reference: {
+            type: 'object',
+            properties: {
+              icaoReference: { type: 'string' },
+              nationalRegulation: { type: 'string' },
+            },
+          },
+          compliance: {
+            type: 'string',
+            enum: ['Compliant', 'Non-compliant', 'Not applicable'],
+          },
+          riskLevel: {
+            type: 'string',
+            enum: ['Low', 'Medium', 'High', 'Critical'],
+          },
+          evidence: {
+            type: 'object',
+            required: ['evidenceId'],
+            properties: {
+              evidenceId: { type: 'string' },
+              evidenceType: { type: 'string' },
+              evidenceSource: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+}
+
+const findingSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'Finding',
+  type: 'object',
+  required: ['schemaVersion', 'finding'],
+  properties: {
+    schemaVersion: {
+      type: 'string',
+    },
+    finding: {
+      type: 'object',
+      required: [
+        'findingId',
+        'domain',
+        'providerId',
+        'locationId',
+        'locationName',
+        'itemId',
+        'description',
+      ],
+      properties: {
+        findingId: {
+          type: 'string',
+          pattern: '^[A-Z0-9]{4}-[A-Z]{3}-\\d{4}-\\d{2}$',
+        },
+        domain: { type: 'string' },
+        providerId: { type: 'string' },
+        locationId: { type: 'string' },
+        locationName: { type: 'string' },
+        itemId: { type: 'string' },
+        requirementBreached: { type: 'string' },
+        dateIssued: { type: 'string', format: 'date' },
+        findingLevel: { type: 'string' },
+        description: { type: 'string' },
+        riskLevel: {
+          type: 'string',
+          enum: ['Low', 'Medium', 'High', 'Critical'],
+        },
+      },
+    },
+  },
+}
+
 // Moved outside the setup function as it's a constant
 //const defaultSavePath = '/home/fernando/Documents/Current_inspection'; //path.join(app.getPath('documents'), 'Current_inspection');
 const defaultSavePath = path.join(app.getPath('documents'), 'Current_inspection')
+
+const sanitizeUpperAlnum = (value = '') =>
+  String(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+
+const safeString = (value, fallback = '') =>
+  typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
+
+const asDateOnly = (value) => {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date().toISOString().split('T')[0]
+  }
+  return parsed.toISOString().split('T')[0]
+}
+
+const normalizeCompliance = (value) => {
+  if (value === 'Compliant' || value === 'Non-compliant' || value === 'Not applicable') {
+    return value
+  }
+  return 'Not applicable'
+}
+
+const inferInspectionCode = (checklistObj) => {
+  const existing = safeString(checklistObj?.inspectionCode)
+  if (/^[A-Z0-9]{4}-\d{4}-\d{2}$/.test(existing)) {
+    return existing
+  }
+
+  const locationToken =
+    sanitizeUpperAlnum(checklistObj?.locationCode || checklistObj?.locationId || checklistObj?.location)
+      .slice(0, 4)
+      .padEnd(4, 'X')
+  const year = asDateOnly(checklistObj?.startDate).slice(0, 4)
+  const seq = String(checklistObj?.inspection || checklistObj?.inspectionNumber || '01').replace(
+    /\D/g,
+    ''
+  )
+  const seq2 = (seq.slice(-2) || '01').padStart(2, '0')
+  return `${locationToken}-${year}-${seq2}`
+}
+
+const inferChecklistId = (inspectionCode, domainCode) => {
+  return `CHK-${inspectionCode}-${domainCode}`
+}
+
+const inferItemCode = (row, domainCode, index) => {
+  const existing = safeString(row?.itemCode)
+  if (/^[A-Z]{3}-\d{4}$/.test(existing)) {
+    return existing
+  }
+
+  const sequenceDigits = String(row?.sequence || index + 1).replace(/\D/g, '')
+  const seq4 = (sequenceDigits || String(index + 1)).padStart(4, '0').slice(-4)
+  return `${domainCode}-${seq4}`
+}
+
+const findResponseForRow = (responses, row, index) => {
+  const byIndex = responses?.[String(index + 1)] || responses?.[index + 1]
+  if (byIndex) {
+    return byIndex
+  }
+
+  const rowId = safeString(row?.id)
+  if (!rowId) {
+    return null
+  }
+
+  for (const entry of Object.values(responses || {})) {
+    if (entry?.id === rowId) {
+      return entry
+    }
+  }
+
+  return null
+}
+
+const inferEvidenceType = (fileName = '') => {
+  const extension = path.extname(fileName).toLowerCase()
+  if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(extension)) {
+    return 'image'
+  }
+  if (['.mp3', '.wav', '.webm', '.m4a'].includes(extension)) {
+    return 'audio'
+  }
+  return 'document'
+}
+
+const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
+  const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
+  const responses = sessionObj?.responses || {}
+  const domainCode = sanitizeUpperAlnum(specialty || checklistObj?.specialty || checklistObj?.domain)
+    .slice(0, 3)
+    .padEnd(3, 'X')
+
+  const inspectionCode = inferInspectionCode(checklistObj)
+
+  const checklistSection = {
+    inspectionId: safeString(checklistObj?.inspectionId, safeString(checklistObj?.inspection)),
+    inspectionCode,
+    domain: domainCode,
+    providerId: safeString(checklistObj?.providerId),
+  }
+
+  const optionalChecklistFields = {
+    locationId: safeString(checklistObj?.locationId),
+    locationName: safeString(checklistObj?.locationName, safeString(checklistObj?.location)),
+    checklistId: inferChecklistId(inspectionCode, domainCode),
+    providerName: safeString(checklistObj?.providerName),
+    inspectors: Array.isArray(checklistObj?.inspectors)
+      ? checklistObj.inspectors.filter((name) => typeof name === 'string' && name.trim())
+      : [],
+  }
+
+  for (const [field, value] of Object.entries(optionalChecklistFields)) {
+    if (Array.isArray(value) ? value.length > 0 : String(value).trim().length > 0) {
+      checklistSection[field] = value
+    }
+  }
+
+  const items = questions.map((row, index) => {
+    const response = findResponseForRow(responses, row, index) || {}
+    const item = {
+      itemId: safeString(row?.id, `item-${index + 1}`),
+      itemCode: inferItemCode(row, domainCode, index),
+      compliance: normalizeCompliance(response?.compliance),
+    }
+
+    const requirement = safeString(row?.question)
+    if (requirement) {
+      item.requirement = requirement
+    }
+
+    const verificationMethod = safeString(row?.verification)
+    if (verificationMethod) {
+      item.verificationMethod = verificationMethod
+    }
+
+    const comment = safeString(response?.comments)
+    if (comment) {
+      item.comment = comment
+    }
+
+    const rowReference = row?.reference || {}
+    const referenceObj = {
+      icaoReference: safeString(rowReference?.normativa?.ICAOref || rowReference?.icaoReference),
+      nationalRegulation: safeString(
+        rowReference?.normativa?.reglamento || rowReference?.nationalRegulation
+      ),
+    }
+
+    if (referenceObj.icaoReference || referenceObj.nationalRegulation) {
+      item.reference = {}
+      if (referenceObj.icaoReference) {
+        item.reference.icaoReference = referenceObj.icaoReference
+      }
+      if (referenceObj.nationalRegulation) {
+        item.reference.nationalRegulation = referenceObj.nationalRegulation
+      }
+    }
+
+    const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
+    if (evidenceList.length > 0) {
+      const firstEvidence = evidenceList[0]
+      item.evidence = {
+        evidenceId: `EV-${String(index + 1).padStart(4, '0')}`,
+        evidenceType: inferEvidenceType(firstEvidence),
+        evidenceSource: firstEvidence,
+      }
+    }
+
+    return item
+  })
+
+  return {
+    schemaVersion: '1.0',
+    checklist: checklistSection,
+    items,
+  }
+}
+
+const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specialty }) => {
+  const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
+  const responses = sessionObj?.responses || {}
+  const domainCode = sanitizeUpperAlnum(specialty || checklistObj?.specialty || checklistObj?.domain)
+    .slice(0, 3)
+    .padEnd(3, 'X')
+
+  const dateIssued = asDateOnly(sessionObj?.summary?.lastUpdated || checklistObj?.startDate)
+  const locationToken = sanitizeUpperAlnum(checklistPayload?.checklist?.inspectionCode).slice(0, 4)
+
+  const findings = []
+
+  questions.forEach((row, index) => {
+    const response = findResponseForRow(responses, row, index) || {}
+    if (normalizeCompliance(response?.compliance) !== 'Non-compliant') {
+      return
+    }
+
+    const findingNumber = findings.length + 1
+    const finding = {
+      schemaVersion: '1.0',
+      finding: {
+        findingId: `${(locationToken || 'XXXX').padEnd(4, 'X')}-${domainCode}-${asDateOnly(
+          checklistObj?.startDate
+        ).slice(0, 4)}-${String(findingNumber).padStart(2, '0')}`,
+        domain: checklistPayload?.checklist?.domain || domainCode,
+        providerId: checklistPayload?.checklist?.providerId || '',
+        locationId: checklistPayload?.checklist?.locationId || '',
+        locationName:
+          checklistPayload?.checklist?.locationName || safeString(checklistObj?.locationName),
+        itemId: safeString(row?.id, `item-${index + 1}`),
+        description: safeString(response?.nonConformity || response?.comments || row?.question),
+      },
+    }
+
+    const requirementBreached =
+      safeString(row?.reference?.normativa?.reglamento) ||
+      safeString(row?.reference?.nationalRegulation)
+    if (requirementBreached) {
+      finding.finding.requirementBreached = requirementBreached
+    }
+
+    finding.finding.dateIssued = dateIssued
+
+    const riskLevel = safeString(response?.riskLevel || row?.riskLevel)
+    if (['Low', 'Medium', 'High', 'Critical'].includes(riskLevel)) {
+      finding.finding.riskLevel = riskLevel
+    }
+
+    const findingLevel = safeString(response?.findingLevel)
+    if (findingLevel) {
+      finding.finding.findingLevel = findingLevel
+    }
+
+    findings.push(finding)
+  })
+
+  return findings
+}
+
+const buildAjvError = (errors = []) =>
+  errors.map((entry) => `${entry.instancePath || '/'} ${entry.message}`).join('; ')
+
+const addDirectoryToZip = async (zipFolder, diskPath) => {
+  const entries = await fs.readdir(diskPath, { withFileTypes: true })
+  for (const entry of entries) {
+    const fullPath = path.join(diskPath, entry.name)
+    if (entry.isDirectory()) {
+      const childFolder = zipFolder.folder(entry.name)
+      await addDirectoryToZip(childFolder, fullPath)
+    } else if (entry.isFile()) {
+      const fileContent = await fs.readFile(fullPath)
+      zipFolder.file(entry.name, fileContent)
+    }
+  }
+}
 
 // All handler definitions are now inside this function
 export function setupIpcHandles(ipcMain) {
@@ -171,6 +556,85 @@ export function setupIpcHandles(ipcMain) {
       return { success: true }
     } catch (err) {
       logger.error(`open-file: Could not open file ${filePath}: ${err.message}`)
+      throw err
+    }
+  })
+
+  ipcMain.handle('export-inspection-payload', async (event, payload) => {
+    try {
+      const { checklistString, sessionString, specialty, filePath, uploadUrl } = payload || {}
+      if (!checklistString || !sessionString || !specialty) {
+        throw new Error('Missing required parameters: checklistString, sessionString, specialty')
+      }
+
+      const checklistObj =
+        typeof checklistString === 'string' ? JSON.parse(checklistString) : checklistString
+      const sessionObj = typeof sessionString === 'string' ? JSON.parse(sessionString) : sessionString
+
+      const checklistPayload = mapChecklistPayload({ checklistObj, sessionObj, specialty })
+      const findingsPayload = mapFindingsPayload({
+        checklistPayload,
+        checklistObj,
+        sessionObj,
+        specialty,
+      })
+
+      const validateChecklist = ajv.compile(checklistSchema)
+      const validateFinding = ajv.compile(findingSchema)
+
+      if (!validateChecklist(checklistPayload)) {
+        throw new Error(`Generated checklist payload failed schema validation: ${buildAjvError(validateChecklist.errors)}`)
+      }
+
+      findingsPayload.forEach((finding, index) => {
+        if (!validateFinding(finding)) {
+          throw new Error(
+            `Generated finding payload at index ${index} failed schema validation: ${buildAjvError(validateFinding.errors)}`
+          )
+        }
+      })
+
+      const dirPath = filePath ? filePath : defaultSavePath
+      const specialtyPath = safeJoin(dirPath, [specialty])
+      const evidencePath = safeJoin(dirPath, [specialty, 'Evidence'])
+      await ensureDir(specialtyPath)
+
+      const zip = new JSZip()
+      zip.file('checklist.json', JSON.stringify(checklistPayload, null, 2))
+      zip.file('findings.json', JSON.stringify(findingsPayload, null, 2))
+
+      if (await fileExists(evidencePath)) {
+        const evidenceFolder = zip.folder('Evidence')
+        await addDirectoryToZip(evidenceFolder, evidencePath)
+      }
+
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+      const zipName = `inspection_payload_${sanitizeUpperAlnum(specialty) || 'SPECIALTY'}_${timestamp}.zip`
+      const zipPath = safeJoin(specialtyPath, [zipName])
+      await saveFile(zipPath, zipBuffer)
+
+      const targetUrl = uploadUrl || 'http://127.0.0.1:8000/inspection-import'
+      const form = new FormData()
+      form.append('file', new Blob([zipBuffer], { type: 'application/zip' }), zipName)
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        body: form,
+      })
+
+      const responseText = await response.text()
+      if (!response.ok) {
+        throw new Error(`Import API failed with status ${response.status}: ${responseText}`)
+      }
+
+      return {
+        zipPath,
+        uploadStatus: response.status,
+        uploadBody: responseText,
+        findingsCount: findingsPayload.length,
+      }
+    } catch (err) {
+      logger.error(`export-inspection-payload: Could not create/upload payload: ${err.message}`)
       throw err
     }
   })
