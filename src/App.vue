@@ -40,6 +40,13 @@
           Report Findings
         </button>
         <button
+          id="exportUploadBtn"
+          :disabled="!sessionStore.summary.finalized || !store.checklistLoaded"
+          @click="store.exportUploadPayload()"
+        >
+          Upload
+        </button>
+        <button
           id="viewReportBtn"
           :disabled="!store.generatedReportPath"
           @click="store.viewGeneratedReport()"

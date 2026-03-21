@@ -52,6 +52,7 @@ describe('App.vue', () => {
       confirmModal: vi.fn(),
       checkDefaultPath: vi.fn(),
       exportChecklist: vi.fn(),
+      exportUploadPayload: vi.fn(),
       viewGeneratedReport: vi.fn(),
       importChecklist: vi.fn(),
       // default empty checklist object; tests will override when needed
@@ -205,6 +206,15 @@ describe('App.vue', () => {
     const button = wrapper.find('#exportBtn')
     await button.trigger('click')
     expect(mockStore.exportChecklist).toHaveBeenCalled()
+  })
+
+  it('calls exportUploadPayload on export/upload button click', async () => {
+    mockSession.summary.finalized = true
+    mockStore.checklistLoaded = true
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    const button = wrapper.find('#exportUploadBtn')
+    await button.trigger('click')
+    expect(mockStore.exportUploadPayload).toHaveBeenCalled()
   })
 
   it('calls viewGeneratedReport on view report button click', async () => {

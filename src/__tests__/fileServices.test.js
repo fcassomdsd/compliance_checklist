@@ -15,6 +15,7 @@ const mockElectronAPI = {
   saveFile: vi.fn(),
   getFullPath: vi.fn(),
   generatePDF: vi.fn(),
+  exportInspectionPayload: vi.fn(),
 }
 window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')
@@ -240,6 +241,36 @@ describe('fileServices', () => {
       await expect(fs.saveFindingsReport(checklist, session, 'VIG')).rejects.toThrow(
         'saveFindingsReport: could not generate PDF'
       )
+    })
+  })
+
+  describe('exportInspectionPayload', () => {
+    it('calls electron exportInspectionPayload with stringified data', async () => {
+      const checklist = { questions: [] }
+      const session = { summary: { specialty: 'VIG' }, responses: {} }
+      const expectedResult = { zipPath: '/tmp/payload.zip', uploadStatus: 200 }
+      mockElectronAPI.exportInspectionPayload.mockResolvedValue(expectedResult)
+
+      const result = await fs.exportInspectionPayload(checklist, session, 'VIG')
+
+      expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+      })
+      expect(result).toEqual(expectedResult)
+    })
+
+    it('throws for missing parameters', async () => {
+      await expect(fs.exportInspectionPayload(null, { responses: {} }, 'VIG')).rejects.toThrow(
+        'exportInspectionPayload: could not export and upload payload'
+      )
+      await expect(
+        fs.exportInspectionPayload({ questions: [] }, null, 'VIG')
+      ).rejects.toThrow('exportInspectionPayload: could not export and upload payload')
+      await expect(
+        fs.exportInspectionPayload({ questions: [] }, { responses: {} }, '')
+      ).rejects.toThrow('exportInspectionPayload: could not export and upload payload')
     })
   })
 
