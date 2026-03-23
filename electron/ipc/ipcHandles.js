@@ -44,7 +44,7 @@ const checklistSchema = {
         locationName: { type: 'string' },
         checklistId: {
           type: 'string',
-          pattern: '^CHK-[A-Z0-9]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
+          pattern: '^CHK-[A-Z]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
         },
         domain: { type: 'string' },
         providerId: { type: 'string' },
@@ -122,7 +122,7 @@ const findingSchema = {
       properties: {
         findingId: {
           type: 'string',
-          pattern: '^[A-Z0-9]{4}-[A-Z]{3}-\\d{4}-\\d{2}$',
+          pattern: '^[A-Z]{4}-[A-Z]{3}-\\d{4}-\\d{2}$',
         },
         domain: { type: 'string' },
         providerId: { type: 'string' },
@@ -170,8 +170,8 @@ const normalizeCompliance = (value) => {
 }
 
 const inferInspectionCode = (checklistObj) => {
-  const existing = safeString(checklistObj?.inspectionCode)
-  if (/^[A-Z0-9]{4}-\d{4}-\d{2}$/.test(existing)) {
+  const existing = safeString(checklistObj?.inspection)
+  if (/^[A-Z]{4}-\d{4}-\d{2}$/.test(existing)) {
     return existing
   }
 
