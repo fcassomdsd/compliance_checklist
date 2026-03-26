@@ -44,7 +44,7 @@ const checklistSchema = {
         locationName: { type: 'string' },
         checklistId: {
           type: 'string',
-          pattern: '^CHK-[A-Z0-9]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
+          pattern: '^CHK-[A-Z]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
         },
         domain: { type: 'string' },
         providerId: { type: 'string' },
@@ -85,12 +85,15 @@ const checklistSchema = {
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
           evidence: {
-            type: 'object',
-            required: ['evidenceId'],
-            properties: {
-              evidenceId: { type: 'string' },
-              evidenceType: { type: 'string' },
-              evidenceSource: { type: 'string' },
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['evidenceId'],
+              properties: {
+                evidenceId: { type: 'string' },
+                evidenceType: { type: 'string' },
+                evidenceSource: { type: 'string' },
+              },
             },
           },
         },
@@ -170,8 +173,8 @@ const normalizeCompliance = (value) => {
 }
 
 const inferInspectionCode = (checklistObj) => {
-  const existing = safeString(checklistObj?.inspectionCode)
-  if (/^[A-Z0-9]{4}-\d{4}-\d{2}$/.test(existing)) {
+  const existing = safeString(checklistObj?.inspection)
+  if (/^[A-Z]{4}-\d{4}-\d{2}$/.test(existing)) {
     return existing
   }
 
@@ -188,11 +191,32 @@ const inferInspectionCode = (checklistObj) => {
   return `${locationToken}-${year}-${seq2}`
 }
 
+const inferSpecialtyCode = (checklistObj, specialty) => {
+  const existing = safeString(checklistObj?.specialtyCode, safeString(specialty))
+  return sanitizeUpperAlnum(existing).slice(0, 3).padEnd(3, 'X')
+}
+
+const inferDomainName = (checklistObj, specialty, specialtyCode) => {
+  return (
+    safeString(checklistObj?.specialtyName) ||
+    safeString(checklistObj?.domain) ||
+    safeString(specialty) ||
+    specialtyCode
+  )
+}
+
 const inferChecklistId = (inspectionCode, domainCode) => {
-  return `CHK-${inspectionCode}-${domainCode}`
+  const [locationPart = 'XXXX', year = '0000', sequence = '00'] = String(inspectionCode).split('-')
+  const checklistLocation = locationPart.replace(/[^A-Z]/g, '').padEnd(4, 'X').slice(0, 4)
+  return `CHK-${checklistLocation}-${year}-${sequence}-${domainCode}`
 }
 
 const inferItemCode = (row, domainCode, index) => {
+  const importedCode = safeString(row?.code, safeString(row?.itemCode))
+  if (importedCode) {
+    return importedCode
+  }
+
   const existing = safeString(row?.itemCode)
   if (/^[A-Z]{3}-\d{4}$/.test(existing)) {
     return existing
@@ -204,6 +228,12 @@ const inferItemCode = (row, domainCode, index) => {
 }
 
 const findResponseForRow = (responses, row, index) => {
+  const rowCode = safeString(row?.code)
+  const byCode = rowCode ? responses?.[rowCode] : null
+  if (byCode) {
+    return byCode
+  }
+
   const byIndex = responses?.[String(index + 1)] || responses?.[index + 1]
   if (byIndex) {
     return byIndex
@@ -215,7 +245,7 @@ const findResponseForRow = (responses, row, index) => {
   }
 
   for (const entry of Object.values(responses || {})) {
-    if (entry?.id === rowId) {
+    if (entry?.id === rowId || (rowCode && entry?.code === rowCode)) {
       return entry
     }
   }
@@ -237,23 +267,22 @@ const inferEvidenceType = (fileName = '') => {
 const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
-  const domainCode = sanitizeUpperAlnum(specialty || checklistObj?.specialty || checklistObj?.domain)
-    .slice(0, 3)
-    .padEnd(3, 'X')
+  const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
+  const domainName = inferDomainName(checklistObj, specialty, specialtyCode)
 
   const inspectionCode = inferInspectionCode(checklistObj)
 
   const checklistSection = {
     inspectionId: safeString(checklistObj?.inspectionId, safeString(checklistObj?.inspection)),
     inspectionCode,
-    domain: domainCode,
+    domain: domainName,
     providerId: safeString(checklistObj?.providerId),
   }
 
   const optionalChecklistFields = {
     locationId: safeString(checklistObj?.locationId),
     locationName: safeString(checklistObj?.locationName, safeString(checklistObj?.location)),
-    checklistId: inferChecklistId(inspectionCode, domainCode),
+    checklistId: inferChecklistId(inspectionCode, specialtyCode),
     providerName: safeString(checklistObj?.providerName),
     inspectors: Array.isArray(checklistObj?.inspectors)
       ? checklistObj.inspectors.filter((name) => typeof name === 'string' && name.trim())
@@ -270,7 +299,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     const response = findResponseForRow(responses, row, index) || {}
     const item = {
       itemId: safeString(row?.id, `item-${index + 1}`),
-      itemCode: inferItemCode(row, domainCode, index),
+      itemCode: inferItemCode(row, specialtyCode, index),
       compliance: normalizeCompliance(response?.compliance),
     }
 
@@ -309,12 +338,11 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
 
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
     if (evidenceList.length > 0) {
-      const firstEvidence = evidenceList[0]
-      item.evidence = {
-        evidenceId: `EV-${String(index + 1).padStart(4, '0')}`,
-        evidenceType: inferEvidenceType(firstEvidence),
-        evidenceSource: firstEvidence,
-      }
+      item.evidence = evidenceList.map((evidenceSource, evidenceIndex) => ({
+        evidenceId: `EV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
+        evidenceType: inferEvidenceType(evidenceSource),
+        evidenceSource,
+      }))
     }
 
     return item
@@ -330,9 +358,8 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
 const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specialty }) => {
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
-  const domainCode = sanitizeUpperAlnum(specialty || checklistObj?.specialty || checklistObj?.domain)
-    .slice(0, 3)
-    .padEnd(3, 'X')
+  const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
+  const domainName = inferDomainName(checklistObj, specialty, specialtyCode)
 
   const dateIssued = asDateOnly(sessionObj?.summary?.lastUpdated || checklistObj?.startDate)
   const locationToken = sanitizeUpperAlnum(checklistPayload?.checklist?.inspectionCode).slice(0, 4)
@@ -349,10 +376,10 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
     const finding = {
       schemaVersion: '1.0',
       finding: {
-        findingId: `${(locationToken || 'XXXX').padEnd(4, 'X')}-${domainCode}-${asDateOnly(
+        findingId: `${(locationToken || 'XXXX').padEnd(4, 'X')}-${specialtyCode}-${asDateOnly(
           checklistObj?.startDate
         ).slice(0, 4)}-${String(findingNumber).padStart(2, '0')}`,
-        domain: checklistPayload?.checklist?.domain || domainCode,
+        domain: checklistPayload?.checklist?.domain || domainName,
         providerId: checklistPayload?.checklist?.providerId || '',
         locationId: checklistPayload?.checklist?.locationId || '',
         locationName:

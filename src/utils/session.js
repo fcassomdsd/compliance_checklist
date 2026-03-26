@@ -27,10 +27,13 @@ const sessionSchema = {
     responses: {
       type: 'object',
       patternProperties: {
-        '^[0-9]+$': {
+        '^[A-Za-z0-9][A-Za-z0-9_-]*$': {
           type: 'object',
           properties: {
             id: {
+              type: 'string',
+            },
+            code: {
               type: 'string',
             },
             compliance: {

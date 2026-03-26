@@ -27,18 +27,24 @@ describe('ChecklistTable.vue', () => {
       checklist: {
         questions: [
           {
+            id: 'checklist-1',
+            code: 'VIG-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1' }, guidance: 'GM 1' },
             question: 'Question 1?',
             verification: 'Verify 1',
           },
           {
+            id: 'checklist-2',
+            code: 'VIG-0002',
             topic: 'Topic 1',
             reference: { normativa: {}, guidance: 'GM 2' },
             question: 'Question 2?',
             verification: 'Verify 2',
           },
           {
+            id: 'checklist-3',
+            code: 'VIG-0003',
             topic: 'Topic 2',
             reference: { normativa: { reglamento: 'RAD 20', articulo: '20.1' }, guidance: 'GM 3' },
             question: 'Question 3?',
@@ -51,9 +57,9 @@ describe('ChecklistTable.vue', () => {
 
     mockSession = {
       responses: {
-        1: { compliance: 'Compliant', id: 'checklist-1' },
-        2: { compliance: 'Non-compliant', id: 'checklist-2' },
-        3: { compliance: 'Non-compliant', id: 'checklist-3' },
+        'VIG-0001': { compliance: 'Compliant', id: 'checklist-1', code: 'VIG-0001' },
+        'VIG-0002': { compliance: 'Non-compliant', id: 'checklist-2', code: 'VIG-0002' },
+        'VIG-0003': { compliance: 'Non-compliant', id: 'checklist-3', code: 'VIG-0003' },
       },
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
@@ -77,7 +83,7 @@ describe('ChecklistTable.vue', () => {
     expect(wrapper.find('table#cklTable').exists()).toBe(true)
     const headers = wrapper.findAll('thead tr th')
     expect(headers.length).toBe(7)
-    expect(headers[0].text()).toBe('#')
+    expect(headers[0].text()).toBe('Code')
     expect(headers[1].text()).toBe('Reference')
     expect(headers[2].text()).toBe('Question')
     expect(headers[3].text()).toBe('Verification')
@@ -103,36 +109,42 @@ describe('ChecklistTable.vue', () => {
     const rows = wrapper.findAllComponents(ChecklistRow)
     expect(rows[0].props()).toEqual({
       newTopic: true,
-      qnumber: 1,
+      questionCode: 'VIG-0001',
       row: {
+        id: 'checklist-1',
+        code: 'VIG-0001',
         topic: 'Topic 1',
         reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1' }, guidance: 'GM 1' },
         question: 'Question 1?',
         verification: 'Verify 1',
       },
-      session: { compliance: 'Compliant', id: 'checklist-1' },
+      session: { compliance: 'Compliant', id: 'checklist-1', code: 'VIG-0001' },
     })
     expect(rows[1].props()).toEqual({
       newTopic: false,
-      qnumber: 2,
+      questionCode: 'VIG-0002',
       row: {
+        id: 'checklist-2',
+        code: 'VIG-0002',
         topic: 'Topic 1',
         reference: { normativa: {}, guidance: 'GM 2' },
         question: 'Question 2?',
         verification: 'Verify 2',
       },
-      session: { compliance: 'Non-compliant', id: 'checklist-2' },
+      session: { compliance: 'Non-compliant', id: 'checklist-2', code: 'VIG-0002' },
     })
     expect(rows[2].props()).toEqual({
       newTopic: true,
-      qnumber: 3,
+      questionCode: 'VIG-0003',
       row: {
+        id: 'checklist-3',
+        code: 'VIG-0003',
         topic: 'Topic 2',
         reference: { normativa: { reglamento: 'RAD 20', articulo: '20.1' }, guidance: 'GM 3' },
         question: 'Question 3?',
         verification: 'Verify 3',
       },
-      session: { compliance: 'Non-compliant', id: 'checklist-3' },
+      session: { compliance: 'Non-compliant', id: 'checklist-3', code: 'VIG-0003' },
     })
   })
 
@@ -165,7 +177,7 @@ describe('ChecklistTable.vue', () => {
   })
 
   it('handles missing session data for a row', () => {
-    mockSession.responses = { 1: { compliance: 'Compliant' } } // Only session for first row
+    mockSession.responses = { 'VIG-0001': { compliance: 'Compliant' } } // Only session for first row
     wrapper = mount(ChecklistTable, {
       global: {
         plugins: [pinia],

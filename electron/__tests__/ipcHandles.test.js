@@ -6,6 +6,7 @@ import * as fileOps from '../utils/fileOps'
 import * as fs from 'node:fs/promises'
 import { logger } from '../utils/logger'
 import path from 'node:path'
+import JSZip from 'jszip'
 
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/mocked/documents') },
@@ -474,6 +475,66 @@ describe('ipcHandles', () => {
           specialty: 'VIG',
         })
       ).rejects.toThrow('Import API failed with status 400')
+    })
+
+    it('includes all evidence files for a question in checklist payload', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const checklist = {
+        inspection: 'MDPP-2026-01',
+        specialtyCode: 'VIG',
+        specialtyName: 'Sistemas de Vigilancia',
+        providerId: 'provider-1',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [
+          { id: 'q1', code: 'VIG-0054', question: 'Question?', verification: 'Verify' },
+        ],
+      }
+      const session = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          'VIG-0054': {
+            id: 'q1',
+            code: 'VIG-0054',
+            compliance: 'Compliant',
+            evidence: ['photo-1.jpg', 'voice-1.webm', 'note.pdf'],
+          },
+        },
+      }
+
+      await handles['export-inspection-payload']({}, {
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+      })
+
+      const zipBuffer = fileOps.saveFile.mock.calls[0][1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
+
+      expect(checklistJson.items[0].evidence).toEqual([
+        {
+          evidenceId: 'EV-0001-01',
+          evidenceType: 'image',
+          evidenceSource: 'photo-1.jpg',
+        },
+        {
+          evidenceId: 'EV-0001-02',
+          evidenceType: 'audio',
+          evidenceSource: 'voice-1.webm',
+        },
+        {
+          evidenceId: 'EV-0001-03',
+          evidenceType: 'document',
+          evidenceSource: 'note.pdf',
+        },
+      ])
     })
   })
 })

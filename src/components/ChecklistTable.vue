@@ -11,7 +11,7 @@
     </colgroup>
     <thead>
       <tr>
-        <th>#</th>
+        <th>Code</th>
         <th>Reference</th>
         <th class="question">Question</th>
         <th class="verification">Verification</th>
@@ -23,11 +23,11 @@
     <tbody>
       <ChecklistRow
         v-for="(row, index) in store.checklist?.questions || []"
-        :key="index"
+        :key="row.code || row.id || index"
         :newTopic="topicChange(row.topic)"
-        :qnumber="index + 1"
+        :questionCode="getQuestionCode(row, index)"
         :row="row"
-        :session="sessionStore.responses[index + 1] || {}"
+        :session="getSessionForRow(row, index)"
       />
     </tbody>
   </table>
@@ -43,6 +43,18 @@
   const sessionStore = useSessionStore()
 
   let previousTopic = ''
+
+  const getQuestionCode = (row, index) => row?.code || String(index + 1)
+
+  const getSessionForRow = (row, index) => {
+    const questionCode = getQuestionCode(row, index)
+    return (
+      sessionStore.responses[questionCode] ||
+      sessionStore.responses[index + 1] ||
+      sessionStore.responses[String(index + 1)] ||
+      {}
+    )
+  }
 
   const topicChange = (t) => {
     if (!t || t.length == 0) {

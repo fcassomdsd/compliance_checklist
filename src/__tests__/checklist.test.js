@@ -6,12 +6,14 @@ describe('checklist.js', () => {
   it('parses a valid checklist object successfully', async () => {
     const validJson = JSON.stringify({
       specialtyName: 'VIG',
+      specialtyCode: 'VIG',
       location: 'Location 1',
       inspection: '0224',
       startDate: '2024-01-01',
       questions: [
         {
           id: '1',
+          code: 'VIG-0001',
           topic: 'Topic 1',
           reference: {
             normativa: {
@@ -59,6 +61,7 @@ describe('checklist.js', () => {
       questions: [
         {
           id: '1',
+          code: 'VIG-0001',
           topic: 'Topic 1',
           reference: { normativa: {}, guidance: 'GM only text' },
           question: 'Question 1',
@@ -73,6 +76,7 @@ describe('checklist.js', () => {
   it('parses a checklist with providerName and new top-level fields', async () => {
     const validJson = JSON.stringify({
       specialtyName: 'VIG',
+      specialtyCode: 'VIG',
       inspection: 'MDPP-2026-01',
       inspectionId: 'abc123',
       location: 'Aeropuerto',
@@ -84,6 +88,7 @@ describe('checklist.js', () => {
       questions: [
         {
           id: '1',
+          code: 'VIG-0001',
           topic: 'Topic 1',
           reference: {
             normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Text', ICAOref: 'A10' },
@@ -99,5 +104,6 @@ describe('checklist.js', () => {
     expect(result.providerId).toBe('prov789')
     expect(result.inspectionId).toBe('abc123')
     expect(result.endDate).toBe('2026-03-26')
+    expect(result.specialtyCode).toBe('VIG')
   })
 })

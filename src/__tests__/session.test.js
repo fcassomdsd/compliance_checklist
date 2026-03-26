@@ -36,6 +36,28 @@ describe('session.js', () => {
       expect(result).toEqual(JSON.parse(validJson))
     })
 
+    it('parses a valid session object with item-code response keys successfully', async () => {
+      const validJson = JSON.stringify({
+        summary: {
+          specialty: 'VIG',
+          finalized: false,
+          lastUpdated: '2023-01-01T10:00:00Z',
+        },
+        responses: {
+          'VIG-0054': {
+            id: 'q1',
+            code: 'VIG-0054',
+            compliance: 'Compliant',
+            comments: 'Test comments',
+            evidence: ['file1.txt', 'file2.txt'],
+          },
+        },
+      })
+      const result = await parseSession(validJson)
+      expect(result).toEqual(JSON.parse(validJson))
+      expect(result.responses['VIG-0054'].code).toBe('VIG-0054')
+    })
+
     it('parses a valid session object with audio recordings', async () => {
       const validJson = JSON.stringify({
         summary: {
@@ -85,6 +107,23 @@ describe('session.js', () => {
         summary: {
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
+        },
+      })
+      expect(() => parseSession(invalidJson)).toThrow('Session validation failed')
+    })
+
+    it('throws an error for an invalid response key', async () => {
+      const invalidJson = JSON.stringify({
+        summary: {
+          specialty: 'VIG',
+          finalized: false,
+          lastUpdated: '2023-01-01T10:00:00Z',
+        },
+        responses: {
+          'VIG 0054': {
+            id: 'q1',
+            compliance: 'Compliant',
+          },
         },
       })
       expect(() => parseSession(invalidJson)).toThrow('Session validation failed')

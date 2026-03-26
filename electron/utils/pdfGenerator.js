@@ -30,20 +30,39 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
       const stream = fs.createWriteStream(outputPath)
       doc.pipe(stream)
 
+      const getQuestionCode = (row, index) => row?.code || String(index + 1)
+      const findResponseForRow = (row, index) => {
+        const questionCode = getQuestionCode(row, index)
+        const byCode = session.responses?.[questionCode]
+        if (byCode) {
+          return byCode
+        }
+
+        const byIndex = session.responses?.[index + 1] || session.responses?.[String(index + 1)]
+        if (byIndex) {
+          return byIndex
+        }
+
+        return Object.values(session.responses || {}).find(
+          (entry) => entry?.id === row?.id || entry?.code === row?.code
+        )
+      }
+
       // Collect non-compliant findings
       const findings = []
       const validCompliance = ['Non-compliant']
       const validQuestions = checklist.questions.entries()
 
       for (const [index, row] of validQuestions) {
+        const response = findResponseForRow(row, index)
         if (
-          session.responses[index + 1] !== undefined &&
-          validCompliance.includes(session.responses[index + 1].compliance)
+          response !== undefined &&
+          validCompliance.includes(response.compliance)
         ) {
-          const qnumber = index + 1
-          const sessionData = session.responses[qnumber] || {}
+          const questionCode = getQuestionCode(row, index)
+          const sessionData = response || {}
           findings.push({
-            number: qnumber,
+            code: questionCode,
             reference: row.reference || '',
             question: row.question || '',
             topic: row.topic || '',
@@ -61,7 +80,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         // Table rows
         const tableData = findings.map( (x) => [
             x.reference,
-            x.number.toString(),
+          x.code,
             x.question,
             x.nonConformity,
             x.comments
@@ -223,7 +242,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
           columnStyles : [120,20,140,'*','*'],
           rowStyles: { align: 'center', font : { src : 'Times-Bold'} },
           data : [
-              ['Referencia', 'No.', 'Pregunta', 'No conformidad', 'Comentario']
+              ['Referencia', 'Codigo', 'Pregunta', 'No conformidad', 'Comentario']
           ]
         })
 

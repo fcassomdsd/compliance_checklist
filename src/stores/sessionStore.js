@@ -98,10 +98,13 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  const updateSession = (rowId, checklistId, field, value) => {
-    if (!responses[rowId]) responses[rowId] = {}
-    responses[rowId][field] = value
-    responses[rowId]['id'] = checklistId
+  const updateSession = (responseKey, checklistId, field, value, questionCode) => {
+    if (!responses[responseKey]) responses[responseKey] = {}
+    responses[responseKey][field] = value
+    responses[responseKey]['id'] = checklistId
+    if (questionCode) {
+      responses[responseKey]['code'] = questionCode
+    }
     fs.saveSession(summary.value, responses, displayToast)
   }
 

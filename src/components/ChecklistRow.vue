@@ -4,7 +4,7 @@
   </tr>
   <tr>
     <td hidden>{{ row.id }}</td>
-    <td :id="`qnumber-${qnumber}`">{{ qnumber }}</td>
+    <td :id="`qcode-${domQuestionCode}`">{{ questionCode }}</td>
     <td class="reference">
       <div v-if="row.reference?.normativa?.reglamento">
         <span class="ref-label">STD</span><br />
@@ -27,7 +27,7 @@
       <label v-for="(radioBtn, index) in radioButtons" :key="index">
         <input
           type="radio"
-          :name="`compliance-${qnumber}`"
+          :name="`compliance-${domQuestionCode}`"
           :value="radioBtn"
           :disabled="sessionStore.summary.finalized"
           :checked="session.compliance === radioBtn"
@@ -38,7 +38,7 @@
       </label>
       <div class="non-conformity" :hidden="session.compliance != 'Non-compliant'">
         <textarea
-          :name="`nonConformity-${qnumber}`"
+          :name="`nonConformity-${domQuestionCode}`"
           :value="session.nonConformity"
           :disabled="sessionStore.summary.finalized"
           placeholder="Describa la no conformidad"
@@ -92,7 +92,7 @@
     </td>
     <td class="comments">
       <textarea
-        :name="`comments-${qnumber}`"
+        :name="`comments-${domQuestionCode}`"
         :value="session.comments"
         :disabled="sessionStore.summary.finalized"
         @input="textAreaChange($event)"
@@ -145,12 +145,12 @@
     <td class="evidence">
       <div class="upload-buttons">
         <input
-          :id="`fileInput-${qnumber}`"
+          :id="`fileInput-${domQuestionCode}`"
           style="width: 100%"
           type="file"
           hidden
           class="evidence-upload"
-          :name="`evidence-${qnumber}`"
+          :name="`evidence-${domQuestionCode}`"
           :disabled="sessionStore.summary.finalized"
           multiple
           @change="evidenceChange($event)"
@@ -161,11 +161,11 @@
           height="30"
           width="30"
           :disabled="sessionStore.summary.finalized"
-          @click="evidenceUpload(qnumber)"
+          @click="evidenceUpload(domQuestionCode)"
         />
         <input
           type="image"
-          :id="`cameraInput-${qnumber}`"
+          :id="`cameraInput-${domQuestionCode}`"
           :src="cameraIcon"
           height="30"
           width="30"
@@ -173,7 +173,7 @@
           @click="openCamera"
         />
       </div>
-      <table class="preview" :id="`evidencetable-${qnumber}`">
+      <table class="preview" :id="`evidencetable-${domQuestionCode}`">
         <tr v-for="(evidence, index) in session.evidence" :key="index">
           <td>
             <input
@@ -222,7 +222,7 @@
 
   const props = defineProps({
     newTopic: { type: Boolean },
-    qnumber: { type: Number },
+    questionCode: { type: String, required: true },
     row: { type: Object },
     session: { type: Object },
   })
@@ -236,8 +236,11 @@
     'Non-compliant': 'border : 3px solid #FF5555',
   })
 
-  const evidenceUpload = (qnumber) => {
-    const inputControl = document.getElementById('fileInput-' + qnumber)
+  const domQuestionCode = String(props.questionCode).replace(/[^A-Za-z0-9_-]/g, '-')
+  const fileQuestionCode = String(props.questionCode).replace(/[^A-Za-z0-9._-]/g, '-')
+
+  const evidenceUpload = (questionCode) => {
+    const inputControl = document.getElementById('fileInput-' + questionCode)
     inputControl.click()
   }
 
@@ -265,16 +268,20 @@
   const evidenceStore = useEvidenceStore()
   const audioStore = useAudioStore()
 
+  const updateResponse = (field, value) => {
+    sessionStore.updateSession(props.questionCode, props.row.id, field, value, props.row.code)
+  }
+
   const radioChange = (event) => {
-    sessionStore.updateSession(props.qnumber, props.row.id, 'compliance', event.target.value)
+    updateResponse('compliance', event.target.value)
   }
 
   const textAreaChange = (event) => {
-    sessionStore.updateSession(props.qnumber, props.row.id, 'comments', event.target.value)
+    updateResponse('comments', event.target.value)
   }
 
   const nonConformityChange = (event) => {
-    sessionStore.updateSession(props.qnumber, props.row.id, 'nonConformity', event.target.value)
+    updateResponse('nonConformity', event.target.value)
   }
 
   const toggleAudioRecordingComments = async () => {
@@ -333,7 +340,7 @@
   const saveAudioRecording = async (blob, field) => {
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const fileName = `audio-${props.qnumber}-${field}-${timestamp}.webm`
+      const fileName = `audio-${fileQuestionCode}-${field}-${timestamp}.webm`
 
       // Convert blob to buffer
       const buffer = await blob.arrayBuffer()
@@ -349,7 +356,7 @@
       // Update count in audio store
       audioStore.addCount(fileName)
 
-      sessionStore.updateSession(props.qnumber, props.row.id, audioFieldName, currentAudioList)
+      updateResponse(audioFieldName, currentAudioList)
       toast.success('Audio recording saved')
     } catch (error) {
       toast.error('Failed to save audio: ' + error.message)
@@ -384,7 +391,7 @@
 
       // Remove from list
       const updatedAudioList = currentAudioList.filter((_, i) => i !== index)
-      sessionStore.updateSession(props.qnumber, props.row.id, audioFieldName, updatedAudioList)
+      updateResponse(audioFieldName, updatedAudioList)
       toast.success('Audio recording removed')
     } catch (error) {
       toast.error('Failed to delete audio: ' + error.message)
@@ -418,7 +425,7 @@
       }
     }
 
-    sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', table)
+    updateResponse('evidence', table)
     toast.success('Evidence updated')
   }
 
@@ -431,7 +438,7 @@
     }
 
     const updatedEvidence = props.session.evidence.filter((_, i) => i !== index)
-    sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', updatedEvidence)
+    updateResponse('evidence', updatedEvidence)
   }
 
   const openCamera = async () => {
@@ -447,7 +454,7 @@
     context.drawImage(video.value, 0, 0)
     const blob = await new Promise((resolve) => canvas.value.toBlob(resolve, 'image/jpeg'))
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const file = new File([blob], `evidence-${props.qnumber}-${timestamp}.jpg`, {
+    const file = new File([blob], `evidence-${fileQuestionCode}-${timestamp}.jpg`, {
       type: 'image/jpeg',
     })
     const table = props.session.evidence || []
@@ -456,7 +463,7 @@
       evidenceStore.addCount(file.name)
       table.push(file.name)
     }
-    sessionStore.updateSession(props.qnumber, props.row.id, 'evidence', table)
+    updateResponse('evidence', table)
     toast.success('Evidence updated')
     closeCameraModal()
   }
