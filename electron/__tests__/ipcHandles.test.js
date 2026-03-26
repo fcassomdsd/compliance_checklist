@@ -410,7 +410,7 @@ describe('ipcHandles', () => {
       })
 
       const checklist = {
-        inspection: 'MDSD-2026-01',
+        inspection: '0224',
         providerId: 'provider-1',
         locationId: 'loc-1',
         location: 'Test Location',
@@ -455,7 +455,7 @@ describe('ipcHandles', () => {
       })
 
       const checklist = {
-        inspection: 'MDSD-2026-01',
+        inspection: '0224',
         providerId: 'provider-1',
         locationId: 'loc-1',
         location: 'Test Location',
