@@ -10,6 +10,9 @@ const checklistSchema = {
     specialtyName: {
       type: 'string',
     },
+    specialtyCode: {
+      type: 'string',
+    },
     inspection: {
       type: 'string',
     },
@@ -66,6 +69,9 @@ const checklistSchema = {
             type: 'string',
           },
           id: {
+            type: 'string',
+          },
+          code: {
             type: 'string',
           },
           topic: {
