@@ -414,7 +414,7 @@ export const createFileService = () => {
         sessionString: JSON.stringify(session),
         specialty,
       })
-
+      console.log('exportInspectionPayload: payload exported and uploaded successfully')
       return result
     } catch (error) {
       throw new Error(
@@ -422,6 +422,46 @@ export const createFileService = () => {
           (error.message ? `: ${error.message}` : '')
       )
     }
+  }
+
+  const notifyImportCanonical = async (inspection, specialtyName) => {
+    if (!inspection || !specialtyName) {
+      throw new Error('notifyImportCanonical: Missing required parameters: inspection, specialtyName')
+    }
+
+    const config = await window.electronAPI.getAppConfig()
+    const host = config?.api?.host || 'http://localhost:1880'
+    const delay = config?.api?.importCanonicalDelay ?? 3000
+    const maxRetries = config?.api?.importCanonicalRetries ?? 3
+
+    const url = new URL(`${host}/importCanonical`)
+    url.searchParams.set('inspection', inspection)
+    url.searchParams.set('specialty', specialtyName)
+
+    // Wait for the previous Alfresco write to commit before triggering the import
+    await new Promise((resolve) => setTimeout(resolve, delay))
+
+    let lastError
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url.toString())
+        if (!response.ok) {
+          throw new Error(`importCanonical API failed with status ${response.status}`)
+        }
+        const data = await response.json().catch(() => null)
+        if (data && data.success === false) {
+          throw new Error(data.error || 'importCanonical reported failure')
+        }
+        return data
+      } catch (error) {
+        lastError = error
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, delay))
+        }
+      }
+    }
+
+    throw new Error(`notifyImportCanonical: ${lastError.message}`)
   }
 
   const createDefaultRoot = async () => {
@@ -501,6 +541,7 @@ export const createFileService = () => {
     readAudio,
     saveFindingsReport,
     exportInspectionPayload,
+    notifyImportCanonical,
     createDefaultRoot,
   }
 }

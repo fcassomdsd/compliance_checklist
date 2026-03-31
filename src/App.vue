@@ -41,10 +41,10 @@
         </button>
         <button
           id="exportUploadBtn"
-          :disabled="!sessionStore.summary.finalized || !store.checklistLoaded"
+          :disabled="!sessionStore.summary.finalized || !store.checklistLoaded || store.isUploading"
           @click="store.exportUploadPayload()"
         >
-          Upload
+          {{ store.isUploading ? 'Uploading...' : 'Upload' }}
         </button>
         <button
           id="viewReportBtn"

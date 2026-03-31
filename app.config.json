@@ -2,4 +2,9 @@
   "app": {
     "name": "Compliance Checklist",
     "version": "1.0.0"
+  },
+  "api": {
+    "host": "http://localhost:1880",
+    "importCanonicalDelay": 3000,
+    "importCanonicalRetries": 3
   }

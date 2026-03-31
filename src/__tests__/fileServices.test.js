@@ -16,6 +16,7 @@ const mockElectronAPI = {
   getFullPath: vi.fn(),
   generatePDF: vi.fn(),
   exportInspectionPayload: vi.fn(),
+  getAppConfig: vi.fn().mockResolvedValue({ api: { host: 'http://localhost:1880', importCanonicalDelay: 0, importCanonicalRetries: 3 } }),
 }
 window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')

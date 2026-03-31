@@ -20,6 +20,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   const accionModal = ref('')
   const generatedReportPath = ref('')
   const isImporting = ref(false)
+  const isUploading = ref(false)
 
   // modal window data
   const modalFinalizeTitle = 'Finalize Checklist'
@@ -137,11 +138,16 @@ export const useChecklistStore = defineStore('checklist', () => {
         throw new Error('Empty checklist not exported')
       }
 
+      isUploading.value = true
+
       const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
       await fs.exportInspectionPayload(checklist.value, sessionObj, specialty.value)
+      await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
       toast.success('Payload exported and uploaded successfully')
     } catch (error) {
       toast.error(error.message)
+    } finally {
+      isUploading.value = false
     }
   }
 
@@ -200,6 +206,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     accionModal,
     generatedReportPath,
     isImporting,
+    isUploading,
     loadChecklist,
     loadSpecialties,
     showFinalize,

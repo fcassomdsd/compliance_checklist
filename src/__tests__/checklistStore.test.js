@@ -362,6 +362,9 @@ describe('Checklist Store', () => {
 
     it('exports and uploads payload through separate action', async () => {
       mockFs.exportInspectionPayload = vi.fn().mockResolvedValue({ zipPath: 'payload.zip' })
+      mockFs.notifyImportCanonical = vi.fn().mockResolvedValue(null)
+
+      expect(store.isUploading.value).toBe(false)
 
       await store.exportUploadPayload()
 
@@ -375,6 +378,7 @@ describe('Checklist Store', () => {
         'VIG'
       )
       expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
+      expect(store.isUploading.value).toBe(false)
     })
   })
 
