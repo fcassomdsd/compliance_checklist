@@ -1,6 +1,8 @@
 import { app } from 'electron'
 import { shell } from 'electron'
 import path from 'node:path'
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 import { Buffer } from 'node:buffer'
 import JSZip from 'jszip'
@@ -584,6 +586,18 @@ export function setupIpcHandles(ipcMain) {
     } catch (err) {
       logger.error(`open-file: Could not open file ${filePath}: ${err.message}`)
       throw err
+    }
+  })
+
+  ipcMain.handle('get-app-config', async () => {
+    try {
+      const appDir = dirname(fileURLToPath(import.meta.url))
+      const configPath = path.join(appDir, '..', '..', 'app.config.json')
+      const raw = await fs.readFile(configPath, 'utf-8')
+      return JSON.parse(raw)
+    } catch (err) {
+      logger.error(`get-app-config: Could not read app config: ${err.message}`)
+      return {}
     }
   })
 
