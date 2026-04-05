@@ -81,3 +81,42 @@ build:portable:windows:
       - dist-portable\win-unpacked\
     expire_in: 1 week
 
+e2e:smoke:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.52.0-jammy
+  before_script:
+    - npm ci
+    - npm run e2e:setup
+    - npm run build
+  script:
+    - echo "🧭 Running Electron E2E smoke tests..."
+    - npx playwright test e2e/specs/electron.smoke.spec.mjs e2e/specs/electron.followup.spec.mjs
+  artifacts:
+    when: always
+    paths:
+      - playwright-report/
+      - test-results/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
+
+e2e:full:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.52.0-jammy
+  before_script:
+    - npm ci
+    - npm run e2e:setup
+    - npm run build
+  script:
+    - echo "🧪 Running full Electron E2E test suite..."
+    - npm run e2e
+  artifacts:
+    when: always
+    paths:
+      - playwright-report/
+      - test-results/
+    expire_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+

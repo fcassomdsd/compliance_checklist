@@ -1,0 +1,27 @@
+{
+  "specialtyName": "Sistemas de Vigilancia",
+  "specialtyCode": "VIG",
+  "inspection": "0224",
+  "location": "Aeropuerto Internacional de las Americas",
+  "locationId": "MDSD",
+  "providerName": "DTIC IDAC",
+  "startDate": "2026-04-01",
+  "questions": [
+    {
+      "id": "q1",
+      "code": "VIG-0001",
+      "topic": "General",
+      "reference": {
+        "normativa": {
+          "reglamento": "RAD 10",
+          "articulo": "10.1",
+          "texto": "Verification sample",
+          "ICAOref": "Annex 10"
+        },
+        "guidance": "Follow guidance"
+      },
+      "question": "Is surveillance monitoring active?",
+      "verification": "Inspect surveillance panel"
+    }
+  ]
+}

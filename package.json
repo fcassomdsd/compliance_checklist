@@ -15,7 +15,10 @@
     "dist": "electron-builder",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "e2e": "npx playwright test",
+    "e2e:headed": "npx playwright test --headed",
+    "e2e:setup": "npx playwright install --with-deps"
   },
   "dependencies": {
     "ajv": "^8.17.0",
@@ -30,6 +33,7 @@
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@eslint/json": "^0.13.2",
+    "@playwright/test": "^1.59.1",
     "@vitejs/plugin-vue": "^5.1.4",
     "@vitest/coverage-v8": "^2.1.9",
     "@vue/test-utils": "^2.4.6",
