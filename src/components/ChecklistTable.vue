@@ -28,6 +28,9 @@
         :questionCode="getQuestionCode(row, index)"
         :row="row"
         :session="getSessionForRow(row, index)"
+        :readOnly="isLinkedOpenFinding(row)"
+        :linkedFindingId="row?.priorFindingId || ''"
+        @go-follow-up="onGoFollowUp"
       />
     </tbody>
   </table>
@@ -65,6 +68,21 @@
       previousTopic = t
       return isNew
     }
+  }
+
+  const isLinkedOpenFinding = (row) => {
+    if (!row?.priorFindingId) {
+      return false
+    }
+    const findingStatus = row?.priorFinding?.findingStatus
+    if (!findingStatus) {
+      return true
+    }
+    return findingStatus.toLowerCase() != 'closed'
+  }
+
+  const onGoFollowUp = (findingId) => {
+    store.goToFollowUpFinding(findingId)
   }
 </script>
 

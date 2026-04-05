@@ -1,4 +1,5 @@
 import { parseChecklist } from './checklist.js'
+import { parseFindings } from './findings.js'
 import { parseSession } from './session.js'
 
 export const createFileService = () => {
@@ -7,6 +8,74 @@ export const createFileService = () => {
   const DEFAULT_ROOT = null
 
   let saveTimer
+
+  const WORKSPACE_META_FILE = 'workspace.json'
+  const WORKSPACES_FILE = 'workspaces.json'
+
+  const ensureWorkspaceLeg = (value, label) => {
+    if (typeof value != 'string' || value.trim().length == 0) {
+      throw new Error(`Invalid ${label}: ${value}`)
+    }
+    return value.trim()
+  }
+
+  const sanitizeWorkspaceLeg = (value) => value.replace(/[^A-Za-z0-9_-]/g, '_')
+
+  const normalizeSpecialty = (entry) => {
+    if (!entry || typeof entry != 'object') {
+      return null
+    }
+    const code = ensureWorkspaceLeg(String(entry.code || ''), 'specialty.code').toUpperCase()
+    return {
+      id: entry.id || code,
+      code,
+      name: entry.name || code,
+    }
+  }
+
+  const normalizeLocation = (entry) => {
+    if (!entry || typeof entry != 'object') {
+      return null
+    }
+    const icaoCode = ensureWorkspaceLeg(String(entry.icaoCode || entry.locationId || ''), 'location.icaoCode').toUpperCase()
+    return {
+      id: entry.id || icaoCode,
+      name: entry.name || icaoCode,
+      icaoCode,
+    }
+  }
+
+  const getWorkspaceKey = (locationId, specialtyCode) => {
+    const safeLocationId = sanitizeWorkspaceLeg(ensureWorkspaceLeg(locationId, 'locationId'))
+    const safeSpecialtyCode = sanitizeWorkspaceLeg(
+      ensureWorkspaceLeg(specialtyCode, 'specialtyCode').toUpperCase()
+    )
+    return `${safeLocationId}__${safeSpecialtyCode}`
+  }
+
+  const getWorkspaceLegs = (specialtyCode, locationId) => {
+    const safeSpecialtyCode = ensureWorkspaceLeg(specialtyCode, 'specialtyCode').toUpperCase()
+    if (!locationId) {
+      return [safeSpecialtyCode]
+    }
+    const locationShortName = sanitizeWorkspaceLeg(ensureWorkspaceLeg(locationId, 'locationId').toUpperCase())
+    return [`${locationShortName}_${sanitizeWorkspaceLeg(safeSpecialtyCode)}`]
+  }
+
+  const getWorkspacePaths = (specialtyCode, locationId) => {
+    const legs = getWorkspaceLegs(specialtyCode, locationId)
+    return {
+      legs,
+      metadata: [...legs, WORKSPACE_META_FILE],
+      checklist: [...legs, 'checklist.json'],
+      findings: [...legs, 'findings.json'],
+      session: [...legs, 'session.json'],
+      followUpSession: [...legs, 'followup.session.json'],
+      evidenceDir: [...legs, 'Evidence'],
+      followUpEvidenceDir: [...legs, 'FollowUpEvidence'],
+      audioDir: [...legs, 'Audio'],
+    }
+  }
 
   function getSizeAndSuffix(sizeString) {
     const suffix = [
@@ -42,16 +111,20 @@ export const createFileService = () => {
     }
   }
 
-  const setSavePath = async (specialty) => {
+  const setSavePath = async (specialty, locationId = null) => {
     try {
-      const filePath = window.electronAPI.getPath(DEFAULT_ROOT, specialty)
-      if (await window.electronAPI.checkPath(DEFAULT_ROOT, specialty)) {
+      const workspaceLegs = getWorkspaceLegs(specialty, locationId)
+      const filePath = window.electronAPI.getPath(DEFAULT_ROOT, ...workspaceLegs)
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...workspaceLegs)) {
         return filePath
       } else {
         return null
       }
     } catch (error) {
-      throw new Error(`setSavePath: could not save path ${specialty} : ` + error.message)
+      throw new Error(
+        `setSavePath: could not save path ${specialty}${locationId ? `/${locationId}` : ''} : ` +
+          error.message
+      )
     }
   }
 
@@ -63,7 +136,7 @@ export const createFileService = () => {
     }
   }
 
-  const saveEvidence = async (specialty, fileName, buffer) => {
+  const saveEvidence = async (specialty, fileName, buffer, locationId = null, evidenceContext = 'inspection') => {
     try {
       if (buffer === undefined) {
         throw new Error('Buffer is undefined')
@@ -76,16 +149,13 @@ export const createFileService = () => {
         throw new Error('File is empty')
       }
 
+      const paths = getWorkspacePaths(specialty, locationId)
+      const evidenceDir = evidenceContext == 'followUp' ? paths.followUpEvidenceDir : paths.evidenceDir
+
       // save if file doesn't exist or the size is different
-      const stats = await window.electronAPI.getStats(DEFAULT_ROOT, specialty, 'Evidence', fileName)
+      const stats = await window.electronAPI.getStats(DEFAULT_ROOT, ...evidenceDir, fileName)
       if (!stats || fileSize != stats.size) {
-        const savedPath = await window.electronAPI.saveFile(
-          buffer,
-          DEFAULT_ROOT,
-          specialty,
-          'Evidence',
-          fileName
-        )
+        const savedPath = await window.electronAPI.saveFile(buffer, DEFAULT_ROOT, ...evidenceDir, fileName)
         return savedPath
       } else {
         return null
@@ -97,14 +167,11 @@ export const createFileService = () => {
     }
   }
 
-  const deleteEvidence = async (specialty, fileName) => {
+  const deleteEvidence = async (specialty, fileName, locationId = null, evidenceContext = 'inspection') => {
     try {
-      const deleted = await window.electronAPI.deleteFile(
-        DEFAULT_ROOT,
-        specialty,
-        'Evidence',
-        fileName
-      )
+      const paths = getWorkspacePaths(specialty, locationId)
+      const evidenceDir = evidenceContext == 'followUp' ? paths.followUpEvidenceDir : paths.evidenceDir
+      const deleted = await window.electronAPI.deleteFile(DEFAULT_ROOT, ...evidenceDir, fileName)
       return deleted
     } catch (error) {
       throw new Error(
@@ -113,11 +180,13 @@ export const createFileService = () => {
     }
   }
 
-  const loadChecklist = async (specialty) => {
+  const loadChecklist = async (specialty, locationId = null) => {
     try {
+      const paths = getWorkspacePaths(specialty, locationId)
+
       // check that the path exists
-      if (await window.electronAPI.checkPath(DEFAULT_ROOT, specialty) == false) {
-        await window.electronAPI.createDir(DEFAULT_ROOT, specialty, 'Evidence')
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.legs) == false) {
+        await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.evidenceDir)
         // create dummy checklist.json
         const dummyChecklist = {
           specialtyName: 'Demo Specialty',
@@ -134,44 +203,37 @@ export const createFileService = () => {
                 'Review the application features and documentation to understand how to use it effectively.',
             }],
         }
-        await window.electronAPI.saveFile(JSON.stringify(dummyChecklist, null, 2), DEFAULT_ROOT, specialty, 'checklist.json')
+        await window.electronAPI.saveFile(
+          JSON.stringify(dummyChecklist, null, 2),
+          DEFAULT_ROOT,
+          ...paths.checklist
+        )
       }
 
-      const fileContents = await window.electronAPI.readFile(
-        DEFAULT_ROOT,
-        specialty,
-        'checklist.json'
-      )
+      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.checklist)
       return parseChecklist(fileContents)
     } catch (error) {
-      throw new Error(`loadChecklist: could not load checklist for ${specialty} : ` + error.message)
+      throw new Error(
+        `loadChecklist: could not load checklist for ${specialty}${locationId ? `/${locationId}` : ''} : ` +
+          error.message
+      )
     }
   }
 
-  const getChecklistImportState = async (specialty) => {
+  const getChecklistImportState = async (specialty, locationId = null) => {
     try {
       if (typeof specialty != 'string' || specialty.length == 0) {
         throw new Error('Invalid specialty value: ' + specialty)
       }
 
-      const hasChecklist = await window.electronAPI.checkPath(
-        DEFAULT_ROOT,
-        specialty,
-        'checklist.json'
-      )
-      const hasSession = await window.electronAPI.checkPath(
-        DEFAULT_ROOT,
-        specialty,
-        'session.json'
-      )
+      const paths = getWorkspacePaths(specialty, locationId)
+
+      const hasChecklist = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.checklist)
+      const hasSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)
 
       let sessionFinalized = null
       if (hasSession) {
-        const sessionContents = await window.electronAPI.readFile(
-          DEFAULT_ROOT,
-          specialty,
-          'session.json'
-        )
+        const sessionContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.session)
         const sessionObj = parseSession(sessionContents)
         sessionFinalized = Boolean(sessionObj?.summary?.finalized)
       }
@@ -179,7 +241,7 @@ export const createFileService = () => {
       return { hasChecklist, hasSession, sessionFinalized }
     } catch (error) {
       throw new Error(
-        `getChecklistImportState: could not check import state for ${specialty} : ${error.message}`
+        `getChecklistImportState: could not check import state for ${specialty}${locationId ? `/${locationId}` : ''} : ${error.message}`
       )
     }
   }
@@ -190,7 +252,10 @@ export const createFileService = () => {
         throw new Error('Missing required parameters: inspection, specialty')
       }
 
-      const url = new URL('http://localhost:1880/checklist')
+      const config = await window.electronAPI.getAppConfig()
+      const host = config?.api?.importHost || config?.api?.host || 'http://localhost:1880'
+
+      const url = new URL(`${host}/checklist`)
       url.searchParams.set('inspection', inspection)
       url.searchParams.set('specialty', specialty)
 
@@ -203,6 +268,34 @@ export const createFileService = () => {
       return parseChecklist(JSON.stringify(data))
     } catch (error) {
       throw new Error(`fetchChecklistFromApi: could not fetch checklist: ${error.message}`)
+    }
+  }
+
+  const fetchFindingsFromApi = async (specialty, locationId, inspection = null) => {
+    try {
+      if (!specialty || !locationId) {
+        throw new Error('Missing required parameters: specialty, locationId')
+      }
+
+      const config = await window.electronAPI.getAppConfig()
+      const host = config?.api?.importHost || config?.api?.host || 'http://localhost:1880'
+
+      const url = new URL(`${host}/findings`)
+      url.searchParams.set('specialty', specialty)
+      url.searchParams.set('locationId', locationId)
+      if (inspection) {
+        url.searchParams.set('inspection', inspection)
+      }
+
+      const response = await fetch(url.toString())
+      if (!response.ok) {
+        throw new Error(`Findings import failed with status ${response.status}`)
+      }
+
+      const data = await response.json()
+      return parseFindings(JSON.stringify(data))
+    } catch (error) {
+      throw new Error(`fetchFindingsFromApi: could not fetch findings: ${error.message}`)
     }
   }
 
@@ -240,48 +333,172 @@ export const createFileService = () => {
     }
   }
 
-  const saveChecklist = async (specialty, checklistObj) => {
+  const replaceJsonFileSafely = async (payload, ...pathLegs) => {
+    try {
+      const normalizedPayload = typeof payload == 'string' ? JSON.parse(payload) : payload
+      const jsonPayload = JSON.stringify(normalizedPayload, null, 2)
+      return await window.electronAPI.saveFile(jsonPayload, DEFAULT_ROOT, ...pathLegs)
+    } catch (error) {
+      throw new Error(`replaceJsonFileSafely: could not replace ${pathLegs.join('/')} : ${error.message}`)
+    }
+  }
+
+  const loadFindings = async (specialty, locationId = null) => {
+    try {
+      const { findings } = getWorkspacePaths(specialty, locationId)
+      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, ...findings)
+      if (!found) {
+        return null
+      }
+
+      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...findings)
+      return parseFindings(fileContents)
+    } catch (error) {
+      throw new Error(
+        `loadFindings: could not load findings for ${specialty}${locationId ? `/${locationId}` : ''} : ${error.message}`
+      )
+    }
+  }
+
+  const saveFindings = async (specialty, findingsObj, locationId = null) => {
+    try {
+      if (!specialty || !findingsObj) {
+        throw new Error('Missing required parameters: specialty, findingsObj')
+      }
+
+      const paths = getWorkspacePaths(specialty, locationId)
+      await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.legs)
+      return await replaceJsonFileSafely(findingsObj, ...paths.findings)
+    } catch (error) {
+      throw new Error(`saveFindings: could not save findings: ${error.message}`)
+    }
+  }
+
+  const getFindingsImportState = async (specialty, locationId = null) => {
+    try {
+      if (typeof specialty != 'string' || specialty.length == 0) {
+        throw new Error('Invalid specialty value: ' + specialty)
+      }
+
+      const paths = getWorkspacePaths(specialty, locationId)
+      const hasFindings = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.findings)
+      const hasFollowUpSession = await window.electronAPI.checkPath(
+        DEFAULT_ROOT,
+        ...paths.followUpSession
+      )
+
+      let followUpFinalized = null
+      if (hasFollowUpSession) {
+        const sessionContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.followUpSession)
+        const sessionObj = typeof sessionContents == 'string' ? JSON.parse(sessionContents) : sessionContents
+        followUpFinalized = Boolean(sessionObj?.summary?.finalized)
+      }
+
+      return { hasFindings, hasFollowUpSession, followUpFinalized }
+    } catch (error) {
+      throw new Error(
+        `getFindingsImportState: could not check findings import state for ${specialty}${locationId ? `/${locationId}` : ''} : ${error.message}`
+      )
+    }
+  }
+
+  const joinChecklistWithFindings = (checklist, findingsPayload) => {
+    const baseChecklist = typeof checklist == 'string' ? parseChecklist(checklist) : checklist
+    const findingsList =
+      typeof findingsPayload == 'string' ? parseFindings(findingsPayload) : findingsPayload || []
+
+    if (!baseChecklist || !Array.isArray(baseChecklist.questions)) {
+      throw new Error('joinChecklistWithFindings: invalid checklist payload')
+    }
+
+    const findingMap = new Map()
+    findingsList.forEach((entry) => {
+      const findingId = entry?.finding?.findingId
+      if (findingId) {
+        findingMap.set(findingId, entry.finding)
+      }
+    })
+
+    const linkedFindingIds = new Set()
+    const enrichedQuestions = baseChecklist.questions.map((question) => {
+      const priorFindingId = question?.priorFindingId
+      if (!priorFindingId) {
+        return question
+      }
+
+      const priorFinding = findingMap.get(priorFindingId) || null
+      if (priorFinding) {
+        linkedFindingIds.add(priorFindingId)
+      }
+
+      return {
+        ...question,
+        priorFinding,
+      }
+    })
+
+    const unmatchedFindings = findingsList.filter((entry) => {
+      const findingId = entry?.finding?.findingId
+      return findingId && !linkedFindingIds.has(findingId)
+    })
+
+    return {
+      checklist: {
+        ...baseChecklist,
+        questions: enrichedQuestions,
+      },
+      unmatchedFindings,
+    }
+  }
+
+  const saveChecklist = async (specialty, checklistObj, locationId = null) => {
     try {
       if (!specialty || !checklistObj) {
         throw new Error('Missing required parameters: specialty, checklistObj')
       }
 
-      await window.electronAPI.createDir(DEFAULT_ROOT, specialty, 'Evidence')
+      const paths = getWorkspacePaths(specialty, locationId)
+      await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.evidenceDir)
       const payload = JSON.stringify(checklistObj, null, 2)
-      await window.electronAPI.saveFile(payload, DEFAULT_ROOT, specialty, 'checklist.json')
+      await window.electronAPI.saveFile(payload, DEFAULT_ROOT, ...paths.checklist)
     } catch (error) {
       throw new Error(`saveChecklist: could not save checklist: ${error.message}`)
     }
   }
 
-  const loadSession = async (specialty) => {
+  const loadSession = async (specialty, locationId = null) => {
     try {
-      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, specialty, 'session.json')
+      const paths = getWorkspacePaths(specialty, locationId)
+      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)
       if (found) {
-        const fileContents = await window.electronAPI.readFile(
-          DEFAULT_ROOT,
-          specialty,
-          'session.json'
-        )
+        const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.session)
         return parseSession(fileContents)
       } else {
         return null
       }
     } catch (error) {
-      throw new Error(`loadSession: could not load session for ${specialty} : ` + error.message)
+      throw new Error(
+        `loadSession: could not load session for ${specialty}${locationId ? `/${locationId}` : ''} : ` +
+          error.message
+      )
     }
   }
 
-  const readEvidence = async (specialty) => {
+  const readEvidence = async (specialty, locationId = null, evidenceContext = 'inspection') => {
     try {
-      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, specialty, 'Evidence')
+      const paths = getWorkspacePaths(specialty, locationId)
+      const evidenceDir = evidenceContext == 'followUp' ? paths.followUpEvidenceDir : paths.evidenceDir
+      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, ...evidenceDir)
       return dirList
     } catch (error) {
-      throw new Error(`readEvidence: could not read evidence for ${specialty} : ` + error.message)
+      throw new Error(
+        `readEvidence: could not read evidence for ${specialty}${locationId ? `/${locationId}` : ''} : ` +
+          error.message
+      )
     }
   }
 
-  const saveSession = (summary, responses, displayError) => {
+  const saveSession = (summary, responses, displayError, locationId = null) => {
     // make sure they are objects and not strings
     const newSummary = typeof summary == 'string' ? JSON.parse(summary) : summary
     const newResponses = typeof summary == 'string' ? JSON.parse(responses) : responses
@@ -293,12 +510,51 @@ export const createFileService = () => {
     saveTimer = setTimeout(() => {
       try {
         const sessionString = JSON.stringify(sessionObj, null, 2)
+        const paths = getWorkspacePaths(newSummary.specialty, locationId)
         window.electronAPI.saveFile(
           sessionString,
           DEFAULT_ROOT,
-          newSummary.specialty,
-          'session.json'
+          ...paths.session
         )
+        return true
+      } catch (err) {
+        displayError(err.message)
+      }
+    }, 1000)
+
+    return true
+  }
+
+  const loadFollowUpSession = async (specialty, locationId = null) => {
+    try {
+      const paths = getWorkspacePaths(specialty, locationId)
+      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)
+      if (!found) {
+        return null
+      }
+
+      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.followUpSession)
+      return typeof fileContents == 'string' ? JSON.parse(fileContents) : fileContents
+    } catch (error) {
+      throw new Error(
+        `loadFollowUpSession: could not load follow-up session for ${specialty}${locationId ? `/${locationId}` : ''} : ${error.message}`
+      )
+    }
+  }
+
+  const saveFollowUpSession = (summary, responses, displayError, locationId = null) => {
+    const newSummary = typeof summary == 'string' ? JSON.parse(summary) : summary
+    const newResponses = typeof summary == 'string' ? JSON.parse(responses) : responses
+
+    const sessionObj = { summary: newSummary, responses: newResponses }
+    sessionObj.summary.lastUpdated = new Date().toISOString()
+
+    clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      try {
+        const sessionString = JSON.stringify(sessionObj, null, 2)
+        const paths = getWorkspacePaths(newSummary.specialty, locationId)
+        window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, ...paths.followUpSession)
         return true
       } catch (err) {
         displayError(err.message)
@@ -321,16 +577,106 @@ export const createFileService = () => {
   }
 
   const loadSpecialties = async () => {
+    const parseSpecialties = (entries) => {
+      if (!Array.isArray(entries)) {
+        return []
+      }
+      const seen = new Set()
+      const normalized = []
+      entries.forEach((entry) => {
+        try {
+          const specialty = normalizeSpecialty(entry)
+          if (specialty && !seen.has(specialty.code)) {
+            seen.add(specialty.code)
+            normalized.push(specialty)
+          }
+        } catch {
+          // ignore malformed records from external sources
+        }
+      })
+      return normalized
+    }
+
     try {
+      const appConfig = await window.electronAPI.getAppConfig()
+      const host = appConfig?.api?.importHost || appConfig?.api?.host || 'http://localhost:1880'
+
+      try {
+        const url = new URL(`${host}/specialties`)
+        url.searchParams.set('option', 'leaf')
+        const response = await fetch(url.toString())
+        if (response.ok) {
+          const specialties = parseSpecialties(await response.json())
+          if (specialties.length > 0) {
+            return specialties
+          }
+        }
+      } catch {
+        // fallback below
+      }
+
+      const fallback = parseSpecialties(appConfig?.fallback?.specialties)
+      if (fallback.length > 0) {
+        return fallback
+      }
+
       const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, 'user.config.json')
-      const config = typeof fileContents === 'string' ? JSON.parse(fileContents) : fileContents
-      return config.specialties
+      const config = typeof fileContents == 'string' ? JSON.parse(fileContents) : fileContents
+      return parseSpecialties(config.specialties)
     } catch (error) {
       throw new Error(`loadSpecialties: could not load specialties : ` + error.message)
     }
   }
 
-  const saveAudio = async (specialty, fileName, buffer) => {
+  const loadLocations = async () => {
+    const parseLocations = (entries) => {
+      if (!Array.isArray(entries)) {
+        return []
+      }
+      const seen = new Set()
+      const normalized = []
+      entries.forEach((entry) => {
+        try {
+          const location = normalizeLocation(entry)
+          if (location && !seen.has(location.icaoCode)) {
+            seen.add(location.icaoCode)
+            normalized.push(location)
+          }
+        } catch {
+          // ignore malformed records from external sources
+        }
+      })
+      return normalized
+    }
+
+    try {
+      const appConfig = await window.electronAPI.getAppConfig()
+      const host = appConfig?.api?.importHost || appConfig?.api?.host || 'http://localhost:1880'
+
+      try {
+        const response = await fetch(`${host}/location`)
+        if (response.ok) {
+          const locations = parseLocations(await response.json())
+          if (locations.length > 0) {
+            return locations
+          }
+        }
+      } catch {
+        // fallback below
+      }
+
+      const fallback = parseLocations(appConfig?.fallback?.locations)
+      if (fallback.length > 0) {
+        return fallback
+      }
+
+      throw new Error('No location data available from API or fallback config')
+    } catch (error) {
+      throw new Error(`loadLocations: could not load locations : ${error.message}`)
+    }
+  }
+
+  const saveAudio = async (specialty, fileName, buffer, locationId = null) => {
     try {
       if (buffer === undefined) {
         throw new Error('Buffer is undefined')
@@ -340,11 +686,11 @@ export const createFileService = () => {
         throw new Error('Audio file is empty')
       }
 
+      const paths = getWorkspacePaths(specialty, locationId)
       const savedPath = await window.electronAPI.saveFile(
         buffer,
         DEFAULT_ROOT,
-        specialty,
-        'Audio',
+        ...paths.audioDir,
         fileName
       )
       return savedPath
@@ -355,12 +701,12 @@ export const createFileService = () => {
     }
   }
 
-  const deleteAudio = async (specialty, fileName) => {
+  const deleteAudio = async (specialty, fileName, locationId = null) => {
     try {
+      const paths = getWorkspacePaths(specialty, locationId)
       const deleted = await window.electronAPI.deleteFile(
         DEFAULT_ROOT,
-        specialty,
-        'Audio',
+        ...paths.audioDir,
         fileName
       )
       return deleted
@@ -371,12 +717,164 @@ export const createFileService = () => {
     }
   }
 
-  const readAudio = async (specialty) => {
+  const readAudio = async (specialty, locationId = null) => {
     try {
-      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, specialty, 'Audio')
+      const paths = getWorkspacePaths(specialty, locationId)
+      const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, ...paths.audioDir)
       return dirList
     } catch (error) {
       throw new Error(`readAudio: could not read audio for ${specialty} : ` + error.message)
+    }
+  }
+
+  const loadWorkspaceRegistry = async () => {
+    try {
+      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, WORKSPACES_FILE)
+      if (!found) {
+        return []
+      }
+
+      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, WORKSPACES_FILE)
+      const registry = typeof fileContents == 'string' ? JSON.parse(fileContents) : fileContents
+      if (!Array.isArray(registry)) {
+        return []
+      }
+      return registry
+    } catch (error) {
+      throw new Error(`loadWorkspaceRegistry: could not read workspace registry: ${error.message}`)
+    }
+  }
+
+  const saveWorkspaceRegistry = async (registry) => {
+    try {
+      if (!Array.isArray(registry)) {
+        throw new Error('Registry payload must be an array')
+      }
+
+      return await replaceJsonFileSafely(registry, WORKSPACES_FILE)
+    } catch (error) {
+      throw new Error(`saveWorkspaceRegistry: could not save workspace registry: ${error.message}`)
+    }
+  }
+
+  const upsertWorkspaceRegistryEntry = async (entry) => {
+    try {
+      const specialtyCode = ensureWorkspaceLeg(entry?.specialtyCode, 'specialtyCode').toUpperCase()
+      const locationId = ensureWorkspaceLeg(entry?.locationId, 'locationId')
+      const workspaceKey = getWorkspaceKey(locationId, specialtyCode)
+
+      const registry = await loadWorkspaceRegistry()
+      const normalizedEntry = {
+        workspaceKey,
+        specialtyCode,
+        specialtyName: entry?.specialtyName || specialtyCode,
+        locationId,
+        locationName: entry?.locationName || locationId,
+        draftStatus: entry?.draftStatus || 'draft',
+        checklistTouched: Boolean(entry?.checklistTouched),
+        followUpTouched: Boolean(entry?.followUpTouched),
+        checklistPresent: Boolean(entry?.checklistPresent),
+        findingsPresent: Boolean(entry?.findingsPresent),
+        updatedAt: new Date().toISOString(),
+      }
+
+      const existingIndex = registry.findIndex((x) => x.workspaceKey == workspaceKey)
+      if (existingIndex >= 0) {
+        registry[existingIndex] = {
+          ...registry[existingIndex],
+          ...normalizedEntry,
+        }
+      } else {
+        registry.push(normalizedEntry)
+      }
+
+      await saveWorkspaceRegistry(registry)
+      return normalizedEntry
+    } catch (error) {
+      throw new Error(`upsertWorkspaceRegistryEntry: could not update workspace registry: ${error.message}`)
+    }
+  }
+
+  const loadWorkspaceMetadata = async (specialtyCode, locationId) => {
+    try {
+      const paths = getWorkspacePaths(specialtyCode, locationId)
+      const found = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.metadata)
+      if (!found) {
+        return null
+      }
+
+      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.metadata)
+      return typeof fileContents == 'string' ? JSON.parse(fileContents) : fileContents
+    } catch (error) {
+      throw new Error(
+        `loadWorkspaceMetadata: could not read metadata for ${specialtyCode}/${locationId} : ${error.message}`
+      )
+    }
+  }
+
+  const saveWorkspaceMetadata = async (specialtyCode, locationId, metadata) => {
+    try {
+      const paths = getWorkspacePaths(specialtyCode, locationId)
+      await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.legs)
+      return await replaceJsonFileSafely(metadata, ...paths.metadata)
+    } catch (error) {
+      throw new Error(
+        `saveWorkspaceMetadata: could not save metadata for ${specialtyCode}/${locationId} : ${error.message}`
+      )
+    }
+  }
+
+  const markWorkspaceTouched = async (specialtyCode, locationId, touchedKey = 'checklistTouched') => {
+    try {
+      if (!locationId) {
+        return null
+      }
+
+      const metadata = (await loadWorkspaceMetadata(specialtyCode, locationId)) || {}
+      metadata[touchedKey] = true
+      metadata.updatedAt = new Date().toISOString()
+      await saveWorkspaceMetadata(specialtyCode, locationId, metadata)
+
+      const registryEntry = await upsertWorkspaceRegistryEntry({
+        specialtyCode,
+        specialtyName: metadata.specialtyName || specialtyCode,
+        locationId,
+        locationName: metadata.locationName || locationId,
+        draftStatus: metadata.draftStatus || 'draft',
+        checklistTouched: touchedKey == 'checklistTouched' ? true : Boolean(metadata.checklistTouched),
+        followUpTouched: touchedKey == 'followUpTouched' ? true : Boolean(metadata.followUpTouched),
+      })
+
+      return registryEntry
+    } catch (error) {
+      throw new Error(`markWorkspaceTouched: could not update touched state: ${error.message}`)
+    }
+  }
+
+  const getWorkspaceTouchedState = async (specialtyCode, locationId) => {
+    try {
+      if (!locationId) {
+        return { checklistTouched: false, followUpTouched: false }
+      }
+
+      const metadata = await loadWorkspaceMetadata(specialtyCode, locationId)
+      if (metadata) {
+        return {
+          checklistTouched: Boolean(metadata?.checklistTouched),
+          followUpTouched: Boolean(metadata?.followUpTouched),
+        }
+      }
+
+      const registry = await loadWorkspaceRegistry()
+      const workspaceKey = getWorkspaceKey(locationId, specialtyCode)
+      const registryEntry = registry.find((entry) => entry.workspaceKey == workspaceKey)
+
+      return {
+        checklistTouched: Boolean(registryEntry?.checklistTouched),
+        followUpTouched: Boolean(registryEntry?.followUpTouched),
+      }
+    } catch (error) {
+      throw new Error(`getWorkspaceTouchedState: could not check touched state: ${error.message}`)
     }
   }
 
@@ -413,12 +911,35 @@ export const createFileService = () => {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
         specialty,
+        locationId: checklist?.locationId || checklist?.location,
       })
       console.log('exportInspectionPayload: payload exported and uploaded successfully')
       return result
     } catch (error) {
       throw new Error(
         `exportInspectionPayload: could not export and upload payload` +
+          (error.message ? `: ${error.message}` : '')
+      )
+    }
+  }
+
+  const exportFollowUpPayload = async (findings, followUpSession, specialty, locationId = null) => {
+    try {
+      if (!findings || !followUpSession || !specialty) {
+        throw new Error('Missing required parameters: findings, followUpSession, specialty')
+      }
+
+      const result = await window.electronAPI.exportFollowUpPayload({
+        findingsString: JSON.stringify(findings),
+        followUpSessionString: JSON.stringify(followUpSession),
+        specialty,
+        locationId,
+      })
+      console.log('exportFollowUpPayload: payload exported and uploaded successfully')
+      return result
+    } catch (error) {
+      throw new Error(
+        `exportFollowUpPayload: could not export and upload follow-up payload` +
           (error.message ? `: ${error.message}` : '')
       )
     }
@@ -464,18 +985,45 @@ export const createFileService = () => {
     throw new Error(`notifyImportCanonical: ${lastError.message}`)
   }
 
+  const checkServiceHealth = async (serviceType) => {
+    try {
+      if (!serviceType || (serviceType != 'import' && serviceType != 'upload')) {
+        throw new Error(`Unsupported service type: ${serviceType}`)
+      }
+
+      const config = await window.electronAPI.getAppConfig()
+      const importHost = config?.api?.importHost || config?.api?.host || 'http://localhost:1880'
+      const uploadHost = config?.api?.uploadHost || 'http://localhost:8000'
+      const timeoutMs = config?.api?.serviceStatusTimeoutMs || 2500
+      const baseUrl = serviceType == 'import' ? importHost : uploadHost
+
+      return await window.electronAPI.checkServiceHealth({
+        baseUrl,
+        timeoutMs,
+      })
+    } catch (error) {
+      return {
+        online: false,
+        baseUrl: null,
+        status: 0,
+        error: error.message,
+      }
+    }
+  }
+
   const createDefaultRoot = async () => {
     // Ensure the default root exists
     await window.electronAPI.createDir(DEFAULT_ROOT)
       
       // Create user.config.json with a dummy specialty
+      const appConfig = await window.electronAPI.getAppConfig()
       const userConfig = {
-        specialties: [
-          { 
-            code: 'DEMO', 
-            name: 'Demo Specialty'
-          }
-        ]
+        specialties: Array.isArray(appConfig?.fallback?.specialties)
+          ? appConfig.fallback.specialties.map((entry) => ({
+            code: entry.code,
+            name: entry.name,
+          }))
+          : [{ code: 'DEMO', name: 'Demo Specialty' }],
       }
       await window.electronAPI.saveFile(JSON.stringify(userConfig, null, 2), 
                                         DEFAULT_ROOT, 
@@ -521,6 +1069,10 @@ export const createFileService = () => {
   }
   
   return {
+    getWorkspaceKey,
+    getWorkspaceLegs,
+    getWorkspacePaths,
+    replaceJsonFileSafely,
     defaultPathExists,
     setSavePath,
     createDefaultPath,
@@ -529,19 +1081,36 @@ export const createFileService = () => {
     loadChecklist,
     getChecklistImportState,
     fetchChecklistFromApi,
+    fetchFindingsFromApi,
+    loadFindings,
+    saveFindings,
+    getFindingsImportState,
+    joinChecklistWithFindings,
+    loadWorkspaceRegistry,
+    saveWorkspaceRegistry,
+    upsertWorkspaceRegistryEntry,
+    loadWorkspaceMetadata,
+    saveWorkspaceMetadata,
+    markWorkspaceTouched,
+    getWorkspaceTouchedState,
     ensureSpecialtyEntry,
     saveChecklist,
     loadSession,
     readEvidence,
     saveExportFile,
     saveSession,
+    loadFollowUpSession,
+    saveFollowUpSession,
     loadSpecialties,
+    loadLocations,
     saveAudio,
     deleteAudio,
     readAudio,
     saveFindingsReport,
     exportInspectionPayload,
+    exportFollowUpPayload,
     notifyImportCanonical,
+    checkServiceHealth,
     createDefaultRoot,
   }
 }

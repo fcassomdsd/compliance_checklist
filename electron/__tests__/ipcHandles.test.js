@@ -437,7 +437,7 @@ describe('ipcHandles', () => {
 
       expect(fileOps.saveFile).toHaveBeenCalled()
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://127.0.0.1:8000/inspection-import',
+        'http://localhost:8000/inspection-import',
         expect.objectContaining({ method: 'POST' })
       )
       expect(result).toEqual(
@@ -535,6 +535,110 @@ describe('ipcHandles', () => {
           evidenceSource: 'note.pdf',
         },
       ])
+    })
+  })
+
+  describe('export-follow-up-payload', () => {
+    beforeEach(() => {
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
+      vi.spyOn(fileOps, 'fileExists').mockResolvedValue(false)
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/followup.zip')
+    })
+
+    it('creates zip and posts follow-up payload to API', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const findings = [
+        {
+          schemaVersion: '1.0',
+          finding: {
+            findingId: 'MDPP-VIG-2026-01',
+            domain: 'VIG',
+            providerId: 'provider-1',
+            locationId: 'loc-1',
+            locationName: 'Test Location',
+            itemId: 'q1',
+            description: 'Issue found',
+          },
+        },
+      ]
+      const followUpSession = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          'MDPP-VIG-2026-01': {
+            findingId: 'MDPP-VIG-2026-01',
+            percentComplete: 100,
+            effectivenessConfirmed: true,
+            findingClosed: true,
+          },
+        },
+      }
+
+      const result = await handles['export-follow-up-payload']({}, {
+        findingsString: JSON.stringify(findings),
+        followUpSessionString: JSON.stringify(followUpSession),
+        specialty: 'VIG',
+        locationId: 'loc-1',
+      })
+
+      expect(fileOps.saveFile).toHaveBeenCalled()
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/followup-import',
+        expect.objectContaining({ method: 'POST' })
+      )
+      expect(result).toEqual(
+        expect.objectContaining({
+          uploadStatus: 200,
+          reportsCount: 1,
+        })
+      )
+    })
+
+    it('throws when follow-up import API returns non-OK', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        text: vi.fn().mockResolvedValue('bad request'),
+      })
+
+      const findings = [
+        {
+          schemaVersion: '1.0',
+          finding: {
+            findingId: 'MDPP-VIG-2026-01',
+            domain: 'VIG',
+            providerId: 'provider-1',
+            locationId: 'loc-1',
+            locationName: 'Test Location',
+            itemId: 'q1',
+            description: 'Issue found',
+          },
+        },
+      ]
+      const followUpSession = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          'MDPP-VIG-2026-01': {
+            findingId: 'MDPP-VIG-2026-01',
+            percentComplete: 10,
+            effectivenessConfirmed: false,
+            findingClosed: false,
+          },
+        },
+      }
+
+      await expect(
+        handles['export-follow-up-payload']({}, {
+          findingsString: JSON.stringify(findings),
+          followUpSessionString: JSON.stringify(followUpSession),
+          specialty: 'VIG',
+          locationId: 'loc-1',
+        })
+      ).rejects.toThrow('Follow-up import API failed with status 400')
     })
   })
 })

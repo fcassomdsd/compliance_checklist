@@ -5,87 +5,82 @@
       <span>
         <h2>Operational Safety Compliance Checklist</h2>
       </span>
+      <div class="service-status">
+        <span class="service-label">Import</span>
+        <span :class="['service-dot', store.importServiceOnline ? 'online' : 'offline']"></span>
+        <span class="service-label">Upload</span>
+        <span :class="['service-dot', store.uploadServiceOnline ? 'online' : 'offline']"></span>
+      </div>
     </div>
+    <div class="workspace-controls">
+      <label>Mode:</label>
+      <select id="modeSelect" v-model="store.uiMode" @change="onModeChange">
+        <option value="inspection">Inspection</option>
+        <option value="followUp">Follow-up</option>
+      </select>
+
+      <label>Workspace:</label>
+      <select id="workspaceSelect" v-model="store.activeWorkspaceKey" @change="onWorkspaceChange">
+        <option value="">Select a workspace</option>
+        <option
+          v-for="(workspace, index) in store.workspaceList"
+          :key="index"
+          :value="workspace.workspaceKey"
+        >
+          {{ workspace.displayName }}
+        </option>
+      </select>
+      <button
+        id="openImportModalBtn"
+        :class="{ 'offline-action': !store.importServiceOnline }"
+        @click="showImportModal = true"
+      >
+        {{ store.uiMode == 'inspection' ? 'Import Inspection' : 'Import Follow-up' }}
+      </button>
+    </div>
+
     <div class="controls-container">
-      <!-- Show checklist-level information (inspection, startDate, location) -->
       <span>Inspection: {{ store.checklist?.inspection || '' }}</span>
       <span>Start: {{ store.checklist?.startDate || '' }}</span>
-      <span>Location: {{ store.checklist?.location || '' }}</span>
-  <span>Provider: {{ store.checklist?.providerName || '' }}</span>
+      <span>Provider: {{ store.checklist?.providerName || '' }}</span>
 
-      <div>
-        <label>Specialty:</label>
-        <select v-model="store.specialty" @change="loadChecklistAndSession">
-          <option value="NONE">Select a specialty</option>
-          <option
-            v-for="(specialty, index) in store.specialtyList"
-            :key="index"
-            :value="specialty.code"
-          >
-            {{ specialty.name }}
-          </option>
-        </select>
-        <button
-          id="finalizeBtn"
-          :disabled="sessionStore.summary.finalized"
-          @click="store.showFinalize()"
-        >
-          Finalize inspection
-        </button>
-        <button
-          id="exportBtn"
-          :disabled="!sessionStore.summary.finalized || !store.checklistLoaded"
-          @click="store.exportChecklist()"
-        >
-          Report Findings
-        </button>
-        <button
-          id="exportUploadBtn"
-          :disabled="!sessionStore.summary.finalized || !store.checklistLoaded || store.isUploading"
-          @click="store.exportUploadPayload()"
-        >
-          {{ store.isUploading ? 'Uploading...' : 'Upload' }}
-        </button>
-        <button
-          id="viewReportBtn"
-          :disabled="!store.generatedReportPath"
-          @click="store.viewGeneratedReport()"
-        >
-          View Report
-        </button>
+      <button
+        id="finalizeBtn"
+        :disabled="store.uiMode == 'inspection' ? sessionStore.summary.finalized : followUpStore.summary.finalized"
+        @click="onFinalize()"
+      >
+        {{ store.uiMode == 'inspection' ? 'Finalize inspection' : 'Finalize follow-up' }}
+      </button>
+      <button
+        id="exportBtn"
+        :disabled="store.uiMode == 'followUp' || !sessionStore.summary.finalized || !store.checklistLoaded"
+        @click="store.exportChecklist()"
+      >
+        {{ store.uiMode == 'followUp' ? 'Follow-up reports are uploaded only' : 'Report Findings' }}
+      </button>
+      <button
+        id="exportUploadBtn"
+        :disabled="uploadDisabled"
+        :class="{ 'offline-action': !store.uploadServiceOnline }"
+        @click="store.exportUploadPayload()"
+      >
+        {{ store.isUploading ? 'Uploading...' : uploadLabel }}
+      </button>
+      <button
+        id="viewReportBtn"
+        :disabled="!store.generatedReportPath"
+        @click="store.viewGeneratedReport()"
+      >
+        View Report
+      </button>
 
-        <!-- General comments toggle -->
-        <button
-          id="genCommentsToggle"
-          @click="showGenComments = !showGenComments"
-          :disabled="!store.checklistLoaded"
-        >
-          {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
-        </button>
-      </div>
-
-      <div class="import-controls">
-        <label>Import Checklist:</label>
-        <input
-          id="importInspection"
-          v-model="importInspection"
-          type="text"
-          placeholder="Inspection code (e.g. 0224)"
-        />
-        <input
-          id="importSpecialty"
-          v-model="importSpecialty"
-          type="text"
-          placeholder="Specialty code (e.g. VIG)"
-        />
-        <button
-          id="importChecklistBtn"
-          :disabled="store.isImporting"
-          @click="onImportChecklist"
-        >
-          {{ store.isImporting ? 'Importing...' : 'Import Checklist' }}
-        </button>
-      </div>
+      <button
+        id="genCommentsToggle"
+        @click="showGenComments = !showGenComments"
+        :disabled="!store.checklistLoaded"
+      >
+        {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
+      </button>
     </div>
 
     <!-- General comments area -->
@@ -115,29 +110,104 @@
       @cancel="store.showModal = false"
       @confirm="store.confirmModal"
     />
+    <div v-if="showImportModal" class="modal-overlay">
+      <div class="modal-container import-modal">
+        <h2>{{ store.uiMode == 'inspection' ? 'Import Inspection Data' : 'Import Follow-up Data' }}</h2>
+        <p class="modal-explanation">
+          Import is explicit and online-only. Existing touched local drafts are protected from overwrite.
+        </p>
+
+        <div class="modal-form-row" v-if="store.uiMode == 'inspection'">
+          <label for="importInspection">Inspection code</label>
+          <input
+            id="importInspection"
+            v-model="importInspection"
+            type="text"
+            placeholder="Inspection code"
+          />
+        </div>
+
+        <div class="modal-form-row" v-else>
+          <label for="importLocation">Location</label>
+          <select id="importLocation" v-model="importLocationId">
+            <option value="">Select location</option>
+            <option
+              v-for="(location, index) in store.locationList"
+              :key="index"
+              :value="location.icaoCode"
+            >
+              {{ location.icaoCode }} - {{ location.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="modal-form-row">
+          <label for="importSpecialty">Specialty</label>
+          <select id="importSpecialty" v-model="importSpecialtyCode">
+            <option value="">Select specialty</option>
+            <option
+              v-for="(specialtyOption, index) in store.specialtyList"
+              :key="index"
+              :value="specialtyOption.code"
+            >
+              {{ specialtyOption.code }} - {{ specialtyOption.name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="import-summary">
+          <p><strong>Mode:</strong> {{ store.uiMode == 'inspection' ? 'Inspection' : 'Follow-up' }}</p>
+          <p v-if="store.uiMode == 'inspection'">
+            <strong>Inspection:</strong> {{ importInspection.trim() || 'Not selected' }}
+          </p>
+          <p v-else><strong>Location:</strong> {{ selectedLocationLabel }}</p>
+          <p><strong>Specialty:</strong> {{ selectedSpecialtyLabel }}</p>
+        </div>
+
+        <div class="modal-actions">
+          <button id="cancelImportModalBtn" class="btn-cancel" @click="showImportModal = false">Cancel</button>
+          <button
+            id="importDataBtn"
+            class="btn-confirm"
+            :disabled="importDisabled"
+            :class="{ 'offline-action': !store.importServiceOnline }"
+            @click="onImportSubmit"
+          >
+            {{ importLabel }}
+          </button>
+        </div>
+      </div>
+    </div>
     <p id="currentPath">{{ store.currentPath }}</p>
-    <ChecklistTable v-if="store.checklistLoaded" />
+    <ChecklistTable v-if="store.uiMode == 'inspection' && store.checklistLoaded" />
+    <FollowUpTable v-if="store.uiMode == 'followUp' && store.findingsLoaded" />
   </div>
 </template>
 
 <script setup>
-  import { onMounted, ref } from 'vue'
+  import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
   import ChecklistTable from './components/ChecklistTable.vue'
+  import FollowUpTable from './components/FollowUpTable.vue'
   import ModalWindow from './components/ModalWindow.vue'
   import { useChecklistStore } from './stores/checklistStore'
   import { useSessionStore } from './stores/sessionStore'
+  import { useFollowUpStore } from './stores/followUpStore'
   import { useToast } from 'vue-toastification'
   import logo from './assets/images/compliance-logo.png'
 
   // Access the Pinia store
   const store = useChecklistStore()
   const sessionStore = useSessionStore()
+  const followUpStore = useFollowUpStore()
   const toast = useToast()
 
   // Local UI state for toggling general comments
   const showGenComments = ref(false)
+  const showImportModal = ref(false)
   const importInspection = ref('')
-  const importSpecialty = ref('')
+  const importSpecialtyCode = ref('')
+  const importLocationId = ref('')
+  let serviceStatusInterval = null
 
   const onGeneralCommentsInput = (event) => {
     sessionStore.updateGeneralComments(event.target.value)
@@ -147,33 +217,138 @@
     sessionStore.updateGeneralComments('')
   }
 
-  const loadChecklistAndSession = async () => {
-    try {
-      if (await store.loadChecklist()) {
-        await sessionStore.loadSession(store.specialty)
-      }
-    } catch (error) {
-      toast.error('Could not load session: ' + error.message)
-    }
-  }
-
-  const onImportChecklist = async () => {
-    const inspection = importInspection.value.trim()
-    const specialtyCode = importSpecialty.value.trim()
-
-    if (!inspection || !specialtyCode) {
-      toast.error('Inspection and specialty are required to import')
+  const onWorkspaceChange = async () => {
+    if (!store.activeWorkspaceKey) {
       return
     }
-
-    await store.importChecklist(inspection, specialtyCode)
+    await store.selectWorkspace(store.activeWorkspaceKey)
   }
+
+  const onImportData = async () => {
+    if (!store.importServiceOnline) {
+      toast.error('Import service offline (localhost:1880)')
+      return false
+    }
+
+    const inspection = importInspection.value.trim()
+    const specialtyCode = importSpecialtyCode.value.trim()
+
+    if (store.uiMode == 'inspection') {
+      if (!inspection || !specialtyCode) {
+        toast.error('Inspection and specialty are required to import')
+        return false
+      }
+      await store.importChecklist(inspection, specialtyCode)
+    } else {
+      const locationId = importLocationId.value.trim()
+      if (!locationId || !specialtyCode) {
+        toast.error('Location and specialty are required to import findings')
+        return false
+      }
+      await store.importFindings(specialtyCode, locationId)
+    }
+
+    if (store.activeWorkspace?.locationId) {
+      await followUpStore.loadFollowUpSession(store.specialty, store.activeWorkspace.locationId)
+    }
+
+    return true
+  }
+
+  const onImportSubmit = async () => {
+    const imported = await onImportData()
+    if (imported) {
+      showImportModal.value = false
+    }
+  }
+
+  const onFinalize = () => {
+    if (store.uiMode == 'inspection') {
+      store.showFinalize()
+      return
+    }
+    followUpStore.finalize()
+  }
+
+  const onModeChange = async () => {
+    importInspection.value = ''
+    if (store.uiMode == 'followUp' && store.activeWorkspace?.locationId) {
+      await followUpStore.loadFollowUpSession(store.specialty, store.activeWorkspace.locationId)
+    }
+  }
+
+  const importLabel = computed(() => {
+    if (store.isImporting || store.isImportingFindings) {
+      return 'Importing...'
+    }
+    return store.uiMode == 'inspection' ? 'Import Inspection' : 'Import Follow-up'
+  })
+
+  const selectedSpecialtyLabel = computed(() => {
+    const code = importSpecialtyCode.value.trim()
+    if (!code) {
+      return 'Not selected'
+    }
+    const specialtyEntry = store.specialtyList.find((entry) => entry.code == code)
+    return specialtyEntry ? `${specialtyEntry.code} - ${specialtyEntry.name}` : code
+  })
+
+  const selectedLocationLabel = computed(() => {
+    const icao = importLocationId.value.trim()
+    if (!icao) {
+      return 'Not selected'
+    }
+    const locationEntry = store.locationList.find((entry) => entry.icaoCode == icao)
+    return locationEntry ? `${locationEntry.icaoCode} - ${locationEntry.name}` : icao
+  })
+
+  const importDisabled = computed(() => {
+    if (!store.importServiceOnline) {
+      return false
+    }
+    if (store.uiMode == 'inspection') {
+      return !importInspection.value.trim() || !importSpecialtyCode.value.trim() || store.isImporting
+    }
+    return !importLocationId.value.trim() || !importSpecialtyCode.value.trim() || store.isImportingFindings
+  })
+
+  const uploadDisabled = computed(() =>
+    !store.uploadServiceOnline ||
+    store.uiMode == 'followUp'
+      ? !followUpStore.summary.finalized || !store.findingsLoaded || store.isUploading
+      : !sessionStore.summary.finalized || !store.checklistLoaded || store.isUploading
+  )
+
+  const uploadLabel = computed(() => (store.uiMode == 'followUp' ? 'Upload Follow-up' : 'Upload'))
+
+  watch(
+    () => store.uiMode,
+    async (mode) => {
+      if (mode == 'followUp' && store.activeWorkspace?.locationId) {
+        await followUpStore.loadFollowUpSession(store.specialty, store.activeWorkspace.locationId)
+      }
+    }
+  )
 
   onMounted(async () => {
     // Check if the default path exists
     await store.checkDefaultPath()
     // Load specialties from file
     await store.loadSpecialties()
+    await store.loadLocations()
+    // Load workspace registry for location + specialty switching
+    await store.loadWorkspaces()
+    await store.refreshServiceStatus()
+    serviceStatusInterval = setInterval(() => {
+      store.refreshServiceStatus()
+    }, 30000)
+  })
+
+  onUnmounted(() => {
+    if (serviceStatusInterval) {
+      clearInterval(serviceStatusInterval)
+      serviceStatusInterval = null
+    }
   })
 </script>
 
@@ -199,6 +374,47 @@
     color: var(--primary-color);
     font-weight: 600;
     margin: 0;
+  }
+  .service-status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 600;
+  }
+  .service-label {
+    font-size: 0.9rem;
+  }
+  .service-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .service-dot.online {
+    background-color: #16a34a;
+  }
+  .service-dot.offline {
+    background-color: #dc2626;
+  }
+  .workspace-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.2rem;
+  }
+  .workspace-controls label {
+    font-weight: 600;
+    color: var(--primary-color);
+  }
+  .workspace-controls select,
+  .workspace-controls input {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    min-width: 220px;
   }
   .controls-container {
     display: flex;
@@ -239,6 +455,44 @@
     font-size: 1rem;
     min-width: 200px;
   }
+  .offline-action {
+    color: #b91c1c;
+  }
+  .import-modal {
+    width: min(520px, 94vw);
+    text-align: left;
+  }
+  .import-modal h2 {
+    margin-top: 0;
+    color: var(--primary-color);
+  }
+  .modal-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.9rem;
+  }
+  .modal-form-row label {
+    font-weight: 600;
+  }
+  .modal-form-row input,
+  .modal-form-row select {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .import-summary {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 0.75rem 0.9rem;
+    margin: 0.4rem 0 1rem;
+  }
+  .import-summary p {
+    margin: 0.2rem 0;
+    font-size: 0.95rem;
+  }
   .general-comments {
     margin: 1rem 0;
   }
@@ -256,6 +510,10 @@
     .header {
       flex-direction: column;
       text-align: center;
+      align-items: flex-start;
+    }
+    .service-status {
+      margin-left: 0;
     }
     .controls-container {
       flex-direction: column;

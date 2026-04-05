@@ -40,6 +40,7 @@ describe('preload.js', () => {
       expect(api).toHaveProperty('listPath')
       expect(api).toHaveProperty('readFile')
       expect(api).toHaveProperty('saveFile')
+      expect(api).toHaveProperty('exportFollowUpPayload')
     })
   })
 
@@ -118,6 +119,15 @@ describe('preload.js', () => {
       expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('save-file', fileData, '/home/user', [
         'file.txt',
       ])
+    })
+
+    it('exportFollowUpPayload should invoke export-follow-up-payload', async () => {
+      mockIpcRenderer.invoke.mockResolvedValue({ uploadStatus: 200 })
+      const params = { findingsString: '[]', followUpSessionString: '{}', specialty: 'VIG' }
+
+      await api.exportFollowUpPayload(params)
+
+      expect(mockIpcRenderer.invoke).toHaveBeenCalledWith('export-follow-up-payload', params)
     })
   })
 

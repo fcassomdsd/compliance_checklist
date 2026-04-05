@@ -15,9 +15,10 @@ export const useSessionStore = defineStore('session', () => {
   const responses = reactive({})
   // session summary: no longer holds location (moved to checklist.json)
   const summary = ref({ finalized: true, generalComments: '' })
+  const context = ref({ specialty: '', locationId: null })
 
   // Actions
-  const loadSession = async (specialty) => {
+  const loadSession = async (specialty, locationId = null) => {
     // initialize state
     // reset summary (no location)
     summary.value.finalized = true
@@ -44,7 +45,7 @@ export const useSessionStore = defineStore('session', () => {
       }
 
       // load session, if exists
-      let sessionRead = await fs.loadSession(specialty)
+      let sessionRead = await fs.loadSession(specialty, locationId)
       if (sessionRead !== null) {
         // can't assign session object directly;  use JSON.parse
         JSON.parse(JSON.stringify(sessionRead), (key, value) => {
@@ -64,6 +65,10 @@ export const useSessionStore = defineStore('session', () => {
       if (!summary.value['specialty']) {
         summary.value['specialty'] = specialty
       }
+      if (locationId) {
+        summary.value['locationId'] = locationId
+      }
+      context.value = { specialty, locationId }
 
       // prepare evidence: load evidence and update counts with the session data
       await evidence.load(specialty)
@@ -85,7 +90,7 @@ export const useSessionStore = defineStore('session', () => {
         }
       }
 
-      fs.saveSession(summary.value, responses, displayToast)
+      fs.saveSession(summary.value, responses, displayToast, locationId)
 
       if (sessionRead !== null) {
         toast.success('Session loaded')
@@ -105,20 +110,26 @@ export const useSessionStore = defineStore('session', () => {
     if (questionCode) {
       responses[responseKey]['code'] = questionCode
     }
-    fs.saveSession(summary.value, responses, displayToast)
+    fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
+    fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId).catch((error) => {
+      toast.error('Could not update workspace touched state: ' + error.message)
+    })
   }
 
   // New: update general comments stored in summary and save
   const updateGeneralComments = (comments) => {
     summary.value.generalComments = comments || ''
-    fs.saveSession(summary.value, responses, displayToast)
+    fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
+    fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId).catch((error) => {
+      toast.error('Could not update workspace touched state: ' + error.message)
+    })
   }
 
   function displayToast(msg) {
     toast.error(msg)
   }
 
-  const finalize = () => {
+  const finalize = (specialty, locationId = null) => {
     for (const key of Object.keys(responses)) {
       if (responses[key].compliance != 'Non-compliant') {
         if (responses[key].nonConformity) {
@@ -128,12 +139,20 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     summary.value['finalized'] = true
-    fs.saveSession(summary.value, responses, displayToast)
+    if (specialty && !summary.value['specialty']) {
+      summary.value['specialty'] = specialty
+    }
+    if (locationId) {
+      summary.value['locationId'] = locationId
+    }
+    context.value = { specialty: summary.value['specialty'], locationId: locationId || null }
+    fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
   }
 
   return {
     responses,
     summary,
+    context,
     loadSession,
     updateSession,
     updateGeneralComments, // <-- exported

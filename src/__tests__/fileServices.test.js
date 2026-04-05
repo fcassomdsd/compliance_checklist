@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createFileService } from '../utils/fileServices'
 import { parseChecklist } from '../utils/checklist'
+import { parseFindings } from '../utils/findings'
 
 vi.useFakeTimers()
 
@@ -16,10 +17,13 @@ const mockElectronAPI = {
   getFullPath: vi.fn(),
   generatePDF: vi.fn(),
   exportInspectionPayload: vi.fn(),
+  exportFollowUpPayload: vi.fn(),
+  checkServiceHealth: vi.fn(),
   getAppConfig: vi.fn().mockResolvedValue({ api: { host: 'http://localhost:1880', importCanonicalDelay: 0, importCanonicalRetries: 3 } }),
 }
 window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')
+vi.mock('../utils/findings.js')
 vi.mock('../utils/session.js')
 
 // Add direct import for getSizeAndSuffix for testing
@@ -131,6 +135,23 @@ describe('fileServices', () => {
       ).rejects.toThrowError(errorMessage)
 
       await fs.saveEvidence('VIG', 'file1.txt', new ArrayBuffer(10 * 1000 * 1000 - 1))
+    })
+
+    it('stores follow-up evidence in FollowUpEvidence directory', async () => {
+      // eslint-disable-next-line no-undef
+      const buffer = Buffer.from('follow-up buffer')
+      mockElectronAPI.getStats.mockResolvedValue(null)
+      mockElectronAPI.saveFile.mockResolvedValue('/mocked/VIG/loc-001__VIG/FollowUpEvidence/file1.txt')
+
+      await fs.saveEvidence('VIG', 'file1.txt', buffer, 'loc-001', 'followUp')
+
+      expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(
+        buffer,
+        null,
+        'LOC-001_VIG',
+        'FollowUpEvidence',
+        'file1.txt'
+      )
     })
   })
 
@@ -275,6 +296,37 @@ describe('fileServices', () => {
     })
   })
 
+  describe('exportFollowUpPayload', () => {
+    it('calls electron exportFollowUpPayload with stringified data', async () => {
+      const findings = [{ finding: { findingId: 'F-1', locationId: 'loc-1' } }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      const expectedResult = { zipPath: '/tmp/followup.zip', uploadStatus: 200 }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue(expectedResult)
+
+      const result = await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
+
+      expect(mockElectronAPI.exportFollowUpPayload).toHaveBeenCalledWith({
+        findingsString: JSON.stringify(findings),
+        followUpSessionString: JSON.stringify(followUpSession),
+        specialty: 'VIG',
+        locationId: 'loc-1',
+      })
+      expect(result).toEqual(expectedResult)
+    })
+
+    it('throws for missing parameters', async () => {
+      await expect(fs.exportFollowUpPayload(null, { responses: {} }, 'VIG')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload'
+      )
+      await expect(fs.exportFollowUpPayload([], null, 'VIG')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload'
+      )
+      await expect(fs.exportFollowUpPayload([], { responses: {} }, '')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload'
+      )
+    })
+  })
+
   describe('saveSession', async () => {
 
     it('saves session after debounce', async () => {
@@ -347,6 +399,33 @@ describe('fileServices', () => {
 
       expect(result).toBe(true)
       expect(mockCallback).toHaveBeenCalledWith('Save failed')
+    })
+  })
+
+  describe('follow-up session persistence', () => {
+    it('loads follow-up session when file exists', async () => {
+      const fs = createFileService()
+      const payload = { summary: { finalized: false }, responses: { F1: { findingId: 'F1' } } }
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(payload))
+
+      const result = await fs.loadFollowUpSession('VIG', 'loc-001')
+
+      expect(result).toEqual(payload)
+      expect(window.electronAPI.checkPath).toHaveBeenCalledWith(
+        null,
+        'LOC-001_VIG',
+        'followup.session.json'
+      )
+    })
+
+    it('returns null when follow-up session file does not exist', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(false)
+
+      const result = await fs.loadFollowUpSession('VIG', 'loc-001')
+
+      expect(result).toBeNull()
     })
   })
 
@@ -539,26 +618,21 @@ describe('fileServices', () => {
 
     it('loadSpecialties returns list of specialties', async () => {
       const fs = createFileService()
-      const mockConfig = {
-        specialties: [
-          { code: 'VIG', name: 'Vigilancia' },
-          { code: 'OPS', name: 'Operaciones' },
-        ],
-      }
-      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(mockConfig))
-
       const result = await fs.loadSpecialties()
 
-      expect(result).toEqual(mockConfig.specialties)
+      expect(Array.isArray(result)).toBe(true)
+      expect(result.length).toBeGreaterThan(0)
+      expect(result[0]).toHaveProperty('code')
+      expect(result[0]).toHaveProperty('name')
     })
 
-    it('loadSpecialties throws error on read failure', async () => {
+    it('loadSpecialties falls back to app config when user config read fails', async () => {
       const fs = createFileService()
       window.electronAPI.readFile.mockRejectedValue(new Error('read failed'))
 
-      await expect(fs.loadSpecialties()).rejects.toThrow(
-        'loadSpecialties: could not load specialties : read failed'
-      )
+      const result = await fs.loadSpecialties()
+      expect(Array.isArray(result)).toBe(true)
+      expect(result.length).toBeGreaterThan(0)
     })
 
     it('setSavePath returns path if checkPath is true', async () => {
@@ -860,6 +934,274 @@ describe('fileServices', () => {
 
       await expect(fs.saveChecklist('VIG', null)).rejects.toThrow(
         'saveChecklist: could not save checklist: Missing required parameters'
+      )
+    })
+
+    it('fetchFindingsFromApi fetches and validates findings from API', async () => {
+      const fs = createFileService()
+      const mockFindings = [
+        {
+          schemaVersion: '1.0',
+          finding: {
+            findingId: 'MDPP-VIG-2026-01',
+            locationId: 'loc-001',
+          },
+        },
+      ]
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: vi.fn().mockResolvedValue(mockFindings),
+        })
+      )
+
+      parseFindings.mockReturnValue(mockFindings)
+
+      const result = await fs.fetchFindingsFromApi('VIG', 'loc-001', '0224')
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:1880/findings?specialty=VIG&locationId=loc-001&inspection=0224'
+      )
+      expect(result).toEqual(mockFindings)
+    })
+
+    it('fetchFindingsFromApi throws for non-ok response', async () => {
+      const fs = createFileService()
+
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+        })
+      )
+
+      await expect(fs.fetchFindingsFromApi('VIG', 'loc-001')).rejects.toThrow(
+        'fetchFindingsFromApi: could not fetch findings: Findings import failed with status 500'
+      )
+    })
+
+    it('saveFindings stores findings using workspace path', async () => {
+      const fs = createFileService()
+      const findings = [{ finding: { findingId: 'F-1', locationId: 'loc-001' } }]
+      window.electronAPI.createDir.mockResolvedValue(undefined)
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/findings.json')
+
+      const result = await fs.saveFindings('VIG', findings, 'loc-001')
+
+      expect(result).toBe('/mocked/path/findings.json')
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'LOC-001_VIG')
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        JSON.stringify(findings, null, 2),
+        null,
+        'LOC-001_VIG',
+        'findings.json'
+      )
+    })
+
+    it('loadFindings returns parsed findings when file exists', async () => {
+      const fs = createFileService()
+      const findings = [{ finding: { findingId: 'F-1', locationId: 'loc-001' } }]
+
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(findings))
+      parseFindings.mockReturnValue(findings)
+
+      const result = await fs.loadFindings('VIG', 'loc-001')
+
+      expect(result).toEqual(findings)
+      expect(window.electronAPI.checkPath).toHaveBeenCalledWith(
+        null,
+        'LOC-001_VIG',
+        'findings.json'
+      )
+    })
+
+    it('loadFindings returns null when no findings file exists', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(false)
+
+      const result = await fs.loadFindings('VIG', 'loc-001')
+
+      expect(result).toBeNull()
+    })
+
+    it('getFindingsImportState returns findings and follow-up session state', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(true)
+      window.electronAPI.readFile.mockResolvedValue(
+        JSON.stringify({ summary: { finalized: false }, responses: {} })
+      )
+
+      const result = await fs.getFindingsImportState('VIG', 'loc-001')
+
+      expect(result).toEqual({
+        hasFindings: true,
+        hasFollowUpSession: true,
+        followUpFinalized: false,
+      })
+    })
+
+    it('joinChecklistWithFindings enriches questions and reports unmatched findings', () => {
+      const fs = createFileService()
+
+      const checklist = {
+        specialtyName: 'VIG',
+        questions: [
+          {
+            id: 'q1',
+            topic: 'Topic',
+            reference: { normativa: {}, guidance: 'GM' },
+            question: 'Question 1',
+            verification: 'Verification',
+            priorFindingId: 'F-1',
+          },
+        ],
+      }
+
+      const findings = [
+        { finding: { findingId: 'F-1', locationId: 'loc-001' } },
+        { finding: { findingId: 'F-2', locationId: 'loc-001' } },
+      ]
+
+      const result = fs.joinChecklistWithFindings(checklist, findings)
+
+      expect(result.checklist.questions[0].priorFinding.findingId).toBe('F-1')
+      expect(result.unmatchedFindings).toHaveLength(1)
+      expect(result.unmatchedFindings[0].finding.findingId).toBe('F-2')
+    })
+  })
+
+  describe('workspace scaffolding', () => {
+    it('builds workspace key using location and specialty', () => {
+      const fs = createFileService()
+      const key = fs.getWorkspaceKey('loc-001', 'vig')
+      expect(key).toBe('loc-001__VIG')
+    })
+
+    it('builds workspace legs with location context', () => {
+      const fs = createFileService()
+      const legs = fs.getWorkspaceLegs('vig', 'loc-001')
+      expect(legs).toEqual(['LOC-001_VIG'])
+    })
+
+    it('builds legacy workspace legs when location is not provided', () => {
+      const fs = createFileService()
+      const legs = fs.getWorkspaceLegs('vig')
+      expect(legs).toEqual(['VIG'])
+    })
+
+    it('builds file and directory paths from workspace', () => {
+      const fs = createFileService()
+      const paths = fs.getWorkspacePaths('OPS', 'mdbq')
+
+      expect(paths.legs).toEqual(['MDBQ_OPS'])
+      expect(paths.checklist).toEqual(['MDBQ_OPS', 'checklist.json'])
+      expect(paths.findings).toEqual(['MDBQ_OPS', 'findings.json'])
+      expect(paths.followUpSession).toEqual(['MDBQ_OPS', 'followup.session.json'])
+      expect(paths.followUpEvidenceDir).toEqual(['MDBQ_OPS', 'FollowUpEvidence'])
+    })
+
+    it('replaces JSON file only when payload parses successfully', async () => {
+      const fs = createFileService()
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspace.json')
+
+      const result = await fs.replaceJsonFileSafely({ key: 'value' }, 'OPS', 'workspace.json')
+
+      expect(result).toBe('/mocked/path/workspace.json')
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        JSON.stringify({ key: 'value' }, null, 2),
+        null,
+        'OPS',
+        'workspace.json'
+      )
+    })
+
+    it('does not overwrite file when replacement payload is invalid JSON', async () => {
+      const fs = createFileService()
+
+      await expect(fs.replaceJsonFileSafely('{', 'OPS', 'workspace.json')).rejects.toThrow(
+        'replaceJsonFileSafely: could not replace OPS/workspace.json :'
+      )
+      expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
+    })
+
+    it('loads empty workspace registry when file does not exist', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(false)
+
+      const result = await fs.loadWorkspaceRegistry()
+
+      expect(result).toEqual([])
+      expect(window.electronAPI.checkPath).toHaveBeenCalledWith(null, 'workspaces.json')
+    })
+
+    it('loads workspace registry when file exists', async () => {
+      const fs = createFileService()
+      const registry = [{ workspaceKey: 'loc-001__VIG' }]
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(registry))
+
+      const result = await fs.loadWorkspaceRegistry()
+
+      expect(result).toEqual(registry)
+      expect(window.electronAPI.readFile).toHaveBeenCalledWith(null, 'workspaces.json')
+    })
+
+    it('upserts workspace entry into registry', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue('[]')
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
+
+      const entry = await fs.upsertWorkspaceRegistryEntry({
+        specialtyCode: 'vig',
+        specialtyName: 'Vigilancia',
+        locationId: 'loc-001',
+        locationName: 'Location 1',
+      })
+
+      expect(entry.workspaceKey).toBe('loc-001__VIG')
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('loc-001__VIG'),
+        null,
+        'workspaces.json'
+      )
+    })
+
+    it('returns touched state from workspace metadata when available', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath
+        .mockResolvedValueOnce(true)
+      window.electronAPI.readFile.mockResolvedValue(
+        JSON.stringify({ checklistTouched: true, followUpTouched: false })
+      )
+
+      const result = await fs.getWorkspaceTouchedState('VIG', 'loc-001')
+
+      expect(result).toEqual({ checklistTouched: true, followUpTouched: false })
+    })
+
+    it('marks workspace checklist as touched', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
+      window.electronAPI.readFile.mockResolvedValue('[]')
+      window.electronAPI.createDir.mockResolvedValue(undefined)
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path')
+
+      await fs.markWorkspaceTouched('VIG', 'loc-001')
+
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('"checklistTouched": true'),
+        null,
+        'LOC-001_VIG',
+        'workspace.json'
       )
     })
   })

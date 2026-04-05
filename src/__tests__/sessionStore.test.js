@@ -48,6 +48,7 @@ describe('Session Store', () => {
     mockFs = {
       loadSession: vi.fn(),
       saveSession: vi.fn(),
+      markWorkspaceTouched: vi.fn().mockResolvedValue(undefined),
     }
     createFileService.mockReturnValue(mockFs)
 
@@ -103,7 +104,7 @@ describe('Session Store', () => {
       })
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
 
-      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG')
+      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG', null)
       expect(mockEvidence.load).toHaveBeenCalledWith('VIG')
       expect(mockAudio.load).toHaveBeenCalledWith('VIG')
     })
@@ -121,7 +122,7 @@ describe('Session Store', () => {
       })
       expect(sessionStore.responses).toEqual({})
 
-      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG')
+      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG', null)
       expect(mockEvidence.load).not.toHaveBeenCalledWith()
     })
 

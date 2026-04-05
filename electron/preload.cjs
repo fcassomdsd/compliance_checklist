@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('save-file', fileData, filePath, pathLegs),
   generatePDF: (params) => ipcRenderer.invoke('generate-pdf', params),
   exportInspectionPayload: (params) => ipcRenderer.invoke('export-inspection-payload', params),
+  exportFollowUpPayload: (params) => ipcRenderer.invoke('export-follow-up-payload', params),
+  checkServiceHealth: (params) => ipcRenderer.invoke('check-service-health', params),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   getAppConfig: () => ipcRenderer.invoke('get-app-config'),
 })

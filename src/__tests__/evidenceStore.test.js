@@ -71,7 +71,7 @@ describe('Evidence Store', () => {
       ])
       await evidence.load('VIG')
 
-      expect(mockFs.readEvidence).toBeCalledWith('VIG')
+      expect(mockFs.readEvidence).toBeCalledWith('VIG', null, 'inspection')
       expect(evidence.files.value).toEqual({
         file1: { URL: '/mocked/file1', count: 0 },
         file2: { URL: '/mocked/file2', count: 0 },
@@ -81,7 +81,7 @@ describe('Evidence Store', () => {
       mockFs.readEvidence.mockResolvedValue([])
       await evidence.load('VIG')
 
-      expect(mockFs.readEvidence).toBeCalledWith('VIG')
+      expect(mockFs.readEvidence).toBeCalledWith('VIG', null, 'inspection')
       expect(evidence.files.value).toEqual({})
     })
   })
@@ -111,7 +111,7 @@ describe('Evidence Store', () => {
       const fileObj = { name: 'file1', arrayBuffer: () => 'This is file1' }
       await evidence.add('VIG', fileObj)
 
-      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'file1', 'This is file1')
+      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'file1', 'This is file1', null, 'inspection')
       expect(mockFs.saveEvidence).toHaveReturned('/mocked/file1')
       expect(evidence.files.value['file1']).toEqual({ URL: '/mocked/file1', count: 0 })
     })
@@ -120,7 +120,7 @@ describe('Evidence Store', () => {
       const fileObj = { name: 'exists', arrayBuffer: () => 'This is exists' }
       await evidence.add('VIG', fileObj)
 
-      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'exists', 'This is exists')
+      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'exists', 'This is exists', null, 'inspection')
       expect(mockFs.saveEvidence).toHaveReturned(null)
       expect(evidence.files.value['exists']).toEqual({ URL: '/mocked/exists', count: 1 })
     })
@@ -129,7 +129,7 @@ describe('Evidence Store', () => {
       const fileObj = { name: 'updated', arrayBuffer: () => 'This is updated' }
       await evidence.add('VIG', fileObj)
 
-      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'updated', 'This is updated')
+      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'updated', 'This is updated', null, 'inspection')
       expect(mockFs.saveEvidence).toHaveReturned('/mocked/updated')
       expect(evidence.files.value['updated']).toEqual({ URL: '/mocked/updated', count: 1 })
     })
@@ -139,7 +139,13 @@ describe('Evidence Store', () => {
       const fileObj = { name: 'notOnDisk', arrayBuffer: () => 'This is not on disk' }
       await evidence.add('VIG', fileObj)
 
-      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'notOnDisk', 'This is not on disk')
+      expect(mockFs.saveEvidence).toBeCalledWith(
+        'VIG',
+        'notOnDisk',
+        'This is not on disk',
+        null,
+        'inspection'
+      )
       expect(mockFs.saveEvidence).toHaveReturned('/mocked/notOnDisk')
       expect(evidence.files.value['notOnDisk']).toEqual({ URL: '/mocked/notOnDisk', count: 2 })
     })
@@ -151,7 +157,13 @@ describe('Evidence Store', () => {
         'evidence.add: detected untracked file: unaccounted'
       )
 
-      expect(mockFs.saveEvidence).toBeCalledWith('VIG', 'unaccounted', 'This is unaccounted for')
+      expect(mockFs.saveEvidence).toBeCalledWith(
+        'VIG',
+        'unaccounted',
+        'This is unaccounted for',
+        null,
+        'inspection'
+      )
       expect(mockFs.saveEvidence).toHaveReturned('null')
       expect(evidence.files.value['unaccounted']).toBe(undefined)
     })
@@ -191,7 +203,7 @@ describe('Evidence Store', () => {
     it('removes the file in case of one link', async () => {
       await evidence.subtract('VIG', 'one')
 
-      expect(mockFs.deleteEvidence).toBeCalledWith('VIG', 'one')
+      expect(mockFs.deleteEvidence).toBeCalledWith('VIG', 'one', null, 'inspection')
       expect(evidence.files.value).toEqual({
         many: { URL: '/mocked/many', count: 3 },
         bad: { URL: '/mocked/bad', count: 1 },
@@ -201,7 +213,7 @@ describe('Evidence Store', () => {
     it('does not modify evidence.files in case of error', async () => {
       await expect(evidence.subtract('VIG', 'bad')).rejects.toThrow('could not delete file bad')
 
-      expect(mockFs.deleteEvidence).toBeCalledWith('VIG', 'bad')
+      expect(mockFs.deleteEvidence).toBeCalledWith('VIG', 'bad', null, 'inspection')
       expect(evidence.files.value).toEqual({
         many: { URL: '/mocked/many', count: 3 },
         one: { URL: '/mocked/one', count: 1 },
@@ -250,6 +262,28 @@ describe('Evidence Store', () => {
       expect(evidence.files.value['IHaveNone.txt'].count).toBe(0)
       expect(evidence.files.value['Ex6.json'].count).toBe(1)
       expect(evidence.files.value['Ex6.json'].URL).toBe('')
+    })
+  })
+
+  describe('follow-up evidence context', () => {
+    it('routes add and subtract to follow-up evidence folder context', async () => {
+      evidence.files.value = {
+        follow: { URL: '/mocked/follow', count: 1 },
+      }
+      mockFs.saveEvidence.mockResolvedValue('/mocked/follow')
+      const fileObj = { name: 'follow', arrayBuffer: () => 'follow-content' }
+
+      await evidence.add('VIG', fileObj, 'loc-001', 'followUp')
+      await evidence.subtract('VIG', 'follow', 'loc-001', 'followUp')
+
+      expect(mockFs.saveEvidence).toHaveBeenCalledWith(
+        'VIG',
+        'follow',
+        'follow-content',
+        'loc-001',
+        'followUp'
+      )
+      expect(mockFs.deleteEvidence).toHaveBeenCalledWith('VIG', 'follow', 'loc-001', 'followUp')
     })
   })
 })
