@@ -1,0 +1,12 @@
+[
+  {
+    "id": "sp-vig",
+    "code": "VIG",
+    "name": "Sistemas de Vigilancia"
+  },
+  {
+    "id": "sp-com",
+    "code": "COM",
+    "name": "Comunicaciones"
+  }
+]

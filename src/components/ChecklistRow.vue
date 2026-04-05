@@ -282,6 +282,7 @@
   const evidenceStore = useEvidenceStore()
   const audioStore = useAudioStore()
   const isReadOnly = props.readOnly || sessionStore.summary.finalized
+  const currentLocationId = () => sessionStore.context?.locationId || null
 
   const updateResponse = (field, value) => {
     sessionStore.updateSession(props.questionCode, props.row.id, field, value, props.row.code)
@@ -361,7 +362,17 @@
       const buffer = await blob.arrayBuffer()
 
       // Save audio file through the audio store
-      await audioStore.add(sessionStore.summary.specialty, fileName, new Uint8Array(buffer))
+      const locationId = currentLocationId()
+      if (locationId) {
+        await audioStore.add(
+          sessionStore.summary.specialty,
+          fileName,
+          new Uint8Array(buffer),
+          locationId
+        )
+      } else {
+        await audioStore.add(sessionStore.summary.specialty, fileName, new Uint8Array(buffer))
+      }
 
       // Add to audio list in session
       const audioFieldName = field === 'comments' ? 'audioComments' : 'audioNonConformity'
@@ -402,7 +413,12 @@
 
     try {
       // Delete through the audio store
-      await audioStore.subtract(sessionStore.summary.specialty, fileName)
+      const locationId = currentLocationId()
+      if (locationId) {
+        await audioStore.subtract(sessionStore.summary.specialty, fileName, locationId)
+      } else {
+        await audioStore.subtract(sessionStore.summary.specialty, fileName)
+      }
 
       // Remove from list
       const updatedAudioList = currentAudioList.filter((_, i) => i !== index)
@@ -420,7 +436,12 @@
     for (const file of files) {
       try {
         // update the evidence file record
-        await evidenceStore.add(sessionStore.summary.specialty, file)
+        const locationId = currentLocationId()
+        if (locationId) {
+          await evidenceStore.add(sessionStore.summary.specialty, file, locationId, 'inspection')
+        } else {
+          await evidenceStore.add(sessionStore.summary.specialty, file)
+        }
 
         const inTable = table.some((item) => item === file.name)
 
@@ -446,7 +467,12 @@
 
   const removeEvidence = async (index, evidence) => {
     try {
-      await evidenceStore.subtract(sessionStore.summary.specialty, evidence)
+      const locationId = currentLocationId()
+      if (locationId) {
+        await evidenceStore.subtract(sessionStore.summary.specialty, evidence, locationId, 'inspection')
+      } else {
+        await evidenceStore.subtract(sessionStore.summary.specialty, evidence)
+      }
     } catch (error) {
       console.log('evidenceChanged failed: ' + error)
       toast.error(error.message)
@@ -473,7 +499,12 @@
       type: 'image/jpeg',
     })
     const table = props.session.evidence || []
-    await evidenceStore.add(sessionStore.summary.specialty, file)
+    const locationId = currentLocationId()
+    if (locationId) {
+      await evidenceStore.add(sessionStore.summary.specialty, file, locationId, 'inspection')
+    } else {
+      await evidenceStore.add(sessionStore.summary.specialty, file)
+    }
     if (!table.some((item) => item === file.name)) {
       evidenceStore.addCount(file.name)
       table.push(file.name)

@@ -16,9 +16,11 @@ export const useAudioStore = defineStore('audio', () => {
     }
   }
 
-  const load = async (specialty) => {
+  const load = async (specialty, locationId = null) => {
     try {
-      const afiles = await fs.readAudio(specialty)
+      const afiles = locationId
+        ? await fs.readAudio(specialty, locationId)
+        : await fs.readAudio(specialty)
       afiles.forEach((x) => {
         files.value[x.name] = {}
         files.value[x.name]['URL'] = x.URL
@@ -45,9 +47,11 @@ export const useAudioStore = defineStore('audio', () => {
     }
   }
 
-  const add = async (specialty, fileName, buffer) => {
+  const add = async (specialty, fileName, buffer, locationId = null) => {
     try {
-      const savedPath = await fs.saveAudio(specialty, fileName, buffer)
+      const savedPath = locationId
+        ? await fs.saveAudio(specialty, fileName, buffer, locationId)
+        : await fs.saveAudio(specialty, fileName, buffer)
 
       // if file created or updated, update the URL
       if (savedPath !== null) {
@@ -75,9 +79,13 @@ export const useAudioStore = defineStore('audio', () => {
     files.value[fileName].count++
   }
 
-  const subtract = async (specialty, fileName) => {
+  const subtract = async (specialty, fileName, locationId = null) => {
     if (files.value[fileName].count == 1) {
-      await fs.deleteAudio(specialty, fileName)
+      if (locationId) {
+        await fs.deleteAudio(specialty, fileName, locationId)
+      } else {
+        await fs.deleteAudio(specialty, fileName)
+      }
       delete files.value[fileName]
     } else {
       files.value[fileName].count--

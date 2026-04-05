@@ -71,11 +71,11 @@ export const useSessionStore = defineStore('session', () => {
       context.value = { specialty, locationId }
 
       // prepare evidence: load evidence and update counts with the session data
-      await evidence.load(specialty)
+      await evidence.load(specialty, locationId, 'inspection')
       evidence.updateCount(responses)
 
       // prepare audio: load audio and update counts with the session data
-      await audio.load(specialty)
+      await audio.load(specialty, locationId)
       audio.updateCount(responses)
 
       if (!summary.value['finalized']) {
