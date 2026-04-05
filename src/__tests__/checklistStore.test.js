@@ -5,6 +5,7 @@ import { useToast } from 'vue-toastification'
 import { createFileService } from '../utils/fileServices.js'
 import { useChecklistStore } from '../stores/checklistStore.js'
 import { useSessionStore } from '../stores/sessionStore.js'
+import { useFollowUpStore } from '../stores/followUpStore.js'
 
 // Mock dependencies
 vi.mock('vue', () => ({
@@ -16,6 +17,7 @@ vi.mock('vue-toastification', () => ({
 }))
 vi.mock('../utils/fileServices.js')
 vi.mock('../stores/sessionStore.js')
+vi.mock('../stores/followUpStore.js')
 
 // timers
 vi.useFakeTimers()
@@ -26,6 +28,7 @@ describe('Checklist Store', () => {
   let mockFs
   let mockToast
   let mockSession
+  let mockFollowUp
   //const displayToast = (msg) => msg;
 
   beforeEach(() => {
@@ -52,9 +55,28 @@ describe('Checklist Store', () => {
       saveExportFile: vi.fn(),
       saveFindingsReport: vi.fn().mockResolvedValue('report.pdf'),
       exportInspectionPayload: vi.fn().mockResolvedValue({ zipPath: 'payload.zip' }),
+      exportFollowUpPayload: vi.fn().mockResolvedValue({ zipPath: 'followup.zip' }),
+      notifyImportCanonical: vi.fn().mockResolvedValue(null),
       updateEvidenceCount: vi.fn(),
       loadSpecialties: vi.fn(),
+      loadLocations: vi.fn(),
+      checkServiceHealth: vi.fn().mockResolvedValue({ online: true }),
       createDefaultRoot: vi.fn(),
+      loadWorkspaceRegistry: vi.fn().mockResolvedValue([]),
+      saveWorkspaceRegistry: vi.fn(),
+      upsertWorkspaceRegistryEntry: vi.fn().mockResolvedValue({
+        workspaceKey: 'loc-001__VIG',
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+      }),
+      loadFindings: vi.fn().mockResolvedValue([]),
+      fetchFindingsFromApi: vi.fn(),
+      saveFindings: vi.fn(),
+      getWorkspaceTouchedState: vi.fn().mockResolvedValue({
+        checklistTouched: false,
+        followUpTouched: false,
+      }),
+      saveWorkspaceMetadata: vi.fn().mockResolvedValue(undefined),
     }
     createFileService.mockReturnValue(mockFs)
 
@@ -66,6 +88,12 @@ describe('Checklist Store', () => {
       finalize: vi.fn(),
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
+
+    mockFollowUp = {
+      summary: { finalized: true, specialty: 'VIG' },
+      responses: {},
+    }
+    vi.mocked(useFollowUpStore).mockReturnValue(mockFollowUp)
 
     // Initialize store
     store = useChecklistStore()
@@ -154,7 +182,7 @@ describe('Checklist Store', () => {
       expect(store.checklistLoaded.value).toBe(true)
       expect(store.currentPath.value).toBe('/path/VIG/Evidence')
 
-      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG')
+      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG', null)
     })
 
     it('handles load errors with toast', async () => {
@@ -380,6 +408,29 @@ describe('Checklist Store', () => {
       expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
       expect(store.isUploading.value).toBe(false)
     })
+
+    it('exports and uploads follow-up payload in follow-up mode', async () => {
+      store.uiMode.value = 'followUp'
+      store.findings.value = [{ finding: { findingId: 'F-1', locationId: 'loc-1' } }]
+      store.findingsLoaded.value = true
+      store.activeWorkspace.value = { locationId: 'loc-1' }
+      mockFollowUp.summary = { finalized: true, specialty: 'VIG' }
+      mockFollowUp.responses = { 'F-1': { findingId: 'F-1', percentComplete: 100 } }
+
+      await store.exportUploadPayload()
+
+      expect(mockFs.exportFollowUpPayload).toHaveBeenCalledWith(
+        store.findings.value,
+        {
+          summary: mockFollowUp.summary,
+          responses: mockFollowUp.responses,
+        },
+        'VIG',
+        'loc-1'
+      )
+      expect(mockFs.notifyImportCanonical).not.toHaveBeenCalled()
+      expect(mockToast.success).toHaveBeenCalledWith('Follow-up payload exported and uploaded successfully')
+    })
   })
 
   describe('viewGeneratedReport', () => {
@@ -446,13 +497,14 @@ describe('Checklist Store', () => {
 
       await store.importChecklist('0224', 'VIG')
 
-      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG')
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'TEST LOCATION')
       expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
+      expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalled()
       expect(mockFs.ensureSpecialtyEntry).toHaveBeenCalledWith('VIG', 'Imported Specialty')
-      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist)
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'TEST LOCATION')
       expect(mockFs.loadSpecialties).toHaveBeenCalled()
       expect(store.specialty.value).toBe('VIG')
-      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'TEST LOCATION')
       expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
       expect(store.isImporting.value).toBe(false)
     })
@@ -486,6 +538,11 @@ describe('Checklist Store', () => {
     })
 
     it('blocks import when active session exists', async () => {
+      mockFs.fetchChecklistFromApi.mockResolvedValue({
+        specialtyName: 'VIG',
+        location: 'Test Location',
+        questions: [],
+      })
       mockFs.getChecklistImportState.mockResolvedValue({
         hasChecklist: true,
         hasSession: true,
@@ -494,7 +551,7 @@ describe('Checklist Store', () => {
 
       await store.importChecklist('0224', 'VIG')
 
-      expect(mockFs.fetchChecklistFromApi).not.toHaveBeenCalled()
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
       expect(mockToast.error).toHaveBeenCalledWith('Cannot import checklist while an active session is in progress')
       expect(store.isImporting.value).toBe(false)
     })
@@ -527,6 +584,25 @@ describe('Checklist Store', () => {
 
       expect(mockToast.error).toHaveBeenCalledWith('API is down')
       expect(store.isImporting.value).toBe(false)
+    })
+
+    it('blocks checklist re-import when workspace is touched', async () => {
+      mockFs.fetchChecklistFromApi.mockResolvedValue({
+        specialtyName: 'Imported Specialty',
+        location: 'Test Location',
+        questions: [],
+      })
+      mockFs.getWorkspaceTouchedState.mockResolvedValue({
+        checklistTouched: true,
+        followUpTouched: false,
+      })
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockFs.getChecklistImportState).not.toHaveBeenCalled()
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'Cannot import checklist because local checklist edits already exist'
+      )
     })
 
     it('sets isImporting flag during import', async () => {

@@ -147,6 +147,59 @@ const findingSchema = {
   },
 }
 
+const followUpReportSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'FollowUpReport',
+  type: 'object',
+  required: ['schemaVersion', 'followUpReport'],
+  properties: {
+    schemaVersion: {
+      type: 'string',
+    },
+    followUpReport: {
+      type: 'object',
+      required: [
+        'findingId',
+        'domain',
+        'providerId',
+        'locationId',
+        'locationName',
+        'followUpDate',
+        'findingClosed',
+        'percentComplete',
+        'effectivenessConfirmed',
+      ],
+      properties: {
+        findingId: { type: 'string' },
+        capId: { type: 'string' },
+        domain: { type: 'string' },
+        providerId: { type: 'string' },
+        locationId: { type: 'string' },
+        locationName: { type: 'string' },
+        followUpDate: { type: 'string', format: 'date-time' },
+        findingClosed: { type: 'boolean' },
+        percentComplete: { type: 'integer', minimum: 0, maximum: 100 },
+        followUpClosureDate: { type: 'string', format: 'date' },
+        closureVerificationMethod: { type: 'string' },
+        effectivenessConfirmed: { type: 'boolean' },
+        comment: { type: 'string' },
+        evidence: {
+          type: 'array',
+          items: {
+            type: 'object',
+            required: ['evidenceId'],
+            properties: {
+              evidenceId: { type: 'string' },
+              evidenceType: { type: 'string' },
+              evidenceSource: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+}
+
 // Moved outside the setup function as it's a constant
 //const defaultSavePath = '/home/fernando/Documents/Current_inspection'; //path.join(app.getPath('documents'), 'Current_inspection');
 const defaultSavePath = path.join(app.getPath('documents'), 'Current_inspection')
@@ -158,6 +211,21 @@ const sanitizeUpperAlnum = (value = '') =>
 
 const safeString = (value, fallback = '') =>
   typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback
+
+const sanitizeWorkspaceLeg = (value = '') => String(value).replace(/[^A-Za-z0-9_-]/g, '_')
+
+const buildWorkspaceFolderName = (locationId, specialty) => {
+  const safeLocationId = sanitizeWorkspaceLeg(String(locationId || '').toUpperCase())
+  const safeSpecialty = sanitizeWorkspaceLeg(String(specialty).toUpperCase())
+  return `${safeLocationId}_${safeSpecialty}`
+}
+
+const readAppConfig = async () => {
+  const appDir = dirname(fileURLToPath(import.meta.url))
+  const configPath = path.join(appDir, '..', '..', 'app.config.json')
+  const raw = await fs.readFile(configPath, 'utf-8')
+  return JSON.parse(raw)
+}
 
 const asDateOnly = (value) => {
   const parsed = new Date(value)
@@ -416,6 +484,69 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
   return findings
 }
 
+const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
+  const findings = Array.isArray(findingsObj) ? findingsObj : []
+  const responses = followUpSessionObj?.responses || {}
+
+  return Object.entries(responses).map(([findingId, response], index) => {
+    const findingEntry = findings.find((entry) => entry?.finding?.findingId === findingId)
+    if (!findingEntry?.finding) {
+      throw new Error(`Could not find source finding for follow-up response ${findingId}`)
+    }
+
+    const finding = findingEntry.finding
+    const report = {
+      schemaVersion: '1.0',
+      followUpReport: {
+        findingId,
+        domain: safeString(finding.domain),
+        providerId: safeString(finding.providerId),
+        locationId: safeString(finding.locationId),
+        locationName: safeString(finding.locationName),
+        followUpDate: safeString(
+          response?.followUpDate,
+          safeString(followUpSessionObj?.summary?.lastUpdated, new Date().toISOString())
+        ),
+        findingClosed: Boolean(response?.findingClosed),
+        percentComplete: Math.max(0, Math.min(100, Number(response?.percentComplete || 0))),
+        effectivenessConfirmed: Boolean(response?.effectivenessConfirmed),
+      },
+    }
+
+    const capId = safeString(finding?.correctiveAction?.capId)
+    if (capId) {
+      report.followUpReport.capId = capId
+    }
+
+    const closureVerificationMethod = safeString(response?.closureVerificationMethod)
+    if (closureVerificationMethod) {
+      report.followUpReport.closureVerificationMethod = closureVerificationMethod
+    }
+
+    const comment = safeString(response?.comments)
+    if (comment) {
+      report.followUpReport.comment = comment
+    }
+
+    if (report.followUpReport.findingClosed) {
+      report.followUpReport.followUpClosureDate = asDateOnly(
+        response?.followUpClosureDate || report.followUpReport.followUpDate
+      )
+    }
+
+    const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
+    if (evidenceList.length > 0) {
+      report.followUpReport.evidence = evidenceList.map((evidenceSource, evidenceIndex) => ({
+        evidenceId: `FUEV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
+        evidenceType: inferEvidenceType(evidenceSource),
+        evidenceSource,
+      }))
+    }
+
+    return report
+  })
+}
+
 const buildAjvError = (errors = []) =>
   errors.map((entry) => `${entry.instancePath || '/'} ${entry.message}`).join('; ')
 
@@ -591,19 +722,53 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('get-app-config', async () => {
     try {
-      const appDir = dirname(fileURLToPath(import.meta.url))
-      const configPath = path.join(appDir, '..', '..', 'app.config.json')
-      const raw = await fs.readFile(configPath, 'utf-8')
-      return JSON.parse(raw)
+      return await readAppConfig()
     } catch (err) {
       logger.error(`get-app-config: Could not read app config: ${err.message}`)
       return {}
     }
   })
 
+  ipcMain.handle('check-service-health', async (event, params) => {
+    try {
+      const baseUrl = typeof params?.baseUrl == 'string' ? params.baseUrl.trim() : ''
+      const timeoutMs = Number.isFinite(params?.timeoutMs) ? params.timeoutMs : 2500
+
+      if (!baseUrl) {
+        throw new Error('Missing required parameter: baseUrl')
+      }
+
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+      try {
+        const response = await fetch(baseUrl, {
+          method: 'GET',
+          signal: controller.signal,
+        })
+
+        return {
+          online: true,
+          baseUrl,
+          status: response.status,
+          error: null,
+        }
+      } finally {
+        clearTimeout(timer)
+      }
+    } catch (err) {
+      return {
+        online: false,
+        baseUrl: params?.baseUrl || null,
+        status: 0,
+        error: err.message,
+      }
+    }
+  })
+
   ipcMain.handle('export-inspection-payload', async (event, payload) => {
     try {
-      const { checklistString, sessionString, specialty, filePath, uploadUrl } = payload || {}
+      const { checklistString, sessionString, specialty, locationId, filePath, uploadUrl } = payload || {}
       if (!checklistString || !sessionString || !specialty) {
         throw new Error('Missing required parameters: checklistString, sessionString, specialty')
       }
@@ -636,9 +801,14 @@ export function setupIpcHandles(ipcMain) {
       })
 
       const dirPath = filePath ? filePath : defaultSavePath
-      const specialtyPath = safeJoin(dirPath, [specialty])
-      const evidencePath = safeJoin(dirPath, [specialty, 'Evidence'])
-      await ensureDir(specialtyPath)
+      const resolvedLocationId =
+        locationId || checklistObj?.locationId || checklistObj?.location || checklistPayload?.checklist?.locationId
+      const workspaceFolder = resolvedLocationId
+        ? buildWorkspaceFolderName(resolvedLocationId, specialty)
+        : sanitizeWorkspaceLeg(String(specialty).toUpperCase())
+      const workspacePath = safeJoin(dirPath, [workspaceFolder])
+      const evidencePath = safeJoin(dirPath, [workspaceFolder, 'Evidence'])
+      await ensureDir(workspacePath)
 
       const zip = new JSZip()
       zip.file('checklist.json', JSON.stringify(checklistPayload, null, 2))
@@ -652,10 +822,15 @@ export function setupIpcHandles(ipcMain) {
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
       const zipName = `inspection_payload_${sanitizeUpperAlnum(specialty) || 'SPECIALTY'}_${timestamp}.zip`
-      const zipPath = safeJoin(specialtyPath, [zipName])
+      const zipPath = safeJoin(workspacePath, [zipName])
       await saveFile(zipPath, zipBuffer)
 
-      const targetUrl = uploadUrl || 'http://127.0.0.1:8000/inspection-import'
+      let targetUrl = uploadUrl
+      if (!targetUrl) {
+        const appConfig = await readAppConfig().catch(() => ({}))
+        const uploadHost = appConfig?.api?.uploadHost || 'http://localhost:8000'
+        targetUrl = `${uploadHost}/inspection-import`
+      }
       const form = new FormData()
       form.append('file', new Blob([zipBuffer], { type: 'application/zip' }), zipName)
       const response = await fetch(targetUrl, {
@@ -676,6 +851,103 @@ export function setupIpcHandles(ipcMain) {
       }
     } catch (err) {
       logger.error(`export-inspection-payload: Could not create/upload payload: ${err.message}`)
+      throw err
+    }
+  })
+
+  ipcMain.handle('export-follow-up-payload', async (event, payload) => {
+    try {
+      const {
+        findingsString,
+        followUpSessionString,
+        specialty,
+        locationId,
+        filePath,
+        uploadUrl,
+      } = payload || {}
+      if (!findingsString || !followUpSessionString || !specialty) {
+        throw new Error('Missing required parameters: findingsString, followUpSessionString, specialty')
+      }
+
+      const findingsObj = typeof findingsString === 'string' ? JSON.parse(findingsString) : findingsString
+      const followUpSessionObj =
+        typeof followUpSessionString === 'string'
+          ? JSON.parse(followUpSessionString)
+          : followUpSessionString
+
+      const followUpReportsPayload = mapFollowUpReportsPayload({
+        findingsObj,
+        followUpSessionObj,
+      })
+
+      const validateFinding = ajv.compile(findingSchema)
+      const validateFollowUpReport = ajv.compile(followUpReportSchema)
+
+      findingsObj.forEach((finding, index) => {
+        if (!validateFinding(finding)) {
+          throw new Error(
+            `Source finding payload at index ${index} failed schema validation: ${buildAjvError(validateFinding.errors)}`
+          )
+        }
+      })
+
+      followUpReportsPayload.forEach((report, index) => {
+        if (!validateFollowUpReport(report)) {
+          throw new Error(
+            `Generated follow-up payload at index ${index} failed schema validation: ${buildAjvError(validateFollowUpReport.errors)}`
+          )
+        }
+      })
+
+      const dirPath = filePath ? filePath : defaultSavePath
+      const workspaceFolder = locationId
+        ? buildWorkspaceFolderName(locationId, specialty)
+        : sanitizeWorkspaceLeg(String(specialty).toUpperCase())
+      const workspacePath = safeJoin(dirPath, [workspaceFolder])
+      const followUpEvidencePath = safeJoin(dirPath, [workspaceFolder, 'FollowUpEvidence'])
+      await ensureDir(workspacePath)
+
+      const zip = new JSZip()
+      zip.file('findings.json', JSON.stringify(findingsObj, null, 2))
+      zip.file('followup-reports.json', JSON.stringify(followUpReportsPayload, null, 2))
+
+      if (await fileExists(followUpEvidencePath)) {
+        const evidenceFolder = zip.folder('FollowUpEvidence')
+        await addDirectoryToZip(evidenceFolder, followUpEvidencePath)
+      }
+
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+      const zipName = `followup_payload_${sanitizeUpperAlnum(specialty) || 'SPECIALTY'}_${timestamp}.zip`
+      const zipPath = safeJoin(workspacePath, [zipName])
+      await saveFile(zipPath, zipBuffer)
+
+      let targetUrl = uploadUrl
+      if (!targetUrl) {
+        const appConfig = await readAppConfig().catch(() => ({}))
+        const uploadHost = appConfig?.api?.uploadHost || 'http://localhost:8000'
+        targetUrl = `${uploadHost}/followup-import`
+      }
+      const form = new FormData()
+      form.append('file', new Blob([zipBuffer], { type: 'application/zip' }), zipName)
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        body: form,
+      })
+
+      const responseText = await response.text()
+      if (!response.ok) {
+        throw new Error(`Follow-up import API failed with status ${response.status}: ${responseText}`)
+      }
+
+      return {
+        zipPath,
+        uploadStatus: response.status,
+        uploadBody: responseText,
+        reportsCount: followUpReportsPayload.length,
+      }
+    } catch (err) {
+      logger.error(`export-follow-up-payload: Could not create/upload payload: ${err.message}`)
       throw err
     }
   })

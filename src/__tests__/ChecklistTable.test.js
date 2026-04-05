@@ -52,6 +52,7 @@ describe('ChecklistTable.vue', () => {
           },
         ],
       },
+      goToFollowUpFinding: vi.fn(),
     }
     vi.mocked(useChecklistStore).mockReturnValue(mockStore)
 
@@ -119,6 +120,8 @@ describe('ChecklistTable.vue', () => {
         verification: 'Verify 1',
       },
       session: { compliance: 'Compliant', id: 'checklist-1', code: 'VIG-0001' },
+      readOnly: false,
+      linkedFindingId: '',
     })
     expect(rows[1].props()).toEqual({
       newTopic: false,
@@ -132,6 +135,8 @@ describe('ChecklistTable.vue', () => {
         verification: 'Verify 2',
       },
       session: { compliance: 'Non-compliant', id: 'checklist-2', code: 'VIG-0002' },
+      readOnly: false,
+      linkedFindingId: '',
     })
     expect(rows[2].props()).toEqual({
       newTopic: true,
@@ -145,7 +150,23 @@ describe('ChecklistTable.vue', () => {
         verification: 'Verify 3',
       },
       session: { compliance: 'Non-compliant', id: 'checklist-3', code: 'VIG-0003' },
+      readOnly: false,
+      linkedFindingId: '',
     })
+  })
+
+  it('marks linked findings as read-only', () => {
+    mockStore.checklist.questions[1].priorFindingId = 'F-100'
+    wrapper = mount(ChecklistTable, {
+      global: {
+        plugins: [pinia],
+        stubs: { ChecklistRow: true },
+      },
+    })
+
+    const rows = wrapper.findAllComponents(ChecklistRow)
+    expect(rows[1].props('readOnly')).toBe(true)
+    expect(rows[1].props('linkedFindingId')).toBe('F-100')
   })
 
   it('calculates newTopic correctly with topicChange', () => {

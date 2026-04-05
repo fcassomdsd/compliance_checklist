@@ -80,6 +80,9 @@ const checklistSchema = {
           sequence: {
             type: 'string',
           },
+          priorFindingId: {
+            type: 'string',
+          },
         },
         required: ['id', 'topic', 'reference', 'question', 'verification'],
         additionalProperties: false,

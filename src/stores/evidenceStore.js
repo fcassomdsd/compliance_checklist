@@ -16,8 +16,8 @@ export const useEvidenceStore = defineStore('evidence', () => {
     }
   }
 
-  const load = async (specialty) => {
-    const efiles = await fs.readEvidence(specialty)
+  const load = async (specialty, locationId = null, evidenceContext = 'inspection') => {
+    const efiles = await fs.readEvidence(specialty, locationId, evidenceContext)
     efiles.forEach((x) => {
       files.value[x.name] = {}
       files.value[x.name]['URL'] = x.URL
@@ -37,10 +37,16 @@ export const useEvidenceStore = defineStore('evidence', () => {
     }
   }
 
-  const add = async (specialty, fileObj) => {
+  const add = async (specialty, fileObj, locationId = null, evidenceContext = 'inspection') => {
     try {
       const buffer = await fileObj.arrayBuffer()
-      const savedPath = await fs.saveEvidence(specialty, fileObj.name, buffer)
+      const savedPath = await fs.saveEvidence(
+        specialty,
+        fileObj.name,
+        buffer,
+        locationId,
+        evidenceContext
+      )
 
       // if file created or updated, update the URL
       if (savedPath !== null) {
@@ -65,9 +71,9 @@ export const useEvidenceStore = defineStore('evidence', () => {
     files.value[fileName].count++
   }
 
-  const subtract = async (specialty, fileName) => {
+  const subtract = async (specialty, fileName, locationId = null, evidenceContext = 'inspection') => {
     if (files.value[fileName].count == 1) {
-      await fs.deleteEvidence(specialty, fileName)
+      await fs.deleteEvidence(specialty, fileName, locationId, evidenceContext)
       delete files.value[fileName]
     } else {
       files.value[fileName].count--

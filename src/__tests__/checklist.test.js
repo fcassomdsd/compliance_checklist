@@ -106,4 +106,24 @@ describe('checklist.js', () => {
     expect(result.endDate).toBe('2026-03-26')
     expect(result.specialtyCode).toBe('VIG')
   })
+
+  it('parses a checklist question with priorFindingId', async () => {
+    const validJson = JSON.stringify({
+      specialtyName: 'VIG',
+      questions: [
+        {
+          id: '1',
+          code: 'VIG-0001',
+          topic: 'Topic 1',
+          reference: { normativa: {}, guidance: 'GM only text' },
+          question: 'Question 1',
+          verification: 'Verification 1',
+          priorFindingId: 'MDPP-VIG-2026-01',
+        },
+      ],
+    })
+
+    const result = parseChecklist(validJson)
+    expect(result.questions[0].priorFindingId).toBe('MDPP-VIG-2026-01')
+  })
 })

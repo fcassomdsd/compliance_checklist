@@ -2,9 +2,19 @@
   <tr v-if="newTopic" class="full-span">
     <td colspan="8">{{ row.topic }}</td>
   </tr>
-  <tr>
+  <tr :class="{ 'row-read-only': isReadOnly }">
     <td hidden>{{ row.id }}</td>
-    <td :id="`qcode-${domQuestionCode}`">{{ questionCode }}</td>
+    <td :id="`qcode-${domQuestionCode}`">
+      {{ questionCode }}
+      <button
+        v-if="readOnly && linkedFindingId"
+        class="followup-link"
+        title="This question has an open linked finding. Click to switch to follow-up mode"
+        @click="emit('go-follow-up', linkedFindingId)"
+      >
+        Follow-up
+      </button>
+    </td>
     <td class="reference">
       <div v-if="row.reference?.normativa?.reglamento">
         <span class="ref-label">STD</span><br />
@@ -29,7 +39,7 @@
           type="radio"
           :name="`compliance-${domQuestionCode}`"
           :value="radioBtn"
-          :disabled="sessionStore.summary.finalized"
+          :disabled="isReadOnly"
           :checked="session.compliance === radioBtn"
           @change="radioChange($event)"
         />
@@ -40,14 +50,14 @@
         <textarea
           :name="`nonConformity-${domQuestionCode}`"
           :value="session.nonConformity"
-          :disabled="sessionStore.summary.finalized"
+          :disabled="isReadOnly"
           placeholder="Describa la no conformidad"
           @input="nonConformityChange($event)"
         ></textarea>
         <div class="audio-controls">
           <button
             :title="`${recordingNonConformity ? 'Stop' : 'Start'} Recording Non-conformity`"
-            :disabled="sessionStore.summary.finalized"
+            :disabled="isReadOnly"
             @click="toggleAudioRecordingNonConformity"
             :class="{ recording: recordingNonConformity }"
           >
@@ -76,7 +86,7 @@
               <span>{{ audio }}</span>
               <button
                 @click="removeAudio(index, 'nonConformity')"
-                :disabled="sessionStore.summary.finalized"
+                :disabled="isReadOnly"
                 title="Delete recording"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -94,13 +104,13 @@
       <textarea
         :name="`comments-${domQuestionCode}`"
         :value="session.comments"
-        :disabled="sessionStore.summary.finalized"
+        :disabled="isReadOnly"
         @input="textAreaChange($event)"
       ></textarea>
       <div class="audio-controls">
         <button
           :title="`${recordingComments ? 'Stop' : 'Start'} Recording Comments`"
-          :disabled="sessionStore.summary.finalized"
+          :disabled="isReadOnly"
           @click="toggleAudioRecordingComments"
           :class="{ recording: recordingComments }"
         >
@@ -129,7 +139,7 @@
             <span>{{ audio }}</span>
             <button
               @click="removeAudio(index, 'comments')"
-              :disabled="sessionStore.summary.finalized"
+              :disabled="isReadOnly"
               title="Delete recording"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -151,7 +161,7 @@
           hidden
           class="evidence-upload"
           :name="`evidence-${domQuestionCode}`"
-          :disabled="sessionStore.summary.finalized"
+          :disabled="isReadOnly"
           multiple
           @change="evidenceChange($event)"
         />
@@ -160,7 +170,7 @@
           :src="fileUpload"
           height="30"
           width="30"
-          :disabled="sessionStore.summary.finalized"
+          :disabled="isReadOnly"
           @click="evidenceUpload(domQuestionCode)"
         />
         <input
@@ -169,7 +179,7 @@
           :src="cameraIcon"
           height="30"
           width="30"
-          :disabled="sessionStore.summary.finalized"
+          :disabled="isReadOnly"
           @click="openCamera"
         />
       </div>
@@ -181,7 +191,7 @@
               :src="trash"
               height="15"
               width="15"
-              :disabled="sessionStore.summary.finalized"
+              :disabled="isReadOnly"
               @click="removeEvidence(index, evidence)"
             />
           </td>
@@ -225,7 +235,11 @@
     questionCode: { type: String, required: true },
     row: { type: Object },
     session: { type: Object },
+    readOnly: { type: Boolean, default: false },
+    linkedFindingId: { type: String, default: '' },
   })
+
+  const emit = defineEmits(['go-follow-up'])
 
   const toast = useToast()
   const radioButtons = ref(['Not applicable', 'Compliant', 'Non-compliant'])
@@ -267,6 +281,7 @@
   const sessionStore = useSessionStore()
   const evidenceStore = useEvidenceStore()
   const audioStore = useAudioStore()
+  const isReadOnly = props.readOnly || sessionStore.summary.finalized
 
   const updateResponse = (field, value) => {
     sessionStore.updateSession(props.questionCode, props.row.id, field, value, props.row.code)
@@ -477,6 +492,22 @@
 </script>
 
 <style scoped>
+  .row-read-only {
+    background-color: #f0f0f0;
+    opacity: 0.85;
+  }
+
+  .followup-link {
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    color: #0b57d0;
+    background: transparent;
+    border: 1px solid #0b57d0;
+    border-radius: 10px;
+    padding: 0.15rem 0.4rem;
+    cursor: pointer;
+  }
+
   .missing a {
     color: red;
   }

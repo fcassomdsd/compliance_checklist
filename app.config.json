@@ -5,6 +5,166 @@
   },
   "api": {
     "host": "http://localhost:1880",
+    "importHost": "http://localhost:1880",
+    "uploadHost": "http://localhost:8000",
     "importCanonicalDelay": 3000,
-    "importCanonicalRetries": 3
+    "importCanonicalRetries": 3,
+    "serviceStatusTimeoutMs": 2500
+  },
+  "fallback": {
+    "specialties": [
+      {
+        "id": "a01k0f67dskef2a475yzd8a5dxd",
+        "code": "VIG",
+        "name": "Sistemas de Vigilancia"
+      },
+      {
+        "id": "a01k0f6y5xre0wr42sbqeyabeb3",
+        "code": "COM",
+        "name": "Comunicaciones de Radio"
+      },
+      {
+        "id": "a01k0f6yf9ae4198h6mmzhwqhcv",
+        "code": "RNA",
+        "name": "Radioayudas a la Navegacion"
+      },
+      {
+        "id": "a01k777msrhe66tzrqf1mrxdj6e",
+        "code": "PAV",
+        "name": "Gestion de Pavimento y Caracteristicas Fisicas"
+      },
+      {
+        "id": "a01k777nj8ye479pxnj5ajfhshs",
+        "code": "FAU",
+        "name": "Control de Fauna Silvestre"
+      },
+      {
+        "id": "a01k777q2ayedk962kxxg02nb61",
+        "code": "PTFM",
+        "name": "Gestion de Plataformas"
+      },
+      {
+        "id": "a01k777rcree6fb56d4yb0es15b",
+        "code": "SSEI",
+        "name": "Servicios de Salvamento y Extincion de Incendios"
+      },
+      {
+        "id": "a01k7qe580def6s7znmspkd7mtb",
+        "code": "ECNS",
+        "name": "Energia CNS"
+      },
+      {
+        "id": "a01k7qe5jkbe0kbkp385qzcqbgb",
+        "code": "EMET",
+        "name": "Equipos Meteorologicos"
+      },
+      {
+        "id": "a01k7qe3xgae7dsaqsjt36k4vq0",
+        "code": "CHT",
+        "name": "Cartografia Aeronautica"
+      },
+      {
+        "id": "a01k7qe2p9wea28tvrv0phc8wkk",
+        "code": "NOTAM",
+        "name": "Servicio de NOTAM"
+      },
+      {
+        "id": "a01k7qe33jwe62t3r2vntz6cm4t",
+        "code": "PUB",
+        "name": "Publicaciones Aeronauticas"
+      },
+      {
+        "id": "a01k7qe4k53e4ctxash5ww8xar4",
+        "code": "AIM",
+        "name": "Gestion de informacion aeronautica"
+      },
+      {
+        "id": "a01kn7gb73pe17a4w43e8xnjyqq",
+        "code": "P/OPS",
+        "name": "PANS/OPS"
+      },
+      {
+        "id": "a01k7qe0jg9e3ys850sxqhbv04x",
+        "code": "MET-AD",
+        "name": "Meteorologia Aeronautica"
+      },
+      {
+        "id": "a01k7qdygyge5dtfbme2m7xnwj4",
+        "code": "ATS",
+        "name": "Control de Transito Aereo"
+      },
+      {
+        "id": "a01k777g91tefrvd0qn71c0v3bq",
+        "code": "AGA",
+        "name": "Aerodromos"
+      },
+      {
+        "id": "a01k7qe1zhxe8zbxexyaaen0v66",
+        "code": "FIS",
+        "name": "Servicio de Informacion Aeronautica"
+      },
+      {
+        "id": "a01k7qe91qnef8rpmj9kn12qwtc",
+        "code": "AY/VIS",
+        "name": "Ayudas Visuales"
+      },
+      {
+        "id": "a01k7qe1d7me81b19f53k89zp4n",
+        "code": "SAR",
+        "name": "Busqueda y Salvamento"
+      },
+      {
+        "id": "a01k0f6tzh4e46b7y45fxd8q9kg",
+        "code": "CNS",
+        "name": "Comunicacion, Navegacion y Vigilancia (CNS)"
+      }
+    ],
+    "locations": [
+      {
+        "id": "a01k5qc0yxte2xts3r9btk77ft6",
+        "name": "Aeropuerto Internacional Gregorio Luperon",
+        "icaoCode": "MDPP"
+      },
+      {
+        "id": "a01k5qjgpcwe3sv2tgsekfr54qp",
+        "name": "Aeropuerto Domestico Arroyo Barril",
+        "icaoCode": "MDAB"
+      },
+      {
+        "id": "a01k5qjgpd5e6bt3av11mdtd6jk",
+        "name": "Aeropuerto Internacional Casa De Campo",
+        "icaoCode": "MDLR"
+      },
+      {
+        "id": "a01k5qjgpd7ecnv2khh0cav47py",
+        "name": "Aeropuerto Internacional Cibao-Santiago",
+        "icaoCode": "MDST"
+      },
+      {
+        "id": "a01k5qjgpd9edmtb26aj4n2tacd",
+        "name": "Aeropuerto Internacional de las Americas - Jose Francisco Pena Gomez",
+        "icaoCode": "MDSD"
+      },
+      {
+        "id": "a01k5qjgpdcefy92tkfjtys65ek",
+        "name": "Aeropuerto Internacional La Isabela, Dr. Joaquin Balaguer",
+        "icaoCode": "MDJB"
+      },
+      {
+        "id": "a01k5qjgpdee2r9hhcadnj006mg",
+        "name": "Aeropuerto Internacional Maria Montez",
+        "icaoCode": "MDBH"
+      },
+      {
+        "id": "a01k5qjgpdge0j96ay3nhycdz6k",
+        "name": "Aeropuerto Internacional Presidente Juan Bosch",
+        "icaoCode": "MDCY"
+      },
+      {
+        "id": "a01k5qjgpdke0svjk57kwkqqed0",
+        "name": "Aeropuerto Internacional Punta Cana",
+        "icaoCode": "MDPC"
+      }
+    ]
   }
+}

@@ -3,11 +3,13 @@ import { ref } from 'vue'
 import { useToast } from 'vue-toastification'
 import { createFileService } from '../utils/fileServices.js'
 import { useSessionStore } from './sessionStore.js'
+import { useFollowUpStore } from './followUpStore.js'
 
 export const useChecklistStore = defineStore('checklist', () => {
   const toast = useToast()
   const fs = createFileService()
   const sessionStore = useSessionStore()
+  const followUpStore = useFollowUpStore()
 
   // State
   const specialty = ref('NONE')
@@ -21,6 +23,14 @@ export const useChecklistStore = defineStore('checklist', () => {
   const generatedReportPath = ref('')
   const isImporting = ref(false)
   const isUploading = ref(false)
+  const isImportingFindings = ref(false)
+  const workspaceList = ref([])
+  const activeWorkspaceKey = ref('')
+  const activeWorkspace = ref(null)
+  const findings = ref([])
+  const findingsLoaded = ref(false)
+  const uiMode = ref('inspection')
+  const followUpFocusFindingId = ref('')
 
   // modal window data
   const modalFinalizeTitle = 'Finalize Checklist'
@@ -37,6 +47,47 @@ export const useChecklistStore = defineStore('checklist', () => {
 
   // specialty data - will be loaded from file
   const specialtyList = ref([])
+  const locationList = ref([])
+  const importServiceOnline = ref(true)
+  const uploadServiceOnline = ref(true)
+
+  const resolveLocationFromChecklist = (checklistObj) => {
+    const checklistLocationId = checklistObj?.locationId
+    const checklistLocationName = checklistObj?.location
+    const checklistLocationIcao = checklistObj?.locationIcao
+
+    const resolved =
+      locationList.value.find(
+        (location) =>
+          location.id == checklistLocationId ||
+          location.icaoCode == checklistLocationId ||
+          location.icaoCode == checklistLocationIcao ||
+          location.name == checklistLocationName
+      ) || null
+
+    if (resolved) {
+      return {
+        locationId: resolved.icaoCode,
+        locationName: resolved.name,
+      }
+    }
+
+    if (typeof checklistLocationId == 'string' && checklistLocationId.trim().length > 0) {
+      return {
+        locationId: checklistLocationId.trim().toUpperCase(),
+        locationName: checklistLocationName || checklistLocationId.trim().toUpperCase(),
+      }
+    }
+
+    if (typeof checklistLocationName == 'string' && checklistLocationName.trim().length > 0) {
+      return {
+        locationId: checklistLocationName.trim().toUpperCase(),
+        locationName: checklistLocationName.trim(),
+      }
+    }
+
+    throw new Error('Imported inspection did not include a resolvable location identifier')
+  }
 
   // Actions
   const loadSpecialties = async () => {
@@ -49,6 +100,48 @@ export const useChecklistStore = defineStore('checklist', () => {
     }
   }
 
+  const loadLocations = async () => {
+    try {
+      locationList.value = await fs.loadLocations()
+    } catch (error) {
+      toast.error(`Failed to load locations: ${error.message}`)
+      locationList.value = []
+    }
+  }
+
+  const refreshServiceStatus = async () => {
+    const [importStatus, uploadStatus] = await Promise.all([
+      fs.checkServiceHealth('import'),
+      fs.checkServiceHealth('upload'),
+    ])
+
+    importServiceOnline.value = Boolean(importStatus?.online)
+    uploadServiceOnline.value = Boolean(uploadStatus?.online)
+
+    return {
+      import: importServiceOnline.value,
+      upload: uploadServiceOnline.value,
+    }
+  }
+
+  const getWorkspaceDisplayName = (workspace) => {
+    const statusLabel = workspace?.draftStatus == 'finalized' ? 'Finalized' : 'Draft'
+    return `${workspace?.locationId || workspace?.locationName || 'Unknown location'} - ${workspace?.specialtyCode || workspace?.specialtyName || 'Unknown specialty'} (${statusLabel})`
+  }
+
+  const loadWorkspaces = async () => {
+    try {
+      const workspaces = await fs.loadWorkspaceRegistry()
+      workspaceList.value = workspaces.map((workspace) => ({
+        ...workspace,
+        displayName: getWorkspaceDisplayName(workspace),
+      }))
+    } catch (error) {
+      workspaceList.value = []
+      toast.error(`Failed to load workspaces: ${error.message}`)
+    }
+  }
+
   const loadChecklist = async () => {
     // initialize state
     checklist.value = null
@@ -56,11 +149,12 @@ export const useChecklistStore = defineStore('checklist', () => {
 
     try {
       if (specialty.value != 'NONE') {
+        const locationId = activeWorkspace.value?.locationId || null
         // load checklist
-        checklist.value = await fs.loadChecklist(specialty.value)
+        checklist.value = await fs.loadChecklist(specialty.value, locationId)
         checklistLoaded.value = true
 
-        currentPath.value = await fs.setSavePath(specialty.value)
+        currentPath.value = await fs.setSavePath(specialty.value, locationId)
         toast.success('Checklist loaded')
       }
     } catch (error) {
@@ -68,6 +162,24 @@ export const useChecklistStore = defineStore('checklist', () => {
       checklistLoaded.value = false
     }
     return checklistLoaded.value
+  }
+
+  const loadFindings = async () => {
+    findings.value = []
+    findingsLoaded.value = false
+
+    try {
+      if (specialty.value != 'NONE') {
+        const locationId = activeWorkspace.value?.locationId || null
+        const loadedFindings = await fs.loadFindings(specialty.value, locationId)
+        findings.value = loadedFindings || []
+        findingsLoaded.value = Array.isArray(loadedFindings)
+      }
+    } catch (error) {
+      toast.error(error.message)
+      findingsLoaded.value = false
+    }
+    return findingsLoaded.value
   }
 
   const showFinalize = () => {
@@ -81,7 +193,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       showModal.value = false
       switch (tituloModal.value) {
         case modalFinalizeTitle: {
-          sessionStore.finalize(specialty.value)
+          sessionStore.finalize(specialty.value, activeWorkspace.value?.locationId)
           toast.success(finalizeSuccess)
           break
         }
@@ -134,16 +246,38 @@ export const useChecklistStore = defineStore('checklist', () => {
 
   const exportUploadPayload = async () => {
     try {
-      if (checklist.value.questions.length == 0) {
-        throw new Error('Empty checklist not exported')
+      if (!uploadServiceOnline.value) {
+        throw new Error('Upload service offline (localhost:8000)')
       }
 
       isUploading.value = true
 
-      const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
-      await fs.exportInspectionPayload(checklist.value, sessionObj, specialty.value)
-      await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
-      toast.success('Payload exported and uploaded successfully')
+      if (uiMode.value == 'followUp') {
+        if (!Array.isArray(findings.value) || findings.value.length == 0) {
+          throw new Error('Empty follow-up not exported')
+        }
+
+        const followUpSessionObj = {
+          summary: followUpStore.summary,
+          responses: followUpStore.responses,
+        }
+        await fs.exportFollowUpPayload(
+          findings.value,
+          followUpSessionObj,
+          specialty.value,
+          activeWorkspace.value?.locationId || null
+        )
+        toast.success('Follow-up payload exported and uploaded successfully')
+      } else {
+        if (checklist.value.questions.length == 0) {
+          throw new Error('Empty checklist not exported')
+        }
+
+        const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
+        await fs.exportInspectionPayload(checklist.value, sessionObj, specialty.value)
+        await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
+        toast.success('Payload exported and uploaded successfully')
+      }
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -157,23 +291,60 @@ export const useChecklistStore = defineStore('checklist', () => {
         throw new Error('Inspection and specialty are required')
       }
 
+      if (!importServiceOnline.value) {
+        throw new Error('Import service offline (localhost:1880)')
+      }
+
       isImporting.value = true
 
-      const importState = await fs.getChecklistImportState(specialtyCode)
+      const importedChecklist = await fs.fetchChecklistFromApi(inspection, specialtyCode)
+      const { locationId, locationName } = resolveLocationFromChecklist(importedChecklist)
+
+      const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)
+      if (touchedState.checklistTouched) {
+        throw new Error('Cannot import checklist because local checklist edits already exist')
+      }
+
+      const importState = await fs.getChecklistImportState(specialtyCode, locationId)
       if (importState.hasChecklist && importState.hasSession && importState.sessionFinalized === false) {
         throw new Error('Cannot import checklist while an active session is in progress')
       }
-
-      const importedChecklist = await fs.fetchChecklistFromApi(inspection, specialtyCode)
       await fs.ensureSpecialtyEntry(specialtyCode, importedChecklist.specialtyName || specialtyCode)
-      await fs.saveChecklist(specialtyCode, importedChecklist)
+      await fs.saveChecklist(specialtyCode, importedChecklist, locationId)
+      await fs.saveWorkspaceMetadata(specialtyCode, locationId, {
+        specialtyCode,
+        specialtyName: importedChecklist.specialtyName || specialtyCode,
+        locationId,
+        locationName,
+        draftStatus: 'draft',
+        checklistTouched: false,
+        followUpTouched: false,
+        checklistPresent: true,
+        findingsPresent: false,
+        updatedAt: new Date().toISOString(),
+      })
+      const workspaceEntry = await fs.upsertWorkspaceRegistryEntry({
+        specialtyCode,
+        specialtyName: importedChecklist.specialtyName || specialtyCode,
+        locationId,
+        locationName,
+        draftStatus: 'draft',
+        checklistTouched: false,
+        followUpTouched: false,
+        checklistPresent: true,
+        findingsPresent: false,
+      })
 
       await loadSpecialties()
+      await loadWorkspaces()
       specialty.value = specialtyCode
+      activeWorkspaceKey.value = workspaceEntry.workspaceKey
+      activeWorkspace.value = workspaceEntry
 
       if (await loadChecklist()) {
-        await sessionStore.loadSession(specialtyCode)
+        await sessionStore.loadSession(specialtyCode, locationId)
       }
+      await loadFindings()
 
       toast.success('Checklist imported successfully')
     } catch (error) {
@@ -181,6 +352,106 @@ export const useChecklistStore = defineStore('checklist', () => {
     } finally {
       isImporting.value = false
     }
+  }
+
+  const selectWorkspace = async (workspaceKey) => {
+    try {
+      const targetWorkspace = workspaceList.value.find((workspace) => workspace.workspaceKey == workspaceKey)
+      if (!targetWorkspace) {
+        throw new Error('Workspace not found')
+      }
+
+      activeWorkspaceKey.value = workspaceKey
+      activeWorkspace.value = targetWorkspace
+      specialty.value = targetWorkspace.specialtyCode
+
+      const hasChecklist = targetWorkspace.checklistPresent !== false
+      if (hasChecklist) {
+        const loaded = await loadChecklist()
+        if (loaded) {
+          await sessionStore.loadSession(specialty.value, targetWorkspace.locationId)
+        }
+      } else {
+        checklist.value = null
+        checklistLoaded.value = false
+      }
+      await loadFindings()
+    } catch (error) {
+      toast.error(`Could not switch workspace: ${error.message}`)
+    }
+  }
+
+  const importFindings = async (specialtyCode, locationId, inspection = null) => {
+    try {
+      if (!locationId || !specialtyCode) {
+        throw new Error('Location and specialty are required')
+      }
+
+      if (!importServiceOnline.value) {
+        throw new Error('Import service offline (localhost:1880)')
+      }
+
+      isImportingFindings.value = true
+
+      const importedFindings = await fs.fetchFindingsFromApi(specialtyCode, locationId, inspection)
+      if (!Array.isArray(importedFindings) || importedFindings.length == 0) {
+        throw new Error('No findings were returned for this location and specialty')
+      }
+
+      const locationName =
+        locationList.value.find((location) => location.icaoCode == locationId)?.name ||
+        importedFindings[0]?.finding?.locationName ||
+        locationId
+
+      const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)
+      if (touchedState.followUpTouched) {
+        throw new Error('Cannot import findings because local follow-up edits already exist')
+      }
+
+      await fs.saveFindings(specialtyCode, importedFindings, locationId)
+      await fs.saveWorkspaceMetadata(specialtyCode, locationId, {
+        specialtyCode,
+        specialtyName: specialtyCode,
+        locationId,
+        locationName,
+        draftStatus: 'draft',
+        checklistTouched: touchedState.checklistTouched,
+        followUpTouched: false,
+        checklistPresent: false,
+        findingsPresent: true,
+        updatedAt: new Date().toISOString(),
+      })
+
+      const workspaceEntry = await fs.upsertWorkspaceRegistryEntry({
+        specialtyCode,
+        specialtyName: specialtyCode,
+        locationId,
+        locationName,
+        draftStatus: 'draft',
+        checklistTouched: touchedState.checklistTouched,
+        followUpTouched: false,
+        checklistPresent: false,
+        findingsPresent: true,
+      })
+
+      await loadWorkspaces()
+      specialty.value = specialtyCode
+      activeWorkspaceKey.value = workspaceEntry.workspaceKey
+      activeWorkspace.value = workspaceEntry
+      await loadFindings()
+      uiMode.value = 'followUp'
+
+      toast.success('Findings imported successfully')
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      isImportingFindings.value = false
+    }
+  }
+
+  const goToFollowUpFinding = (findingId = '') => {
+    uiMode.value = 'followUp'
+    followUpFocusFindingId.value = findingId || ''
   }
 
   const viewGeneratedReport = async () => {
@@ -197,6 +468,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   return {
     specialty,
     specialtyList,
+    locationList,
     checklist,
     checklistLoaded,
     currentPath,
@@ -206,9 +478,23 @@ export const useChecklistStore = defineStore('checklist', () => {
     accionModal,
     generatedReportPath,
     isImporting,
+    isImportingFindings,
     isUploading,
+    workspaceList,
+    activeWorkspaceKey,
+    activeWorkspace,
+    findings,
+    findingsLoaded,
+    uiMode,
+    importServiceOnline,
+    uploadServiceOnline,
+    followUpFocusFindingId,
     loadChecklist,
+    loadFindings,
     loadSpecialties,
+    loadLocations,
+    loadWorkspaces,
+    refreshServiceStatus,
     showFinalize,
     checkDefaultPath,
     confirmModal,
@@ -216,5 +502,8 @@ export const useChecklistStore = defineStore('checklist', () => {
     exportUploadPayload,
     viewGeneratedReport,
     importChecklist,
+    importFindings,
+    selectWorkspace,
+    goToFollowUpFinding,
   }
 })
