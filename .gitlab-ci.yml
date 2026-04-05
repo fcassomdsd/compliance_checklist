@@ -90,7 +90,7 @@ e2e:smoke:
     - npm run build
   script:
     - echo "🧭 Running Electron E2E smoke tests..."
-    - npx playwright test e2e/specs/electron.smoke.spec.mjs e2e/specs/electron.followup.spec.mjs
+    - xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx playwright test e2e/specs/electron.smoke.spec.mjs e2e/specs/electron.followup.spec.mjs
   artifacts:
     when: always
     paths:
