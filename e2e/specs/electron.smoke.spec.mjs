@@ -7,7 +7,7 @@ test('imports inspection and renders checklist table', async () => {
   await importInspection(window, '0224', 'VIG')
 
   await expect(window.locator('#cklTable')).toBeVisible()
-  await expect(window.locator('text=Inspection: 0224')).toBeVisible()
+  await expect(window.locator('.controls-container span').filter({ hasText: 'Inspection: 0224' })).toBeVisible()
   await expect(window.locator('#workspaceSelect')).toHaveValue(/MDSD__VIG/i)
 
   await electronApp.close()
