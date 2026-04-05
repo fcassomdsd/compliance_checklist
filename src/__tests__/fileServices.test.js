@@ -616,7 +616,7 @@ describe('fileServices', () => {
       expect(result).toEqual({ success: true, message: 'Default root created successfully' })
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null)
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'DEMO', 'Evidence')
-      expect(window.electronAPI.saveFile).toHaveBeenCalledTimes(2)
+      expect(window.electronAPI.saveFile).toHaveBeenCalledTimes(1)
     })
 
     it('saveExportFile throws error for empty content', async () => {
@@ -664,10 +664,9 @@ describe('fileServices', () => {
       expect(result[0]).toHaveProperty('name')
     })
 
-    it('loadSpecialties falls back to app config when user config read fails', async () => {
+    it('loadSpecialties falls back to app config when API is unavailable', async () => {
       const fs = createFileService()
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-      window.electronAPI.readFile.mockRejectedValue(new Error('read failed'))
 
       const result = await fs.loadSpecialties()
 
@@ -889,56 +888,28 @@ describe('fileServices', () => {
       )
     })
 
-    it('ensureSpecialtyEntry adds new specialty to config', async () => {
+    it('ensureSpecialtyEntry returns normalized specialty and does not persist local config', async () => {
       const fs = createFileService()
-      const existingConfig = {
-        specialties: [
-          { code: 'VIG', name: 'Vigilancia' }
-        ]
-      }
+      const result = await fs.ensureSpecialtyEntry('OPS', 'Operaciones')
 
-      window.electronAPI.checkPath.mockResolvedValue(true)
-      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(existingConfig))
-      window.electronAPI.saveFile.mockResolvedValue(undefined)
-
-      await fs.ensureSpecialtyEntry('OPS', 'Operaciones')
-
-      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
-        expect.stringContaining('"code": "OPS"'),
-        null,
-        'user.config.json'
-      )
-    })
-
-    it('ensureSpecialtyEntry does not duplicate existing specialty', async () => {
-      const fs = createFileService()
-      const existingConfig = {
-        specialties: [
-          { code: 'VIG', name: 'Vigilancia' }
-        ]
-      }
-
-      window.electronAPI.checkPath.mockResolvedValue(true)
-      window.electronAPI.readFile.mockResolvedValue(JSON.stringify(existingConfig))
-      window.electronAPI.saveFile.mockResolvedValue(undefined)
-
-      await fs.ensureSpecialtyEntry('VIG', 'Vigilancia')
-
+      expect(result).toEqual({ code: 'OPS', name: 'Operaciones' })
       expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
     })
 
-    it('ensureSpecialtyEntry creates config if it does not exist', async () => {
+    it('ensureSpecialtyEntry works when specialty already exists upstream', async () => {
       const fs = createFileService()
-      window.electronAPI.checkPath.mockResolvedValue(false)
-      window.electronAPI.saveFile.mockResolvedValue(undefined)
+      const result = await fs.ensureSpecialtyEntry('VIG', 'Vigilancia')
 
-      await fs.ensureSpecialtyEntry('OPS', 'Operaciones')
+      expect(result).toEqual({ code: 'VIG', name: 'Vigilancia' })
+      expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
+    })
 
-      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
-        expect.stringContaining('"code": "OPS"'),
-        null,
-        'user.config.json'
-      )
+    it('ensureSpecialtyEntry works without specialty name fallback', async () => {
+      const fs = createFileService()
+      const result = await fs.ensureSpecialtyEntry('OPS')
+
+      expect(result).toEqual({ code: 'OPS', name: 'OPS' })
+      expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
     })
 
     it('ensureSpecialtyEntry throws error for missing specialty code', async () => {

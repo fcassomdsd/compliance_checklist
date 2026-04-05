@@ -305,28 +305,11 @@ export const createFileService = () => {
         throw new Error('Missing specialty code')
       }
 
-      let config = { specialties: [] }
-      const hasConfig = await window.electronAPI.checkPath(DEFAULT_ROOT, 'user.config.json')
-      if (hasConfig) {
-        const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, 'user.config.json')
-        config = typeof fileContents === 'string' ? JSON.parse(fileContents) : fileContents
-      }
-
-      if (!Array.isArray(config.specialties)) {
-        config.specialties = []
-      }
-
-      const exists = config.specialties.some((entry) => entry.code === specialty)
-      if (!exists) {
-        config.specialties.push({
-          code: specialty,
-          name: specialtyName || specialty,
-        })
-        await window.electronAPI.saveFile(
-          JSON.stringify(config, null, 2),
-          DEFAULT_ROOT,
-          'user.config.json'
-        )
+      // Specialties are now sourced from API/app.config.json.
+      // Keep this function for call-site compatibility without persisting user.config.json.
+      return {
+        code: specialty,
+        name: specialtyName || specialty,
       }
     } catch (error) {
       throw new Error(`ensureSpecialtyEntry: could not update specialties: ${error.message}`)
@@ -620,9 +603,7 @@ export const createFileService = () => {
         return fallback
       }
 
-      const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, 'user.config.json')
-      const config = typeof fileContents == 'string' ? JSON.parse(fileContents) : fileContents
-      return parseSpecialties(config.specialties)
+      throw new Error('No specialty data available from API or fallback config')
     } catch (error) {
       throw new Error(`loadSpecialties: could not load specialties : ` + error.message)
     }
@@ -1014,22 +995,7 @@ export const createFileService = () => {
   const createDefaultRoot = async () => {
     // Ensure the default root exists
     await window.electronAPI.createDir(DEFAULT_ROOT)
-      
-      // Create user.config.json with a dummy specialty
-      const appConfig = await window.electronAPI.getAppConfig()
-      const userConfig = {
-        specialties: Array.isArray(appConfig?.fallback?.specialties)
-          ? appConfig.fallback.specialties.map((entry) => ({
-            code: entry.code,
-            name: entry.name,
-          }))
-          : [{ code: 'DEMO', name: 'Demo Specialty' }],
-      }
-      await window.electronAPI.saveFile(JSON.stringify(userConfig, null, 2), 
-                                        DEFAULT_ROOT, 
-                                        'user.config.json'
-                                      )
-      
+
       // Create the dummy specialty directory with Evidence subdirectory
       await window.electronAPI.createDir(DEFAULT_ROOT, 'DEMO', 'Evidence')
       
