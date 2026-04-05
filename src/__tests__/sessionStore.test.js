@@ -105,8 +105,8 @@ describe('Session Store', () => {
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
 
       expect(mockFs.loadSession).toHaveBeenCalledWith('VIG', null)
-      expect(mockEvidence.load).toHaveBeenCalledWith('VIG')
-      expect(mockAudio.load).toHaveBeenCalledWith('VIG')
+      expect(mockEvidence.load).toHaveBeenCalledWith('VIG', null, 'inspection')
+      expect(mockAudio.load).toHaveBeenCalledWith('VIG', null)
     })
 
     it('correctly creates session summary when file doesnt exist', async () => {
@@ -163,7 +163,7 @@ describe('Session Store', () => {
 
       await sessionStore.loadSession('VIG')
 
-      expect(mockEvidence.load).toHaveBeenCalledWith('VIG')
+      expect(mockEvidence.load).toHaveBeenCalledWith('VIG', null, 'inspection')
       expect(mockEvidence.updateCount).toHaveBeenCalledWith({ 1: { evidence: ['file.txt'] } })
     })
 
@@ -175,7 +175,7 @@ describe('Session Store', () => {
 
       await sessionStore.loadSession('VIG')
 
-      expect(mockAudio.load).toHaveBeenCalledWith('VIG')
+      expect(mockAudio.load).toHaveBeenCalledWith('VIG', null)
       expect(mockAudio.updateCount).toHaveBeenCalledWith({ 1: { audioComments: ['audio.webm'] } })
     })
 

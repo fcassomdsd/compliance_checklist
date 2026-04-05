@@ -361,7 +361,12 @@
       const buffer = await blob.arrayBuffer()
 
       // Save audio file through the audio store
-      await audioStore.add(sessionStore.summary.specialty, fileName, new Uint8Array(buffer))
+      await audioStore.add(
+        sessionStore.summary.specialty,
+        fileName,
+        new Uint8Array(buffer),
+        sessionStore.context.locationId
+      )
 
       // Add to audio list in session
       const audioFieldName = field === 'comments' ? 'audioComments' : 'audioNonConformity'
@@ -402,7 +407,11 @@
 
     try {
       // Delete through the audio store
-      await audioStore.subtract(sessionStore.summary.specialty, fileName)
+      await audioStore.subtract(
+        sessionStore.summary.specialty,
+        fileName,
+        sessionStore.context.locationId
+      )
 
       // Remove from list
       const updatedAudioList = currentAudioList.filter((_, i) => i !== index)
@@ -420,7 +429,12 @@
     for (const file of files) {
       try {
         // update the evidence file record
-        await evidenceStore.add(sessionStore.summary.specialty, file)
+        await evidenceStore.add(
+          sessionStore.summary.specialty,
+          file,
+          sessionStore.context.locationId,
+          'inspection'
+        )
 
         const inTable = table.some((item) => item === file.name)
 
@@ -446,7 +460,12 @@
 
   const removeEvidence = async (index, evidence) => {
     try {
-      await evidenceStore.subtract(sessionStore.summary.specialty, evidence)
+      await evidenceStore.subtract(
+        sessionStore.summary.specialty,
+        evidence,
+        sessionStore.context.locationId,
+        'inspection'
+      )
     } catch (error) {
       console.log('evidenceChanged failed: ' + error)
       toast.error(error.message)
@@ -473,7 +492,12 @@
       type: 'image/jpeg',
     })
     const table = props.session.evidence || []
-    await evidenceStore.add(sessionStore.summary.specialty, file)
+    await evidenceStore.add(
+      sessionStore.summary.specialty,
+      file,
+      sessionStore.context.locationId,
+      'inspection'
+    )
     if (!table.some((item) => item === file.name)) {
       evidenceStore.addCount(file.name)
       table.push(file.name)
