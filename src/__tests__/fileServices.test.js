@@ -1,10 +1,26 @@
 // fileServices.test.js
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createFileService } from '../utils/fileServices'
 import { parseChecklist } from '../utils/checklist'
 import { parseFindings } from '../utils/findings'
 
 vi.useFakeTimers()
+
+const mockAppConfig = {
+  api: {
+    host: 'http://localhost:1880',
+    importHost: 'http://localhost:1880',
+    uploadHost: 'http://localhost:8000',
+    importCanonicalDelay: 0,
+    importCanonicalRetries: 3,
+  },
+  fallback: {
+    specialties: [
+      { code: 'VIG', name: 'Sistemas de Vigilancia' },
+      { code: 'COM', name: 'Comunicaciones de Radio' },
+    ],
+  },
+}
 
 // Mock the electronAPI and utils
 const mockElectronAPI = {
@@ -19,7 +35,7 @@ const mockElectronAPI = {
   exportInspectionPayload: vi.fn(),
   exportFollowUpPayload: vi.fn(),
   checkServiceHealth: vi.fn(),
-  getAppConfig: vi.fn().mockResolvedValue({ api: { host: 'http://localhost:1880', importCanonicalDelay: 0, importCanonicalRetries: 3 } }),
+  getAppConfig: vi.fn().mockResolvedValue(mockAppConfig),
 }
 window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')
@@ -55,6 +71,11 @@ describe('fileServices', () => {
     vi.clearAllMocks()
     window.electronAPI.createDir = vi.fn()
     window.electronAPI.deleteFile = vi.fn()
+    window.electronAPI.getAppConfig.mockResolvedValue(mockAppConfig)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('defaultPathExists returns true if path exists', async () => {
@@ -618,21 +639,45 @@ describe('fileServices', () => {
 
     it('loadSpecialties returns list of specialties', async () => {
       const fs = createFileService()
+      const apiSpecialties = [
+        { code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { code: 'COM', name: 'Comunicaciones de Radio' },
+      ]
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: vi.fn().mockResolvedValue(apiSpecialties),
+        })
+      )
+
       const result = await fs.loadSpecialties()
 
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/specialties?option=leaf')
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
+      expect(result).toEqual([
+        { id: 'VIG', code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { id: 'COM', code: 'COM', name: 'Comunicaciones de Radio' },
+      ])
       expect(result[0]).toHaveProperty('code')
       expect(result[0]).toHaveProperty('name')
     })
 
     it('loadSpecialties falls back to app config when user config read fails', async () => {
       const fs = createFileService()
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
       window.electronAPI.readFile.mockRejectedValue(new Error('read failed'))
 
       const result = await fs.loadSpecialties()
+
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/specialties?option=leaf')
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
+      expect(result).toEqual([
+        { id: 'VIG', code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { id: 'COM', code: 'COM', name: 'Comunicaciones de Radio' },
+      ])
     })
 
     it('setSavePath returns path if checkPath is true', async () => {
