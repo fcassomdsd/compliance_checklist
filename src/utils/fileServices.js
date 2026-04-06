@@ -745,21 +745,33 @@ export const createFileService = () => {
       const workspaceKey = getWorkspaceKey(locationId, specialtyCode)
 
       const registry = await loadWorkspaceRegistry()
+      const existingIndex = registry.findIndex((x) => x.workspaceKey == workspaceKey)
+      const existingEntry = existingIndex >= 0 ? registry[existingIndex] : null
+
+      const resolveBoolean = (fieldName, fallback = false) => {
+        if (typeof entry?.[fieldName] == 'boolean') {
+          return entry[fieldName]
+        }
+        if (typeof existingEntry?.[fieldName] == 'boolean') {
+          return existingEntry[fieldName]
+        }
+        return fallback
+      }
+
       const normalizedEntry = {
         workspaceKey,
         specialtyCode,
-        specialtyName: entry?.specialtyName || specialtyCode,
+        specialtyName: entry?.specialtyName || existingEntry?.specialtyName || specialtyCode,
         locationId,
-        locationName: entry?.locationName || locationId,
-        draftStatus: entry?.draftStatus || 'draft',
-        checklistTouched: Boolean(entry?.checklistTouched),
-        followUpTouched: Boolean(entry?.followUpTouched),
-        checklistPresent: Boolean(entry?.checklistPresent),
-        findingsPresent: Boolean(entry?.findingsPresent),
+        locationName: entry?.locationName || existingEntry?.locationName || locationId,
+        draftStatus: entry?.draftStatus || existingEntry?.draftStatus || 'draft',
+        checklistTouched: resolveBoolean('checklistTouched', false),
+        followUpTouched: resolveBoolean('followUpTouched', false),
+        checklistPresent: resolveBoolean('checklistPresent', false),
+        findingsPresent: resolveBoolean('findingsPresent', false),
         updatedAt: new Date().toISOString(),
       }
 
-      const existingIndex = registry.findIndex((x) => x.workspaceKey == workspaceKey)
       if (existingIndex >= 0) {
         registry[existingIndex] = {
           ...registry[existingIndex],

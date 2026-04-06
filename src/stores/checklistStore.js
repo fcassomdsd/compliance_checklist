@@ -364,8 +364,40 @@ export const useChecklistStore = defineStore('checklist', () => {
       activeWorkspaceKey.value = workspaceKey
       activeWorkspace.value = targetWorkspace
       specialty.value = targetWorkspace.specialtyCode
+      currentPath.value = (await fs.setSavePath(specialty.value, targetWorkspace.locationId)) || ''
 
-      const hasChecklist = targetWorkspace.checklistPresent !== false
+      let hasChecklist = targetWorkspace.checklistPresent !== false
+      if (!hasChecklist) {
+        const importState = await fs.getChecklistImportState(specialty.value, targetWorkspace.locationId)
+        if (importState?.hasChecklist) {
+          hasChecklist = true
+          await fs.saveWorkspaceMetadata(specialty.value, targetWorkspace.locationId, {
+            specialtyCode: targetWorkspace.specialtyCode,
+            specialtyName: targetWorkspace.specialtyName || targetWorkspace.specialtyCode,
+            locationId: targetWorkspace.locationId,
+            locationName: targetWorkspace.locationName || targetWorkspace.locationId,
+            draftStatus: targetWorkspace.draftStatus || 'draft',
+            checklistTouched: Boolean(targetWorkspace.checklistTouched),
+            followUpTouched: Boolean(targetWorkspace.followUpTouched),
+            checklistPresent: true,
+            findingsPresent: Boolean(targetWorkspace.findingsPresent),
+            updatedAt: new Date().toISOString(),
+          })
+          await fs.upsertWorkspaceRegistryEntry({
+            specialtyCode: targetWorkspace.specialtyCode,
+            specialtyName: targetWorkspace.specialtyName || targetWorkspace.specialtyCode,
+            locationId: targetWorkspace.locationId,
+            locationName: targetWorkspace.locationName || targetWorkspace.locationId,
+            draftStatus: targetWorkspace.draftStatus || 'draft',
+            checklistTouched: Boolean(targetWorkspace.checklistTouched),
+            followUpTouched: Boolean(targetWorkspace.followUpTouched),
+            checklistPresent: true,
+            findingsPresent: Boolean(targetWorkspace.findingsPresent),
+          })
+          await loadWorkspaces()
+        }
+      }
+
       if (hasChecklist) {
         const loaded = await loadChecklist()
         if (loaded) {

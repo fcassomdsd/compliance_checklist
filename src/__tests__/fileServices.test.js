@@ -1189,6 +1189,40 @@ describe('fileServices', () => {
       )
     })
 
+    it('preserves existing checklist/findings presence flags when omitted', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(
+        JSON.stringify([
+          {
+            workspaceKey: 'loc-001__VIG',
+            specialtyCode: 'VIG',
+            specialtyName: 'Vigilancia',
+            locationId: 'loc-001',
+            locationName: 'Location 1',
+            draftStatus: 'draft',
+            checklistTouched: true,
+            followUpTouched: false,
+            checklistPresent: true,
+            findingsPresent: true,
+          },
+        ])
+      )
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
+
+      await fs.upsertWorkspaceRegistryEntry({
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+        checklistTouched: true,
+      })
+
+      const lastSavePayload = window.electronAPI.saveFile.mock.calls.at(-1)[0]
+      const savedRegistry = JSON.parse(lastSavePayload)
+      expect(savedRegistry[0].checklistPresent).toBe(true)
+      expect(savedRegistry[0].findingsPresent).toBe(true)
+      expect(savedRegistry[0].checklistTouched).toBe(true)
+    })
+
     it('returns touched state from workspace metadata when available', async () => {
       const fs = createFileService()
       window.electronAPI.checkPath

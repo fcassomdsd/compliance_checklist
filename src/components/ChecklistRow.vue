@@ -221,7 +221,7 @@
 </template>
 
 <script setup>
-  import { ref } from 'vue'
+  import { computed, ref } from 'vue'
   import { useSessionStore } from '../stores/sessionStore'
   import { useEvidenceStore } from '../stores/evidenceStore'
   import { useAudioStore } from '../stores/audioStore'
@@ -281,7 +281,7 @@
   const sessionStore = useSessionStore()
   const evidenceStore = useEvidenceStore()
   const audioStore = useAudioStore()
-  const isReadOnly = props.readOnly || sessionStore.summary.finalized
+  const isReadOnly = computed(() => props.readOnly || sessionStore.summary.finalized)
   const currentLocationId = () => sessionStore.context?.locationId || null
 
   const updateResponse = (field, value) => {
