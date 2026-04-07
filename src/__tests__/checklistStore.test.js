@@ -52,6 +52,7 @@ describe('Checklist Store', () => {
       createDefaultPath: vi.fn(),
       readEvidence: vi.fn(),
       setSavePath: vi.fn(),
+      getChecklistImportState: vi.fn().mockResolvedValue({ hasChecklist: false }),
       saveExportFile: vi.fn(),
       saveFindingsReport: vi.fn().mockResolvedValue('report.pdf'),
       exportInspectionPayload: vi.fn().mockResolvedValue({ zipPath: 'payload.zip' }),
@@ -374,7 +375,8 @@ describe('Checklist Store', () => {
       expect(mockFs.saveFindingsReport).toHaveBeenCalledWith(
         store.checklist.value,
         expectedSessionObj,
-        'VIG'
+        'VIG',
+        null
       )
       expect(mockToast.success).toHaveBeenCalledWith('Report generated successfully')
       expect(store.generatedReportPath.value).toBe('report.pdf')
@@ -403,7 +405,8 @@ describe('Checklist Store', () => {
       expect(mockFs.exportInspectionPayload).toHaveBeenCalledWith(
         store.checklist.value,
         expectedSessionObj,
-        'VIG'
+        'VIG',
+        null
       )
       expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
       expect(store.isUploading.value).toBe(false)
@@ -632,6 +635,42 @@ describe('Checklist Store', () => {
       await store.importChecklist('0224', 'VIG')
 
       expect(store.isImporting.value).toBe(false)
+    })
+  })
+
+  describe('selectWorkspace', () => {
+    it('loads checklist from disk even when registry checklistPresent is false', async () => {
+      store.workspaceList.value = [
+        {
+          workspaceKey: 'loc-001__VIG',
+          specialtyCode: 'VIG',
+          specialtyName: 'Vigilancia',
+          locationId: 'loc-001',
+          locationName: 'Location 1',
+          checklistPresent: false,
+          findingsPresent: false,
+          checklistTouched: true,
+          followUpTouched: false,
+          draftStatus: 'draft',
+        },
+      ]
+      mockFs.getChecklistImportState.mockResolvedValue({ hasChecklist: true })
+      mockFs.loadChecklist.mockResolvedValue({ questions: [{ id: 'q1' }] })
+      mockFs.setSavePath.mockResolvedValue('/path/LOC-001_VIG')
+
+      await store.selectWorkspace('loc-001__VIG')
+
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(store.currentPath.value).toBe('/path/LOC-001_VIG')
+      expect(mockFs.upsertWorkspaceRegistryEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          specialtyCode: 'VIG',
+          locationId: 'loc-001',
+          checklistPresent: true,
+        })
+      )
     })
   })
 })

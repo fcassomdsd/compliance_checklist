@@ -235,7 +235,8 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       // Generate PDF report of findings
       const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
-      const reportPath = await fs.saveFindingsReport(checklist.value, sessionObj, specialty.value)
+      const locationId = activeWorkspace.value?.locationId || null
+      const reportPath = await fs.saveFindingsReport(checklist.value, sessionObj, specialty.value, locationId)
       generatedReportPath.value = reportPath
       toast.success('Report generated successfully')
     } catch (error) {
@@ -274,7 +275,12 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
 
         const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
-        await fs.exportInspectionPayload(checklist.value, sessionObj, specialty.value)
+        await fs.exportInspectionPayload(
+          checklist.value,
+          sessionObj,
+          specialty.value,
+          activeWorkspace.value?.locationId || null
+        )
         await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
         toast.success('Payload exported and uploaded successfully')
       }
@@ -340,6 +346,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       specialty.value = specialtyCode
       activeWorkspaceKey.value = workspaceEntry.workspaceKey
       activeWorkspace.value = workspaceEntry
+      generatedReportPath.value = ''
 
       if (await loadChecklist()) {
         await sessionStore.loadSession(specialtyCode, locationId)
@@ -364,8 +371,41 @@ export const useChecklistStore = defineStore('checklist', () => {
       activeWorkspaceKey.value = workspaceKey
       activeWorkspace.value = targetWorkspace
       specialty.value = targetWorkspace.specialtyCode
+      currentPath.value = (await fs.setSavePath(specialty.value, targetWorkspace.locationId)) || ''
+      generatedReportPath.value = ''
 
-      const hasChecklist = targetWorkspace.checklistPresent !== false
+      let hasChecklist = targetWorkspace.checklistPresent !== false
+      if (!hasChecklist) {
+        const importState = await fs.getChecklistImportState(specialty.value, targetWorkspace.locationId)
+        if (importState?.hasChecklist) {
+          hasChecklist = true
+          await fs.saveWorkspaceMetadata(specialty.value, targetWorkspace.locationId, {
+            specialtyCode: targetWorkspace.specialtyCode,
+            specialtyName: targetWorkspace.specialtyName || targetWorkspace.specialtyCode,
+            locationId: targetWorkspace.locationId,
+            locationName: targetWorkspace.locationName || targetWorkspace.locationId,
+            draftStatus: targetWorkspace.draftStatus || 'draft',
+            checklistTouched: Boolean(targetWorkspace.checklistTouched),
+            followUpTouched: Boolean(targetWorkspace.followUpTouched),
+            checklistPresent: true,
+            findingsPresent: Boolean(targetWorkspace.findingsPresent),
+            updatedAt: new Date().toISOString(),
+          })
+          await fs.upsertWorkspaceRegistryEntry({
+            specialtyCode: targetWorkspace.specialtyCode,
+            specialtyName: targetWorkspace.specialtyName || targetWorkspace.specialtyCode,
+            locationId: targetWorkspace.locationId,
+            locationName: targetWorkspace.locationName || targetWorkspace.locationId,
+            draftStatus: targetWorkspace.draftStatus || 'draft',
+            checklistTouched: Boolean(targetWorkspace.checklistTouched),
+            followUpTouched: Boolean(targetWorkspace.followUpTouched),
+            checklistPresent: true,
+            findingsPresent: Boolean(targetWorkspace.findingsPresent),
+          })
+          await loadWorkspaces()
+        }
+      }
+
       if (hasChecklist) {
         const loaded = await loadChecklist()
         if (loaded) {
@@ -438,6 +478,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       specialty.value = specialtyCode
       activeWorkspaceKey.value = workspaceEntry.workspaceKey
       activeWorkspace.value = workspaceEntry
+      generatedReportPath.value = ''
       await loadFindings()
       uiMode.value = 'followUp'
 

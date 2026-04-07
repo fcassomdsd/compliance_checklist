@@ -54,7 +54,7 @@ const checklistSchema = {
                   reglamento: { type: 'string' },
                   articulo: { type: 'string' },
                   texto: { type: 'string' },
-                  ICAOref: { type: 'string' },
+                  ICAOref: { type: ['string', 'null'] },
                 },
                 additionalProperties: false,
               },

@@ -22,6 +22,7 @@ describe('session.js', () => {
           specialty: 'VIG',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
+          locationId: 'MDPP',
         },
         responses: {
           1: {

@@ -250,6 +250,23 @@ describe('fileServices', () => {
       expect(callArgs.outputPath).toContain('reporte_hallazgos')
     })
 
+    it('uses workspace folder when locationId is provided', async () => {
+      const expectedPath = '/path/to/MDPP_VIG/reporte_hallazgos_2024-01-15.pdf'
+      mockElectronAPI.getFullPath.mockResolvedValue(expectedPath)
+      mockElectronAPI.generatePDF.mockResolvedValue(expectedPath)
+
+      const checklist = { questions: [] }
+      const session = { responses: {} }
+
+      await fs.saveFindingsReport(checklist, session, 'VIG', 'MDPP')
+
+      expect(mockElectronAPI.getFullPath).toHaveBeenCalledWith(
+        null,
+        'MDPP_VIG',
+        expect.stringContaining('reporte_hallazgos_')
+      )
+    })
+
     it('handles missing checklist', async () => {
       mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
 
@@ -302,6 +319,21 @@ describe('fileServices', () => {
         specialty: 'VIG',
       })
       expect(result).toEqual(expectedResult)
+    })
+
+    it('prefers explicit workspace locationId when provided', async () => {
+      const checklist = { locationId: 'A01K5QC0YXTE2XTS3R9BTK77FT6', questions: [] }
+      const session = { summary: { specialty: 'VIG' }, responses: {} }
+      mockElectronAPI.exportInspectionPayload.mockResolvedValue({ zipPath: '/tmp/payload.zip', uploadStatus: 200 })
+
+      await fs.exportInspectionPayload(checklist, session, 'VIG', 'MDPP')
+
+      expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+        locationId: 'MDPP',
+      })
     })
 
     it('throws for missing parameters', async () => {
@@ -1187,6 +1219,40 @@ describe('fileServices', () => {
         null,
         'workspaces.json'
       )
+    })
+
+    it('preserves existing checklist/findings presence flags when omitted', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
+      window.electronAPI.readFile.mockResolvedValue(
+        JSON.stringify([
+          {
+            workspaceKey: 'loc-001__VIG',
+            specialtyCode: 'VIG',
+            specialtyName: 'Vigilancia',
+            locationId: 'loc-001',
+            locationName: 'Location 1',
+            draftStatus: 'draft',
+            checklistTouched: true,
+            followUpTouched: false,
+            checklistPresent: true,
+            findingsPresent: true,
+          },
+        ])
+      )
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
+
+      await fs.upsertWorkspaceRegistryEntry({
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+        checklistTouched: true,
+      })
+
+      const lastSavePayload = window.electronAPI.saveFile.mock.calls.at(-1)[0]
+      const savedRegistry = JSON.parse(lastSavePayload)
+      expect(savedRegistry[0].checklistPresent).toBe(true)
+      expect(savedRegistry[0].findingsPresent).toBe(true)
+      expect(savedRegistry[0].checklistTouched).toBe(true)
     })
 
     it('returns touched state from workspace metadata when available', async () => {

@@ -745,21 +745,33 @@ export const createFileService = () => {
       const workspaceKey = getWorkspaceKey(locationId, specialtyCode)
 
       const registry = await loadWorkspaceRegistry()
+      const existingIndex = registry.findIndex((x) => x.workspaceKey == workspaceKey)
+      const existingEntry = existingIndex >= 0 ? registry[existingIndex] : null
+
+      const resolveBoolean = (fieldName, fallback = false) => {
+        if (typeof entry?.[fieldName] == 'boolean') {
+          return entry[fieldName]
+        }
+        if (typeof existingEntry?.[fieldName] == 'boolean') {
+          return existingEntry[fieldName]
+        }
+        return fallback
+      }
+
       const normalizedEntry = {
         workspaceKey,
         specialtyCode,
-        specialtyName: entry?.specialtyName || specialtyCode,
+        specialtyName: entry?.specialtyName || existingEntry?.specialtyName || specialtyCode,
         locationId,
-        locationName: entry?.locationName || locationId,
-        draftStatus: entry?.draftStatus || 'draft',
-        checklistTouched: Boolean(entry?.checklistTouched),
-        followUpTouched: Boolean(entry?.followUpTouched),
-        checklistPresent: Boolean(entry?.checklistPresent),
-        findingsPresent: Boolean(entry?.findingsPresent),
+        locationName: entry?.locationName || existingEntry?.locationName || locationId,
+        draftStatus: entry?.draftStatus || existingEntry?.draftStatus || 'draft',
+        checklistTouched: resolveBoolean('checklistTouched', false),
+        followUpTouched: resolveBoolean('followUpTouched', false),
+        checklistPresent: resolveBoolean('checklistPresent', false),
+        findingsPresent: resolveBoolean('findingsPresent', false),
         updatedAt: new Date().toISOString(),
       }
 
-      const existingIndex = registry.findIndex((x) => x.workspaceKey == workspaceKey)
       if (existingIndex >= 0) {
         registry[existingIndex] = {
           ...registry[existingIndex],
@@ -859,13 +871,14 @@ export const createFileService = () => {
     }
   }
 
-  const saveFindingsReport = async (checklist, session, specialty) => {
+  const saveFindingsReport = async (checklist, session, specialty, locationId = null) => {
     try {
       if (!checklist || !session || !specialty) {
         throw new Error('Missing required parameters: checklist, session, specialty')
       }
       const fileName = `reporte_hallazgos_${new Date().toISOString().split('T')[0]}.pdf`
-      const filePath = await window.electronAPI.getFullPath(DEFAULT_ROOT, specialty, fileName)
+      const paths = getWorkspacePaths(specialty, locationId)
+      const filePath = await window.electronAPI.getFullPath(DEFAULT_ROOT, ...paths.legs, fileName)
       const checklistString = JSON.stringify(checklist)
       const sessionString = JSON.stringify(session)
       const result = await window.electronAPI.generatePDF({
@@ -882,18 +895,23 @@ export const createFileService = () => {
     }
   }
 
-  const exportInspectionPayload = async (checklist, session, specialty) => {
+  const exportInspectionPayload = async (checklist, session, specialty, locationId = null) => {
     try {
       if (!checklist || !session || !specialty) {
         throw new Error('Missing required parameters: checklist, session, specialty')
       }
 
-      const result = await window.electronAPI.exportInspectionPayload({
+      const resolvedLocationId = locationId || checklist?.locationId || checklist?.location || null
+      const payload = {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
         specialty,
-        locationId: checklist?.locationId || checklist?.location,
-      })
+      }
+      if (resolvedLocationId) {
+        payload.locationId = resolvedLocationId
+      }
+
+      const result = await window.electronAPI.exportInspectionPayload(payload)
       console.log('exportInspectionPayload: payload exported and uploaded successfully')
       return result
     } catch (error) {

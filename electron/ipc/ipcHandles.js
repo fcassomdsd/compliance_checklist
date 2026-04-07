@@ -708,15 +708,37 @@ export function setupIpcHandles(ipcMain) {
   })
 
   ipcMain.handle('open-file', async (event, filePath) => {
+    if (!filePath) {
+      logger.error('open-file: Missing required parameter: filePath')
+      throw new Error('Missing required parameter: filePath')
+    }
+
+    logger.info(`open-file: Opening file ${filePath}`)
+    
     try {
-      if (!filePath) {
-        throw new Error('Missing required parameter: filePath')
-      }
-      await shell.openPath(filePath)
+      // Fire-and-forget: shell.openPath() may not resolve until the application exits,
+      // so we initiate the open but don't wait for it to complete.
+      // Any errors opening the file will be handled by the OS.
+      shell.openPath(filePath).then(
+        (errorMsg) => {
+          if (errorMsg) {
+            logger.error(`open-file: OS error opening ${filePath}: ${errorMsg}`)
+          } else {
+            logger.info(`open-file: OS successfully opened ${filePath}`)
+          }
+        },
+        (err) => {
+          logger.error(`open-file: Failed to open ${filePath}: ${err?.message || String(err)}`)
+        }
+      )
+      
+      logger.info(`open-file: File open initiated for ${filePath}`)
       return { success: true }
     } catch (err) {
-      logger.error(`open-file: Could not open file ${filePath}: ${err.message}`)
-      throw err
+      // Catch any synchronous errors (e.g., invalid path)
+      const errMsg = err?.message || String(err)
+      logger.error(`open-file: Error initiating file open for ${filePath}: ${errMsg}`)
+      throw new Error(`Could not open file: ${errMsg}`)
     }
   })
 
