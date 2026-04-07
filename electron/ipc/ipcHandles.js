@@ -712,7 +712,11 @@ export function setupIpcHandles(ipcMain) {
       if (!filePath) {
         throw new Error('Missing required parameter: filePath')
       }
-      await shell.openPath(filePath)
+      // shell.openPath resolves with empty string on success, error message on failure
+      const errorMsg = await shell.openPath(filePath)
+      if (errorMsg) {
+        throw new Error(errorMsg)
+      }
       return { success: true }
     } catch (err) {
       logger.error(`open-file: Could not open file ${filePath}: ${err.message}`)
