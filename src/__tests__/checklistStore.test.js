@@ -405,7 +405,8 @@ describe('Checklist Store', () => {
       expect(mockFs.exportInspectionPayload).toHaveBeenCalledWith(
         store.checklist.value,
         expectedSessionObj,
-        'VIG'
+        'VIG',
+        null
       )
       expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
       expect(store.isUploading.value).toBe(false)

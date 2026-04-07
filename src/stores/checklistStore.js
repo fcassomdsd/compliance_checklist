@@ -275,7 +275,12 @@ export const useChecklistStore = defineStore('checklist', () => {
         }
 
         const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
-        await fs.exportInspectionPayload(checklist.value, sessionObj, specialty.value)
+        await fs.exportInspectionPayload(
+          checklist.value,
+          sessionObj,
+          specialty.value,
+          activeWorkspace.value?.locationId || null
+        )
         await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
         toast.success('Payload exported and uploaded successfully')
       }

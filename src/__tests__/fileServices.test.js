@@ -321,6 +321,21 @@ describe('fileServices', () => {
       expect(result).toEqual(expectedResult)
     })
 
+    it('prefers explicit workspace locationId when provided', async () => {
+      const checklist = { locationId: 'A01K5QC0YXTE2XTS3R9BTK77FT6', questions: [] }
+      const session = { summary: { specialty: 'VIG' }, responses: {} }
+      mockElectronAPI.exportInspectionPayload.mockResolvedValue({ zipPath: '/tmp/payload.zip', uploadStatus: 200 })
+
+      await fs.exportInspectionPayload(checklist, session, 'VIG', 'MDPP')
+
+      expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+        locationId: 'MDPP',
+      })
+    })
+
     it('throws for missing parameters', async () => {
       await expect(fs.exportInspectionPayload(null, { responses: {} }, 'VIG')).rejects.toThrow(
         'exportInspectionPayload: could not export and upload payload'

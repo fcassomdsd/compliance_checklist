@@ -895,18 +895,23 @@ export const createFileService = () => {
     }
   }
 
-  const exportInspectionPayload = async (checklist, session, specialty) => {
+  const exportInspectionPayload = async (checklist, session, specialty, locationId = null) => {
     try {
       if (!checklist || !session || !specialty) {
         throw new Error('Missing required parameters: checklist, session, specialty')
       }
 
-      const result = await window.electronAPI.exportInspectionPayload({
+      const resolvedLocationId = locationId || checklist?.locationId || checklist?.location || null
+      const payload = {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
         specialty,
-        locationId: checklist?.locationId || checklist?.location,
-      })
+      }
+      if (resolvedLocationId) {
+        payload.locationId = resolvedLocationId
+      }
+
+      const result = await window.electronAPI.exportInspectionPayload(payload)
       console.log('exportInspectionPayload: payload exported and uploaded successfully')
       return result
     } catch (error) {
