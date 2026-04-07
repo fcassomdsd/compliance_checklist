@@ -250,6 +250,23 @@ describe('fileServices', () => {
       expect(callArgs.outputPath).toContain('reporte_hallazgos')
     })
 
+    it('uses workspace folder when locationId is provided', async () => {
+      const expectedPath = '/path/to/MDPP_VIG/reporte_hallazgos_2024-01-15.pdf'
+      mockElectronAPI.getFullPath.mockResolvedValue(expectedPath)
+      mockElectronAPI.generatePDF.mockResolvedValue(expectedPath)
+
+      const checklist = { questions: [] }
+      const session = { responses: {} }
+
+      await fs.saveFindingsReport(checklist, session, 'VIG', 'MDPP')
+
+      expect(mockElectronAPI.getFullPath).toHaveBeenCalledWith(
+        null,
+        'MDPP_VIG',
+        expect.stringContaining('reporte_hallazgos_')
+      )
+    })
+
     it('handles missing checklist', async () => {
       mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
 

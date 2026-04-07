@@ -235,7 +235,8 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       // Generate PDF report of findings
       const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
-      const reportPath = await fs.saveFindingsReport(checklist.value, sessionObj, specialty.value)
+      const locationId = activeWorkspace.value?.locationId || null
+      const reportPath = await fs.saveFindingsReport(checklist.value, sessionObj, specialty.value, locationId)
       generatedReportPath.value = reportPath
       toast.success('Report generated successfully')
     } catch (error) {
@@ -340,6 +341,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       specialty.value = specialtyCode
       activeWorkspaceKey.value = workspaceEntry.workspaceKey
       activeWorkspace.value = workspaceEntry
+      generatedReportPath.value = ''
 
       if (await loadChecklist()) {
         await sessionStore.loadSession(specialtyCode, locationId)
@@ -365,6 +367,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       activeWorkspace.value = targetWorkspace
       specialty.value = targetWorkspace.specialtyCode
       currentPath.value = (await fs.setSavePath(specialty.value, targetWorkspace.locationId)) || ''
+      generatedReportPath.value = ''
 
       let hasChecklist = targetWorkspace.checklistPresent !== false
       if (!hasChecklist) {
@@ -470,6 +473,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       specialty.value = specialtyCode
       activeWorkspaceKey.value = workspaceEntry.workspaceKey
       activeWorkspace.value = workspaceEntry
+      generatedReportPath.value = ''
       await loadFindings()
       uiMode.value = 'followUp'
 

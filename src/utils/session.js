@@ -20,6 +20,9 @@ const sessionSchema = {
         generalComments: {
           type: 'string',
         },
+        locationId: {
+          type: 'string',
+        },
       },
       additionalProperties: false,
       required: ['specialty'],

@@ -375,7 +375,8 @@ describe('Checklist Store', () => {
       expect(mockFs.saveFindingsReport).toHaveBeenCalledWith(
         store.checklist.value,
         expectedSessionObj,
-        'VIG'
+        'VIG',
+        null
       )
       expect(mockToast.success).toHaveBeenCalledWith('Report generated successfully')
       expect(store.generatedReportPath.value).toBe('report.pdf')

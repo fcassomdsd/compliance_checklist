@@ -100,6 +100,7 @@ describe('Session Store', () => {
       expect(mockToast.success).toHaveBeenCalledWith('Session loaded')
       expect(sessionStore.summary.value).toEqual({
         finalized: false,
+        generalComments: '',
         specialty: 'VIG',
       })
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
@@ -124,6 +125,26 @@ describe('Session Store', () => {
 
       expect(mockFs.loadSession).toHaveBeenCalledWith('VIG', null)
       expect(mockEvidence.load).not.toHaveBeenCalledWith()
+    })
+
+    it('rebinds summary specialty/location when switching workspaces', async () => {
+      mockFs.loadSession.mockResolvedValue(null)
+
+      await sessionStore.loadSession('VIG', 'MDPP')
+      expect(mockFs.saveSession).toHaveBeenLastCalledWith(
+        expect.objectContaining({ specialty: 'VIG', locationId: 'MDPP' }),
+        expect.any(Object),
+        expect.any(Function),
+        'MDPP'
+      )
+
+      await sessionStore.loadSession('FAU', 'MDPP')
+      expect(mockFs.saveSession).toHaveBeenLastCalledWith(
+        expect.objectContaining({ specialty: 'FAU', locationId: 'MDPP' }),
+        expect.any(Object),
+        expect.any(Function),
+        'MDPP'
+      )
     })
 
     it('handles invalid specialty value errors with toast', async () => {

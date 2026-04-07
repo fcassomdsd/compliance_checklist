@@ -20,9 +20,8 @@ export const useSessionStore = defineStore('session', () => {
   // Actions
   const loadSession = async (specialty, locationId = null) => {
     // initialize state
-    // reset summary (no location)
-    summary.value.finalized = true
-    summary.value.generalComments = '' // ensure default
+    // reset summary so stale workspace data does not leak across switches
+    summary.value = { finalized: true, generalComments: '' }
 
     // clear out evidenceFiles
     evidence.reset()
@@ -62,11 +61,17 @@ export const useSessionStore = defineStore('session', () => {
       } else {
         summary.value.finalized = false
       }
-      if (!summary.value['specialty']) {
-        summary.value['specialty'] = specialty
-      }
+
+      // Always bind the session summary to the active workspace.
+      // This prevents saving under a previous specialty/location after workspace switch.
+      summary.value['specialty'] = specialty
       if (locationId) {
         summary.value['locationId'] = locationId
+      } else if ('locationId' in summary.value) {
+        delete summary.value['locationId']
+      }
+      if (!('generalComments' in summary.value)) {
+        summary.value.generalComments = ''
       }
       context.value = { specialty, locationId }
 

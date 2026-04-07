@@ -871,13 +871,14 @@ export const createFileService = () => {
     }
   }
 
-  const saveFindingsReport = async (checklist, session, specialty) => {
+  const saveFindingsReport = async (checklist, session, specialty, locationId = null) => {
     try {
       if (!checklist || !session || !specialty) {
         throw new Error('Missing required parameters: checklist, session, specialty')
       }
       const fileName = `reporte_hallazgos_${new Date().toISOString().split('T')[0]}.pdf`
-      const filePath = await window.electronAPI.getFullPath(DEFAULT_ROOT, specialty, fileName)
+      const paths = getWorkspacePaths(specialty, locationId)
+      const filePath = await window.electronAPI.getFullPath(DEFAULT_ROOT, ...paths.legs, fileName)
       const checklistString = JSON.stringify(checklist)
       const sessionString = JSON.stringify(session)
       const result = await window.electronAPI.generatePDF({
