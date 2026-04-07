@@ -716,26 +716,28 @@ export function setupIpcHandles(ipcMain) {
     logger.info(`open-file: Opening file ${filePath}`)
     
     try {
-      // Create a timeout promise in case shell.openPath hangs
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('File opening timed out after 10 seconds')), 10000)
+      // Fire-and-forget: shell.openPath() may not resolve until the application exits,
+      // so we initiate the open but don't wait for it to complete.
+      // Any errors opening the file will be handled by the OS.
+      shell.openPath(filePath).then(
+        (errorMsg) => {
+          if (errorMsg) {
+            logger.error(`open-file: OS error opening ${filePath}: ${errorMsg}`)
+          } else {
+            logger.info(`open-file: OS successfully opened ${filePath}`)
+          }
+        },
+        (err) => {
+          logger.error(`open-file: Failed to open ${filePath}: ${err?.message || String(err)}`)
+        }
       )
       
-      // shell.openPath resolves with empty string on success, error message on failure
-      const openPromise = Promise.resolve(shell.openPath(filePath))
-      const errorMsg = await Promise.race([openPromise, timeoutPromise])
-      
-      if (errorMsg) {
-        logger.error(`open-file: File open returned error: ${errorMsg}`)
-        throw new Error(errorMsg)
-      }
-      
-      logger.info(`open-file: Successfully opened file ${filePath}`)
+      logger.info(`open-file: File open initiated for ${filePath}`)
       return { success: true }
     } catch (err) {
-      // Ensure we always throw with a serializable error object
+      // Catch any synchronous errors (e.g., invalid path)
       const errMsg = err?.message || String(err)
-      logger.error(`open-file: Error opening file ${filePath}: ${errMsg}`)
+      logger.error(`open-file: Error initiating file open for ${filePath}: ${errMsg}`)
       throw new Error(`Could not open file: ${errMsg}`)
     }
   })
