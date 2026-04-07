@@ -708,19 +708,35 @@ export function setupIpcHandles(ipcMain) {
   })
 
   ipcMain.handle('open-file', async (event, filePath) => {
+    if (!filePath) {
+      logger.error('open-file: Missing required parameter: filePath')
+      throw new Error('Missing required parameter: filePath')
+    }
+
+    logger.info(`open-file: Opening file ${filePath}`)
+    
     try {
-      if (!filePath) {
-        throw new Error('Missing required parameter: filePath')
-      }
+      // Create a timeout promise in case shell.openPath hangs
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('File opening timed out after 10 seconds')), 10000)
+      )
+      
       // shell.openPath resolves with empty string on success, error message on failure
-      const errorMsg = await shell.openPath(filePath)
+      const openPromise = Promise.resolve(shell.openPath(filePath))
+      const errorMsg = await Promise.race([openPromise, timeoutPromise])
+      
       if (errorMsg) {
+        logger.error(`open-file: File open returned error: ${errorMsg}`)
         throw new Error(errorMsg)
       }
+      
+      logger.info(`open-file: Successfully opened file ${filePath}`)
       return { success: true }
     } catch (err) {
-      logger.error(`open-file: Could not open file ${filePath}: ${err.message}`)
-      throw err
+      // Ensure we always throw with a serializable error object
+      const errMsg = err?.message || String(err)
+      logger.error(`open-file: Error opening file ${filePath}: ${errMsg}`)
+      throw new Error(`Could not open file: ${errMsg}`)
     }
   })
 
