@@ -257,5 +257,44 @@ describe('pdfGenerator', () => {
 
       expect(result).toBeInstanceOf(Promise)
     })
+
+    it('should accept new-format checklist with locationName instead of location', async () => {
+      const { generateFindingsReport } = await import('../utils/pdfGenerator')
+
+      // New header format: locationName replaces location, icaoCode is present
+      const mockChecklistData = {
+        specialtyName: 'Sistemas de Vigilancia',
+        specialtyCode: 'VIG',
+        inspection: 'MDPP-2026-01',
+        inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
+        locationName: 'Aeropuerto Internacional Gregorio Luperon',
+        locationId: 'a01k5qc0yxte2xts3r9btk77ft6',
+        icaoCode: 'MDPP',
+        startDate: '2026-03-25',
+        endDate: '2026-03-26',
+        providerId: 'a01kkq6arvbeef8ssmsd2aqnvyb',
+        providerName: 'DTIC Instituto Dominicano de Aviacion Civil',
+        questions: [],
+      }
+
+      const mockSessionData = {
+        summary: {
+          specialty: 'VIG',
+          finalized: false,
+          lastUpdated: '2026-03-25T10:00:00Z',
+          generalComments: '',
+        },
+        responses: {},
+      }
+
+      const result = generateFindingsReport({
+        checklistString: JSON.stringify(mockChecklistData),
+        sessionString: JSON.stringify(mockSessionData),
+        outputPath: '/tmp/test-report-new-format.pdf',
+      })
+
+      // Must not throw — previously crashed at checklist.location.trim()
+      expect(result).toBeInstanceOf(Promise)
+    })
   })
 })

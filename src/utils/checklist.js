@@ -19,10 +19,19 @@ const checklistSchema = {
     inspectionId: {
       type: 'string',
     },
+    locationName: {
+      type: 'string',
+    },
     location: {
       type: 'string',
     },
     locationId: {
+      type: 'string',
+    },
+    icaoCode: {
+      type: 'string',
+    },
+    specialtyId: {
       type: 'string',
     },
     startDate: {

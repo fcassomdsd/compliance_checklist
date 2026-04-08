@@ -512,6 +512,90 @@ describe('Checklist Store', () => {
       expect(store.isImporting.value).toBe(false)
     })
 
+    it('imports checklist using locationName and icaoCode from new header format', async () => {
+      const mockImportedChecklist = {
+        specialtyName: 'Sistemas de Vigilancia',
+        specialtyCode: 'VIG',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
+        inspection: 'MDPP-2026-01',
+        inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
+        locationName: 'Aeropuerto Internacional Gregorio Luperon',
+        locationId: 'a01k5qc0yxte2xts3r9btk77ft6',
+        icaoCode: 'MDPP',
+        startDate: '2026-03-25',
+        endDate: '2026-03-26',
+        providerId: 'a01kkq6arvbeef8ssmsd2aqnvyb',
+        providerName: 'DTIC Instituto Dominicano de Aviacion Civil',
+        questions: [{ id: 'q1', topic: 'T1', reference: 'R1', question: 'Q1?', verification: 'V1' }],
+      }
+
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: false,
+        hasSession: false,
+        sessionFinalized: null,
+      })
+      mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
+      mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
+      mockFs.saveChecklist.mockResolvedValue(undefined)
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Sistemas de Vigilancia' }])
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+      mockFs.setSavePath.mockResolvedValue('/path/MDPP/VIG/Evidence')
+
+      await store.importChecklist('MDPP-2026-01', 'VIG')
+
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'MDPP')
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'MDPP')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'MDPP')
+      expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('uses icaoCode as workspace key even when locationId is a UUID', async () => {
+      // Both locationId (opaque UUID) and icaoCode (human ICAO code) are present.
+      // The workspace folder / key must be derived from icaoCode, not the UUID.
+      const mockImportedChecklist = {
+        specialtyName: 'Sistemas de Vigilancia',
+        specialtyCode: 'VIG',
+        inspection: 'MDPP-2026-01',
+        inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
+        locationName: 'Aeropuerto Internacional Gregorio Luperon',
+        locationId: 'a01k5qc0yxte2xts3r9btk77ft6', // opaque UUID — must NOT become the location key
+        icaoCode: 'MDPP',                            // must be preferred over locationId
+        startDate: '2026-03-25',
+        endDate: '2026-03-26',
+        providerId: 'a01kkq6arvbeef8ssmsd2aqnvyb',
+        providerName: 'DTIC Instituto Dominicano de Aviacion Civil',
+        questions: [{ id: 'q1', topic: 'T1', reference: 'R1', question: 'Q1?', verification: 'V1' }],
+      }
+
+      mockFs.getChecklistImportState.mockResolvedValue({
+        hasChecklist: false,
+        hasSession: false,
+        sessionFinalized: null,
+      })
+      mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
+      mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
+      mockFs.saveChecklist.mockResolvedValue(undefined)
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Sistemas de Vigilancia' }])
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+      mockFs.setSavePath.mockResolvedValue('/path/MDPP/VIG/Evidence')
+
+      await store.importChecklist('MDPP-2026-01', 'VIG')
+
+      // All location-keyed calls must use 'MDPP', not the UUID
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'MDPP')
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'MDPP')
+      expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalledWith(
+        'VIG',
+        'MDPP',
+        expect.objectContaining({ locationId: 'MDPP', locationName: 'Aeropuerto Internacional Gregorio Luperon' }),
+      )
+      expect(mockFs.upsertWorkspaceRegistryEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ locationId: 'MDPP', locationName: 'Aeropuerto Internacional Gregorio Luperon' }),
+      )
+      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'MDPP')
+    })
+
     it('imports checklist when session is finalized (re-import)', async () => {
       const mockImportedChecklist = {
         specialtyName: 'Re-imported Specialty',
