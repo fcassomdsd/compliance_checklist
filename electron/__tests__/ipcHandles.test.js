@@ -486,6 +486,7 @@ describe('ipcHandles', () => {
 
       const checklist = {
         inspection: 'MDPP-2026-01',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
         specialtyCode: 'VIG',
         specialtyName: 'Sistemas de Vigilancia',
         providerId: 'provider-1',
@@ -518,6 +519,9 @@ describe('ipcHandles', () => {
       const zip = await JSZip.loadAsync(zipBuffer)
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
 
+      expect(checklistJson.checklist.specialtyId).toBe('a01k0f67dskef2a475yzd8a5dxd')
+      expect(checklistJson.checklist.specialtyCode).toBe('VIG')
+      expect(checklistJson.checklist.specialtyName).toBe('Sistemas de Vigilancia')
       expect(checklistJson.items[0].evidence).toEqual([
         {
           evidenceId: 'EV-0001-01',

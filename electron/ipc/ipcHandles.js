@@ -35,7 +35,14 @@ const checklistSchema = {
     },
     checklist: {
       type: 'object',
-      required: ['inspectionId', 'inspectionCode', 'domain', 'providerId'],
+      required: [
+        'inspectionId',
+        'inspectionCode',
+        'specialtyId',
+        'specialtyCode',
+        'specialtyName',
+        'providerId',
+      ],
       properties: {
         inspectionId: { type: 'string' },
         inspectionCode: {
@@ -44,9 +51,13 @@ const checklistSchema = {
         },
         locationId: { type: 'string' },
         locationName: { type: 'string' },
+        icaoCode: { type: 'string' },
+        specialtyId: { type: 'string' },
+        specialtyCode: { type: 'string' },
+        specialtyName: { type: 'string' },
         checklistId: {
           type: 'string',
-          pattern: '^CHK-[A-Z]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
+          pattern: '^CHK-[A-Z0-9]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
         },
         domain: { type: 'string' },
         providerId: { type: 'string' },
@@ -338,13 +349,22 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
   const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
+  const specialtyName = inferDomainName(checklistObj, specialty, specialtyCode)
+  const specialtyId = safeString(
+    checklistObj?.specialtyId,
+    safeString(sessionObj?.summary?.specialtyId, specialtyCode)
+  )
   const domainName = inferDomainName(checklistObj, specialty, specialtyCode)
 
   const inspectionCode = inferInspectionCode(checklistObj)
+  const icaoCode = safeString(checklistObj?.icaoCode, safeString(checklistObj?.locationCode))
 
   const checklistSection = {
     inspectionId: safeString(checklistObj?.inspectionId, safeString(checklistObj?.inspection)),
     inspectionCode,
+    specialtyId,
+    specialtyCode,
+    specialtyName,
     domain: domainName,
     providerId: safeString(checklistObj?.providerId),
   }
@@ -352,6 +372,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   const optionalChecklistFields = {
     locationId: safeString(checklistObj?.locationId),
     locationName: safeString(checklistObj?.locationName, safeString(checklistObj?.location)),
+    icaoCode,
     checklistId: inferChecklistId(inspectionCode, specialtyCode),
     providerName: safeString(checklistObj?.providerName),
     inspectors: Array.isArray(checklistObj?.inspectors)
