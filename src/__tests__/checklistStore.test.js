@@ -414,7 +414,7 @@ describe('Checklist Store', () => {
 
     it('exports and uploads follow-up payload in follow-up mode', async () => {
       store.uiMode.value = 'followUp'
-      store.findings.value = [{ finding: { findingId: 'F-1', locationId: 'loc-1' } }]
+      store.findings.value = [{ findingId: 'F-1', locationId: 'loc-1' }]
       store.findingsLoaded.value = true
       store.activeWorkspace.value = { locationId: 'loc-1' }
       mockFollowUp.summary = { finalized: true, specialty: 'VIG' }

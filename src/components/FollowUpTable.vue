@@ -17,9 +17,9 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="entry in store.findings" :key="entry?.finding?.findingId || Math.random()">
-        <td>{{ entry?.finding?.findingId || '' }}</td>
-        <td>{{ entry?.finding?.description || '' }}</td>
+      <tr v-for="entry in store.findings" :key="entry?.findingId || Math.random()">
+        <td>{{ entry?.findingId || '' }}</td>
+        <td>{{ entry?.description || '' }}</td>
         <td>
           <input
             type="number"
@@ -58,7 +58,7 @@
   const store = useChecklistStore()
   const followUpStore = useFollowUpStore()
 
-  const getFindingId = (entry) => entry?.finding?.findingId || ''
+  const getFindingId = (entry) => entry?.findingId || ''
 
   const getField = (entry, field) => {
     const findingId = getFindingId(entry)

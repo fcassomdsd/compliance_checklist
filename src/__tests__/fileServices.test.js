@@ -351,7 +351,7 @@ describe('fileServices', () => {
 
   describe('exportFollowUpPayload', () => {
     it('calls electron exportFollowUpPayload with stringified data', async () => {
-      const findings = [{ finding: { findingId: 'F-1', locationId: 'loc-1' } }]
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
       const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
       const expectedResult = { zipPath: '/tmp/followup.zip', uploadStatus: 200 }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue(expectedResult)
@@ -990,10 +990,8 @@ describe('fileServices', () => {
       const mockFindings = [
         {
           schemaVersion: '1.0',
-          finding: {
-            findingId: 'MDPP-VIG-2026-01',
-            locationId: 'loc-001',
-          },
+          findingId: 'MDPP-VIG-2026-01',
+          locationId: 'loc-001',
         },
       ]
 
@@ -1010,7 +1008,7 @@ describe('fileServices', () => {
       const result = await fs.fetchFindingsFromApi('VIG', 'loc-001', '0224')
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:1880/findings?specialty=VIG&locationId=loc-001&inspection=0224'
+        'http://localhost:1880/findings/open?specialtyCode=VIG&locationCode=loc-001&inspection=0224'
       )
       expect(result).toEqual(mockFindings)
     })
@@ -1033,7 +1031,7 @@ describe('fileServices', () => {
 
     it('saveFindings stores findings using workspace path', async () => {
       const fs = createFileService()
-      const findings = [{ finding: { findingId: 'F-1', locationId: 'loc-001' } }]
+      const findings = [{ findingId: 'F-1', locationId: 'loc-001' }]
       window.electronAPI.createDir.mockResolvedValue(undefined)
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path/findings.json')
 
@@ -1051,7 +1049,7 @@ describe('fileServices', () => {
 
     it('loadFindings returns parsed findings when file exists', async () => {
       const fs = createFileService()
-      const findings = [{ finding: { findingId: 'F-1', locationId: 'loc-001' } }]
+      const findings = [{ findingId: 'F-1', locationId: 'loc-001' }]
 
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(findings))
@@ -1112,15 +1110,15 @@ describe('fileServices', () => {
       }
 
       const findings = [
-        { finding: { findingId: 'F-1', locationId: 'loc-001' } },
-        { finding: { findingId: 'F-2', locationId: 'loc-001' } },
+        { findingId: 'F-1', locationId: 'loc-001' },
+        { findingId: 'F-2', locationId: 'loc-001' },
       ]
 
       const result = fs.joinChecklistWithFindings(checklist, findings)
 
       expect(result.checklist.questions[0].priorFinding.findingId).toBe('F-1')
       expect(result.unmatchedFindings).toHaveLength(1)
-      expect(result.unmatchedFindings[0].finding.findingId).toBe('F-2')
+      expect(result.unmatchedFindings[0].findingId).toBe('F-2')
     })
   })
 

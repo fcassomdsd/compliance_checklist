@@ -280,9 +280,9 @@ export const createFileService = () => {
       const config = await window.electronAPI.getAppConfig()
       const host = config?.api?.importHost || config?.api?.host || 'http://localhost:1880'
 
-      const url = new URL(`${host}/findings`)
-      url.searchParams.set('specialty', specialty)
-      url.searchParams.set('locationId', locationId)
+      const url = new URL(`${host}/findings/open`)
+      url.searchParams.set('specialtyCode', specialty)
+      url.searchParams.set('locationCode', locationId)
       if (inspection) {
         url.searchParams.set('inspection', inspection)
       }
@@ -396,9 +396,9 @@ export const createFileService = () => {
 
     const findingMap = new Map()
     findingsList.forEach((entry) => {
-      const findingId = entry?.finding?.findingId
+      const findingId = entry?.findingId
       if (findingId) {
-        findingMap.set(findingId, entry.finding)
+        findingMap.set(findingId, entry)
       }
     })
 
@@ -421,7 +421,7 @@ export const createFileService = () => {
     })
 
     const unmatchedFindings = findingsList.filter((entry) => {
-      const findingId = entry?.finding?.findingId
+      const findingId = entry?.findingId
       return findingId && !linkedFindingIds.has(findingId)
     })
 

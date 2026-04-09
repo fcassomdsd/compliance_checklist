@@ -447,7 +447,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       const locationName =
         locationList.value.find((location) => location.icaoCode == locationId)?.name ||
-        importedFindings[0]?.finding?.locationName ||
+        importedFindings[0]?.locationName ||
         locationId
 
       const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)

@@ -53,7 +53,7 @@ async function createImportServer() {
       return
     }
 
-    if (url.pathname === '/findings') {
+    if (url.pathname === '/findings/open') {
       sendJson(res, 200, findings)
       return
     }
