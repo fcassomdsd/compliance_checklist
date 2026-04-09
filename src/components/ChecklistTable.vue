@@ -1,10 +1,10 @@
 <template>
   <table id="cklTable" class="cklTable" disabled>
     <colgroup>
-      <col style="width: 3%" />
+      <col style="width: 5%" />
       <col style="width: 12%" />
+      <col style="width: 20%" />
       <col style="width: 21%" />
-      <col style="width: 22%" />
       <col style="width: 12%" />
       <col style="width: 15%" />
       <col style="width: 15%" />
