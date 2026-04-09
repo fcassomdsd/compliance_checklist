@@ -20,10 +20,8 @@ describe('FollowUpTable.vue', () => {
     mockChecklistStore = {
       findings: [
         {
-          finding: {
-            findingId: 'F-1',
-            description: 'Sample finding',
-          },
+          findingId: 'F-1',
+          description: 'Sample finding',
         },
       ],
     }

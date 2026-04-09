@@ -61,9 +61,15 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         ) {
           const questionCode = getQuestionCode(row, index)
           const sessionData = response || {}
+          const normativa = row.reference?.normativa
+          const normativaText = normativa
+            ? [normativa.reglamento, normativa.articulo].filter(Boolean).join(' ')
+            : ''
+          const guidanceText = row.reference?.guidance || ''
+          const referenceText = [normativaText, guidanceText].filter(Boolean).join('\n')
           findings.push({
             code: questionCode,
-            reference: row.reference || '',
+            reference: referenceText,
             question: row.question || '',
             topic: row.topic || '',
             nonConformity: sessionData.nonConformity || '',
@@ -91,7 +97,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
             position: {x: SIDE_MARGIN, y: doc.y},
             columnStyles : [
                 { width : 120 }, 
-                { width: 20, align : 'center' }, 
+                { width: 40, align : 'center' }, 
                 { width: 140 }, 
                 { width: '*' }, 
                 { width: '*' }
@@ -231,7 +237,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         doc
           .font('Times-Roman')
           .moveUp()
-          .text(`: ${checklist.location.trim() || ''}`, 140, doc.y)
+          .text(`: ${(checklist.locationName || checklist.location || '').trim()}`, 140, doc.y)
           .moveUp()
           .text(`: ${checklist.specialtyName.trim() || ''}`, 440, doc.y)
         doc.moveDown(2)
@@ -239,7 +245,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         doc.font('Times-Roman')
         doc.table({
           position : { x: SIDE_MARGIN, y: doc.y },
-          columnStyles : [120,20,140,'*','*'],
+          columnStyles : [120,40,140,'*','*'],
           rowStyles: { align: 'center', font : { src : 'Times-Bold'} },
           data : [
               ['Referencia', 'Codigo', 'Pregunta', 'No conformidad', 'Comentario']

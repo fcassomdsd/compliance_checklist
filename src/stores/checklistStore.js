@@ -53,8 +53,8 @@ export const useChecklistStore = defineStore('checklist', () => {
 
   const resolveLocationFromChecklist = (checklistObj) => {
     const checklistLocationId = checklistObj?.locationId
-    const checklistLocationName = checklistObj?.location
-    const checklistLocationIcao = checklistObj?.locationIcao
+    const checklistLocationName = checklistObj?.locationName || checklistObj?.location
+    const checklistLocationIcao = checklistObj?.icaoCode || checklistObj?.locationIcao
 
     const resolved =
       locationList.value.find(
@@ -69,6 +69,13 @@ export const useChecklistStore = defineStore('checklist', () => {
       return {
         locationId: resolved.icaoCode,
         locationName: resolved.name,
+      }
+    }
+
+    if (typeof checklistLocationIcao == 'string' && checklistLocationIcao.trim().length > 0) {
+      return {
+        locationId: checklistLocationIcao.trim().toUpperCase(),
+        locationName: checklistLocationName || checklistLocationIcao.trim().toUpperCase(),
       }
     }
 
@@ -440,7 +447,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       const locationName =
         locationList.value.find((location) => location.icaoCode == locationId)?.name ||
-        importedFindings[0]?.finding?.locationName ||
+        importedFindings[0]?.locationName ||
         locationId
 
       const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)

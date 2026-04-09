@@ -1,15 +1,13 @@
 [
   {
     "schemaVersion": "1.0",
-    "finding": {
-      "findingId": "MDSD-VIG-2026-0001",
-      "domain": "VIG",
-      "providerId": "provider-1",
-      "locationId": "MDSD",
-      "locationName": "Aeropuerto Internacional de las Americas",
-      "itemId": "VIG-0001",
-      "description": "Surveillance alarm not acknowledged",
-      "findingStatus": "Open"
-    }
+    "findingId": "MDSD-VIG-2026-0001",
+    "domain": "VIG",
+    "providerId": "provider-1",
+    "locationId": "MDSD",
+    "locationName": "Aeropuerto Internacional de las Americas",
+    "itemId": "VIG-0001",
+    "description": "Surveillance alarm not acknowledged",
+    "findingStatus": "Open"
   }
 ]
