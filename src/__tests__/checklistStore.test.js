@@ -756,6 +756,268 @@ describe('Checklist Store', () => {
         })
       )
     })
+
+    it('shows error when workspace key does not exist', async () => {
+      store.workspaceList.value = []
+
+      await store.selectWorkspace('missing__key')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Could not switch workspace: Workspace not found')
+    })
+
+    it('keeps checklist empty when workspace has no checklist on disk', async () => {
+      store.workspaceList.value = [
+        {
+          workspaceKey: 'loc-001__VIG',
+          specialtyCode: 'VIG',
+          locationId: 'loc-001',
+          checklistPresent: false,
+        },
+      ]
+      mockFs.getChecklistImportState.mockResolvedValue({ hasChecklist: false })
+
+      await store.selectWorkspace('loc-001__VIG')
+
+      expect(store.checklist.value).toBe(null)
+      expect(store.checklistLoaded.value).toBe(false)
+    })
+  })
+
+  describe('locations, workspaces, and services', () => {
+    it('loads locations successfully', async () => {
+      const locations = [{ icaoCode: 'MDPP', name: 'Puerto Plata' }]
+      mockFs.loadLocations.mockResolvedValue(locations)
+
+      await store.loadLocations()
+
+      expect(store.locationList.value).toEqual(locations)
+    })
+
+    it('handles location load failure', async () => {
+      mockFs.loadLocations.mockRejectedValue(new Error('Location load failed'))
+
+      await store.loadLocations()
+
+      expect(store.locationList.value).toEqual([])
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to load locations: Location load failed')
+    })
+
+    it('refreshes import and upload service status', async () => {
+      mockFs.checkServiceHealth
+        .mockResolvedValueOnce({ online: false })
+        .mockResolvedValueOnce({ online: true })
+
+      const status = await store.refreshServiceStatus()
+
+      expect(status).toEqual({ import: false, upload: true })
+      expect(store.importServiceOnline.value).toBe(false)
+      expect(store.uploadServiceOnline.value).toBe(true)
+    })
+
+    it('loads and formats workspace display names', async () => {
+      mockFs.loadWorkspaceRegistry.mockResolvedValue([
+        {
+          workspaceKey: 'loc-001__VIG',
+          locationId: 'loc-001',
+          specialtyCode: 'VIG',
+          draftStatus: 'finalized',
+        },
+      ])
+
+      await store.loadWorkspaces()
+
+      expect(store.workspaceList.value[0].displayName).toContain('(Finalized)')
+    })
+
+    it('handles workspace registry load failure', async () => {
+      mockFs.loadWorkspaceRegistry.mockRejectedValue(new Error('Registry read failed'))
+
+      await store.loadWorkspaces()
+
+      expect(store.workspaceList.value).toEqual([])
+      expect(mockToast.error).toHaveBeenCalledWith('Failed to load workspaces: Registry read failed')
+    })
+  })
+
+  describe('findings and follow-up actions', () => {
+    it('loads findings for active workspace', async () => {
+      store.specialty.value = 'VIG'
+      store.activeWorkspace.value = { locationId: 'loc-001' }
+      mockFs.loadFindings.mockResolvedValue([{ findingId: 'F-1' }])
+
+      const loaded = await store.loadFindings()
+
+      expect(loaded).toBe(true)
+      expect(store.findingsLoaded.value).toBe(true)
+      expect(store.findings.value).toEqual([{ findingId: 'F-1' }])
+    })
+
+    it('handles findings load failure', async () => {
+      store.specialty.value = 'VIG'
+      mockFs.loadFindings.mockRejectedValue(new Error('findings failed'))
+
+      const loaded = await store.loadFindings()
+
+      expect(loaded).toBe(false)
+      expect(mockToast.error).toHaveBeenCalledWith('findings failed')
+    })
+
+    it('imports findings successfully and switches mode to follow-up', async () => {
+      const importedFindings = [
+        { findingId: 'F-1', locationId: 'loc-001', locationName: 'Location 1' },
+      ]
+      mockFs.fetchFindingsFromApi.mockResolvedValue(importedFindings)
+      mockFs.getWorkspaceTouchedState.mockResolvedValue({ checklistTouched: false, followUpTouched: false })
+      mockFs.upsertWorkspaceRegistryEntry.mockResolvedValue({
+        workspaceKey: 'loc-001__VIG',
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+      })
+      mockFs.loadWorkspaceRegistry.mockResolvedValue([])
+      mockFs.loadFindings.mockResolvedValue(importedFindings)
+
+      await store.importFindings('VIG', 'loc-001')
+
+      expect(store.uiMode.value).toBe('followUp')
+      expect(store.isImportingFindings.value).toBe(false)
+      expect(mockToast.success).toHaveBeenCalledWith('Findings imported successfully')
+    })
+
+    it('blocks findings import when local follow-up edits exist', async () => {
+      mockFs.fetchFindingsFromApi.mockResolvedValue([{ findingId: 'F-1', locationId: 'loc-001' }])
+      mockFs.getWorkspaceTouchedState.mockResolvedValue({ checklistTouched: false, followUpTouched: true })
+
+      await store.importFindings('VIG', 'loc-001')
+
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'Cannot import findings because local follow-up edits already exist'
+      )
+    })
+
+    it('rejects findings import when service is offline', async () => {
+      store.importServiceOnline.value = false
+
+      await store.importFindings('VIG', 'loc-001')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Import service offline (localhost:1880)')
+    })
+
+    it('goToFollowUpFinding updates mode and focus id', () => {
+      store.goToFollowUpFinding('F-22')
+
+      expect(store.uiMode.value).toBe('followUp')
+      expect(store.followUpFocusFindingId.value).toBe('F-22')
+    })
+  })
+
+  describe('export upload edge cases', () => {
+    it('rejects upload when upload service is offline', async () => {
+      store.uploadServiceOnline.value = false
+
+      await store.exportUploadPayload()
+
+      expect(mockToast.error).toHaveBeenCalledWith('Upload service offline (localhost:8000)')
+      expect(store.isUploading.value).toBe(false)
+    })
+
+    it('rejects follow-up upload for empty findings', async () => {
+      store.uploadServiceOnline.value = true
+      store.uiMode.value = 'followUp'
+      store.findings.value = []
+
+      await store.exportUploadPayload()
+
+      expect(mockToast.error).toHaveBeenCalledWith('Empty follow-up not exported')
+    })
+
+    it('rejects inspection upload for empty checklist', async () => {
+      store.uploadServiceOnline.value = true
+      store.uiMode.value = 'inspection'
+      store.checklist.value = { questions: [] }
+
+      await store.exportUploadPayload()
+
+      expect(mockToast.error).toHaveBeenCalledWith('Empty checklist not exported')
+    })
+  })
+
+  describe('additional branch coverage', () => {
+    it('does not show create-path modal when default path already exists', async () => {
+      mockFs.defaultPathExists.mockResolvedValue(true)
+
+      await store.checkDefaultPath()
+
+      expect(store.showModal.value).toBe(false)
+    })
+
+    it('handles checkDefaultPath failure', async () => {
+      mockFs.defaultPathExists.mockRejectedValue(new Error('default path failed'))
+
+      await store.checkDefaultPath()
+
+      expect(mockToast.error).toHaveBeenCalledWith('default path failed')
+    })
+
+    it('rejects findings import when parameters are missing', async () => {
+      await store.importFindings('', '')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Location and specialty are required')
+    })
+
+    it('rejects findings import when API returns empty array', async () => {
+      mockFs.fetchFindingsFromApi.mockResolvedValue([])
+
+      await store.importFindings('VIG', 'loc-001')
+
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'No findings were returned for this location and specialty'
+      )
+    })
+
+    it('uses location name from location list when importing findings', async () => {
+      store.locationList.value = [{ icaoCode: 'loc-001', name: 'Known Location' }]
+      const importedFindings = [{ findingId: 'F-1', locationId: 'loc-001', locationName: 'API Name' }]
+      mockFs.fetchFindingsFromApi.mockResolvedValue(importedFindings)
+      mockFs.getWorkspaceTouchedState.mockResolvedValue({ checklistTouched: true, followUpTouched: false })
+      mockFs.upsertWorkspaceRegistryEntry.mockResolvedValue({
+        workspaceKey: 'loc-001__VIG',
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+      })
+      mockFs.loadWorkspaceRegistry.mockResolvedValue([])
+      mockFs.loadFindings.mockResolvedValue(importedFindings)
+
+      await store.importFindings('VIG', 'loc-001')
+
+      expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalledWith(
+        'VIG',
+        'loc-001',
+        expect.objectContaining({ locationName: 'Known Location', checklistTouched: true })
+      )
+    })
+
+    it('handles import checklist when import service is offline', async () => {
+      store.importServiceOnline.value = false
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockToast.error).toHaveBeenCalledWith('Import service offline (localhost:1880)')
+      expect(store.isImporting.value).toBe(false)
+    })
+
+    it('reports unresolved location error when checklist header has no location fields', async () => {
+      mockFs.fetchChecklistFromApi = vi.fn()
+      mockFs.fetchChecklistFromApi.mockResolvedValue({
+        specialtyName: 'VIG',
+        questions: [],
+      })
+
+      await store.importChecklist('0224', 'VIG')
+
+      expect(mockToast.error).toHaveBeenCalledWith(
+        'Imported inspection did not include a resolvable location identifier'
+      )
+    })
   })
 })
 
