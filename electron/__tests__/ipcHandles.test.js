@@ -738,5 +738,51 @@ describe('ipcHandles', () => {
       )
     })
 
+    it('allows findings without domain and strips invalid riskLevel', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const findings = [
+        {
+          findingId: 'MDPP-VIG-2025-03',
+          specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
+          providerId: 'provider-1',
+          locationId: 'MDPP',
+          locationName: 'Test Location',
+          itemId: 'q3',
+          description: 'Issue found',
+          riskLevel: 'Unknown',
+        },
+      ]
+      const followUpSession = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          'MDPP-VIG-2025-03': {
+            findingId: 'MDPP-VIG-2025-03',
+            percentComplete: 80,
+            effectivenessConfirmed: false,
+            findingClosed: false,
+          },
+        },
+      }
+
+      const result = await handles['export-follow-up-payload']({}, {
+        findingsString: JSON.stringify(findings),
+        followUpSessionString: JSON.stringify(followUpSession),
+        specialty: 'VIG',
+        locationId: 'MDPP',
+      })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          uploadStatus: 200,
+          reportsCount: 1,
+        })
+      )
+    })
+
   })
 })

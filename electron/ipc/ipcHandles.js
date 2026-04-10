@@ -72,7 +72,6 @@ const checklistSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['itemId', 'itemCode', 'compliance'],
         properties: {
           itemId: { type: 'string' },
           itemCode: {
@@ -84,6 +83,7 @@ const checklistSchema = {
           comment: { type: 'string' },
           reference: {
             properties: {
+        specialtyId: { type: 'string' },
               icaoReference: { type: 'string' },
               nationalRegulation: { type: 'string' },
             },
@@ -170,7 +170,6 @@ const followUpReportSchema = {
       type: 'object',
       required: [
         'findingId',
-        'domain',
         'providerId',
         'locationId',
         'locationName',
@@ -181,6 +180,7 @@ const followUpReportSchema = {
       ],
       properties: {
         findingId: { type: 'string' },
+        specialtyId: { type: 'string' },
         capId: { type: 'string' },
         domain: { type: 'string' },
         providerId: { type: 'string' },
@@ -525,7 +525,6 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       schemaVersion: '1.0',
       followUpReport: {
         findingId: effectiveFindingId,
-        domain: safeString(finding.domain),
         providerId: safeString(finding.providerId),
         locationId: safeString(finding.locationId),
         locationName: safeString(finding.locationName),
@@ -537,6 +536,16 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
         percentComplete: Math.max(0, Math.min(100, Number(response?.percentComplete || 0))),
         effectivenessConfirmed: Boolean(response?.effectivenessConfirmed),
       },
+    }
+
+    const specialtyId = safeString(finding?.specialtyId)
+    if (specialtyId) {
+      report.followUpReport.specialtyId = specialtyId
+    }
+
+    const domain = safeString(finding?.domain)
+    if (domain) {
+      report.followUpReport.domain = domain
     }
 
     const capId = safeString(finding?.correctiveAction?.capId)
@@ -576,6 +585,11 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
 const normalizeFindingForFollowUpExport = (entry) => {
   const finding = {
     ...(entry?.finding || entry || {}),
+  }
+
+  const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
+  if (finding.riskLevel && !validRiskLevels.includes(finding.riskLevel)) {
+    delete finding.riskLevel
   }
 
   return {
