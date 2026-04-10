@@ -644,5 +644,99 @@ describe('ipcHandles', () => {
         })
       ).rejects.toThrow('Follow-up import API failed with status 400')
     })
+
+    it('maps follow-up responses using response findingId when response key differs', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const findings = [
+        {
+          schemaVersion: '1.0',
+          finding: {
+            findingId: 'MDPP-VIG-2025-02',
+            domain: 'VIG',
+            providerId: 'provider-1',
+            locationId: 'MDPP',
+            locationName: 'Test Location',
+            itemId: 'q2',
+            description: 'Issue found',
+          },
+        },
+      ]
+      const followUpSession = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          orphan_key: {
+            findingId: 'MDPP-VIG-2025-02',
+            percentComplete: 20,
+            effectivenessConfirmed: false,
+            findingClosed: false,
+          },
+        },
+      }
+
+      const result = await handles['export-follow-up-payload']({}, {
+        findingsString: JSON.stringify(findings),
+        followUpSessionString: JSON.stringify(followUpSession),
+        specialty: 'VIG',
+        locationId: 'MDPP',
+      })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          uploadStatus: 200,
+          reportsCount: 1,
+        })
+      )
+    })
+
+    it('accepts flat findings payload by normalizing wrappers', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const findings = [
+        {
+          findingId: 'MDPP-VIG-2025-02',
+          domain: 'VIG',
+          providerId: 'provider-1',
+          locationId: 'MDPP',
+          locationName: 'Test Location',
+          itemId: 'q2',
+          description: 'Issue found',
+        },
+      ]
+      const followUpSession = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          'MDPP-VIG-2025-02': {
+            findingId: 'MDPP-VIG-2025-02',
+            percentComplete: 50,
+            effectivenessConfirmed: false,
+            findingClosed: false,
+          },
+        },
+      }
+
+      const result = await handles['export-follow-up-payload']({}, {
+        findingsString: JSON.stringify(findings),
+        followUpSessionString: JSON.stringify(followUpSession),
+        specialty: 'VIG',
+        locationId: 'MDPP',
+      })
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          uploadStatus: 200,
+          reportsCount: 1,
+        })
+      )
+    })
+
   })
 })
