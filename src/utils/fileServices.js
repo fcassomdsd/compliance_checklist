@@ -484,7 +484,7 @@ export const createFileService = () => {
   const saveSession = (summary, responses, displayError, locationId = null) => {
     // make sure they are objects and not strings
     const newSummary = typeof summary == 'string' ? JSON.parse(summary) : summary
-    const newResponses = typeof summary == 'string' ? JSON.parse(responses) : responses
+    const newResponses = typeof responses == 'string' ? JSON.parse(responses) : responses
 
     let sessionObj = { summary: newSummary, responses: newResponses }
     sessionObj.summary.lastUpdated = new Date().toISOString()
@@ -527,7 +527,7 @@ export const createFileService = () => {
 
   const saveFollowUpSession = (summary, responses, displayError, locationId = null) => {
     const newSummary = typeof summary == 'string' ? JSON.parse(summary) : summary
-    const newResponses = typeof summary == 'string' ? JSON.parse(responses) : responses
+    const newResponses = typeof responses == 'string' ? JSON.parse(responses) : responses
 
     const sessionObj = { summary: newSummary, responses: newResponses }
     sessionObj.summary.lastUpdated = new Date().toISOString()

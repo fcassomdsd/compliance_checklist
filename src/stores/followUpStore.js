@@ -2,9 +2,11 @@ import { ref, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
 import { defineStore } from 'pinia'
 import { createFileService } from '../utils/fileServices.js'
+import { useEvidenceStore } from './evidenceStore.js'
 
 export const useFollowUpStore = defineStore('followUp', () => {
   const fs = createFileService()
+  const evidence = useEvidenceStore()
   const toast = useToast()
 
   const responses = reactive({})
@@ -13,8 +15,86 @@ export const useFollowUpStore = defineStore('followUp', () => {
 
   const reset = () => {
     summary.value = { finalized: true, generalComments: '' }
+    evidence.reset()
     for (const key of Object.keys(responses)) {
       delete responses[key]
+    }
+  }
+
+  const normalizeSummary = (rawSummary, specialty, locationId) => {
+    const nextSummary = {
+      finalized: Boolean(rawSummary?.finalized),
+      generalComments: typeof rawSummary?.generalComments == 'string' ? rawSummary.generalComments : '',
+      specialty,
+    }
+
+    if (locationId) {
+      nextSummary.locationId = locationId
+    }
+
+    if (typeof rawSummary?.lastUpdated == 'string') {
+      nextSummary.lastUpdated = rawSummary.lastUpdated
+    }
+
+    return nextSummary
+  }
+
+  const normalizeResponse = (findingId, rawEntry) => {
+    const nextEntry = {
+      findingId:
+        typeof rawEntry?.findingId == 'string' && rawEntry.findingId.length > 0
+          ? rawEntry.findingId
+          : findingId,
+      percentComplete: Number.isFinite(Number(rawEntry?.percentComplete))
+        ? Math.max(0, Math.min(100, Number(rawEntry.percentComplete)))
+        : 0,
+      effectivenessConfirmed: Boolean(rawEntry?.effectivenessConfirmed),
+      findingClosed: Boolean(rawEntry?.findingClosed),
+    }
+
+    if (typeof rawEntry?.comments == 'string') {
+      nextEntry.comments = rawEntry.comments
+    }
+
+    if (Array.isArray(rawEntry?.evidence)) {
+      nextEntry.evidence = rawEntry.evidence.filter((item) => typeof item == 'string')
+    }
+
+    if (typeof rawEntry?.closureVerificationMethod == 'string') {
+      nextEntry.closureVerificationMethod = rawEntry.closureVerificationMethod
+    }
+
+    if (typeof rawEntry?.followUpDate == 'string') {
+      nextEntry.followUpDate = rawEntry.followUpDate
+    }
+
+    if (typeof rawEntry?.followUpClosureDate == 'string') {
+      nextEntry.followUpClosureDate = rawEntry.followUpClosureDate
+    }
+
+    return nextEntry
+  }
+
+  const collectResponses = (rawResponses, target) => {
+    if (!rawResponses || typeof rawResponses != 'object') {
+      return
+    }
+
+    for (const [key, value] of Object.entries(rawResponses)) {
+      if (key == 'summary') {
+        continue
+      }
+
+      if (key == 'responses') {
+        collectResponses(value, target)
+        continue
+      }
+
+      if (!value || typeof value != 'object') {
+        continue
+      }
+
+      target[key] = normalizeResponse(key, value)
     }
   }
 
@@ -32,15 +112,12 @@ export const useFollowUpStore = defineStore('followUp', () => {
 
       const loaded = await fs.loadFollowUpSession(specialty, locationId)
       if (loaded !== null) {
-        JSON.parse(JSON.stringify(loaded), (key, value) => {
-          if (typeof value == 'object' && value && key.match('^[A-Za-z0-9_-]+$')) {
-            responses[key] = value
-          }
-          if (key == 'summary') {
-            summary.value = value
-          }
-          return value
-        })
+        summary.value = normalizeSummary(loaded?.summary, specialty, locationId)
+        const normalizedResponses = {}
+        collectResponses(loaded?.responses, normalizedResponses)
+        for (const [findingId, entry] of Object.entries(normalizedResponses)) {
+          responses[findingId] = entry
+        }
       } else {
         summary.value.finalized = false
       }
@@ -52,6 +129,9 @@ export const useFollowUpStore = defineStore('followUp', () => {
         summary.value.locationId = locationId
       }
       context.value = { specialty, locationId }
+
+      await evidence.load(specialty, locationId, 'followUp')
+      evidence.updateCount(responses)
 
       fs.saveFollowUpSession(summary.value, responses, displayToast, context.value.locationId)
 
