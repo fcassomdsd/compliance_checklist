@@ -72,7 +72,6 @@ const checklistSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['itemId', 'itemCode', 'compliance'],
         properties: {
           itemId: { type: 'string' },
           itemCode: {
@@ -83,8 +82,8 @@ const checklistSchema = {
           verificationMethod: { type: 'string' },
           comment: { type: 'string' },
           reference: {
-            type: 'object',
             properties: {
+        specialtyId: { type: 'string' },
               icaoReference: { type: 'string' },
               nationalRegulation: { type: 'string' },
             },
@@ -128,7 +127,6 @@ const findingSchema = {
       type: 'object',
       required: [
         'findingId',
-        'domain',
         'providerId',
         'locationId',
         'locationName',
@@ -140,6 +138,7 @@ const findingSchema = {
           type: 'string',
           pattern: '^[A-Z0-9]{4}-[A-Z]{3}-\\d{4}-\\d{2}$',
         },
+        specialtyId: { type: 'string' },
         domain: { type: 'string' },
         providerId: { type: 'string' },
         locationId: { type: 'string' },
@@ -171,7 +170,6 @@ const followUpReportSchema = {
       type: 'object',
       required: [
         'findingId',
-        'domain',
         'providerId',
         'locationId',
         'locationName',
@@ -182,6 +180,7 @@ const followUpReportSchema = {
       ],
       properties: {
         findingId: { type: 'string' },
+        specialtyId: { type: 'string' },
         capId: { type: 'string' },
         domain: { type: 'string' },
         providerId: { type: 'string' },
@@ -510,17 +509,22 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
   const responses = followUpSessionObj?.responses || {}
 
   return Object.entries(responses).map(([findingId, response], index) => {
-    const findingEntry = findings.find((entry) => entry?.finding?.findingId === findingId)
-    if (!findingEntry?.finding) {
-      throw new Error(`Could not find source finding for follow-up response ${findingId}`)
+    const effectiveFindingId = safeString(response?.findingId, findingId)
+    const findingEntry = findings.find((entry) => {
+      const wrappedId = safeString(entry?.finding?.findingId)
+      const flatId = safeString(entry?.findingId)
+      return wrappedId === effectiveFindingId || flatId === effectiveFindingId
+    })
+
+    const finding = findingEntry?.finding || findingEntry
+    if (!finding?.findingId) {
+      throw new Error(`Could not find source finding for follow-up response ${effectiveFindingId}`)
     }
 
-    const finding = findingEntry.finding
     const report = {
       schemaVersion: '1.0',
       followUpReport: {
-        findingId,
-        domain: safeString(finding.domain),
+        findingId: effectiveFindingId,
         providerId: safeString(finding.providerId),
         locationId: safeString(finding.locationId),
         locationName: safeString(finding.locationName),
@@ -532,6 +536,16 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
         percentComplete: Math.max(0, Math.min(100, Number(response?.percentComplete || 0))),
         effectivenessConfirmed: Boolean(response?.effectivenessConfirmed),
       },
+    }
+
+    const specialtyId = safeString(finding?.specialtyId)
+    if (specialtyId) {
+      report.followUpReport.specialtyId = specialtyId
+    }
+
+    const domain = safeString(finding?.domain)
+    if (domain) {
+      report.followUpReport.domain = domain
     }
 
     const capId = safeString(finding?.correctiveAction?.capId)
@@ -566,6 +580,22 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
 
     return report
   })
+}
+
+const normalizeFindingForFollowUpExport = (entry) => {
+  const finding = {
+    ...(entry?.finding || entry || {}),
+  }
+
+  const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
+  if (finding.riskLevel && !validRiskLevels.includes(finding.riskLevel)) {
+    delete finding.riskLevel
+  }
+
+  return {
+    schemaVersion: '1.0',
+    finding,
+  }
 }
 
 const buildAjvError = (errors = []) =>
@@ -918,15 +948,19 @@ export function setupIpcHandles(ipcMain) {
           ? JSON.parse(followUpSessionString)
           : followUpSessionString
 
+      const normalizedFindingsObj = Array.isArray(findingsObj)
+        ? findingsObj.map((entry) => normalizeFindingForFollowUpExport(entry))
+        : []
+
       const followUpReportsPayload = mapFollowUpReportsPayload({
-        findingsObj,
+        findingsObj: normalizedFindingsObj,
         followUpSessionObj,
       })
 
       const validateFinding = ajv.compile(findingSchema)
       const validateFollowUpReport = ajv.compile(followUpReportSchema)
 
-      findingsObj.forEach((finding, index) => {
+      normalizedFindingsObj.forEach((finding, index) => {
         if (!validateFinding(finding)) {
           throw new Error(
             `Source finding payload at index ${index} failed schema validation: ${buildAjvError(validateFinding.errors)}`
@@ -951,7 +985,7 @@ export function setupIpcHandles(ipcMain) {
       await ensureDir(workspacePath)
 
       const zip = new JSZip()
-      zip.file('findings.json', JSON.stringify(findingsObj, null, 2))
+      zip.file('findings.json', JSON.stringify(normalizedFindingsObj, null, 2))
       zip.file('followup-reports.json', JSON.stringify(followUpReportsPayload, null, 2))
 
       if (await fileExists(followUpEvidencePath)) {
