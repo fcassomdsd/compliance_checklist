@@ -89,8 +89,8 @@ export const useSessionStore = defineStore('session', () => {
 
       for (const key of Object.keys(responses)) {
         if (responses[key].compliance != 'Non-compliant') {
-          if (responses[key].nonConformity) {
-            delete responses[key].nonConformity
+          if (responses[key].nonConformityDetails) {
+            delete responses[key].nonConformityDetails
           }
         }
       }
@@ -137,8 +137,8 @@ export const useSessionStore = defineStore('session', () => {
   const finalize = (specialty, locationId = null) => {
     for (const key of Object.keys(responses)) {
       if (responses[key].compliance != 'Non-compliant') {
-        if (responses[key].nonConformity) {
-          delete responses[key].nonConformity
+        if (responses[key].nonConformityDetails) {
+          delete responses[key].nonConformityDetails
         }
       }
     }

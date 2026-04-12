@@ -257,7 +257,7 @@ describe('Audio Store', () => {
     it('initializes files that dont exist yet', () => {
       audio.files.value = {}
 
-      audio.updateCount({ 1: { audioNonConformity: ['audio1.webm'] } })
+      audio.updateCount({ 1: { nonConformityDetails: { audioNonConformity: ['audio1.webm'] } } })
 
       expect(audio.files.value['audio1.webm']).toEqual({ URL: '', count: 1 })
     })

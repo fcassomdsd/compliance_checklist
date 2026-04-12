@@ -46,8 +46,24 @@ const sessionSchema = {
             comments: {
               type: 'string',
             },
-            nonConformity: {
-              type: 'string',
+            nonConformityDetails: {
+              type: 'object',
+              properties: {
+                description: {
+                  type: 'string',
+                },
+                riskLevel: {
+                  type: 'string',
+                  enum: ['Low', 'Medium', 'High', 'Critical'],
+                },
+                audioNonConformity: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                  },
+                },
+              },
+              additionalProperties: true,
             },
             evidence: {
               type: 'array',
@@ -56,12 +72,6 @@ const sessionSchema = {
               },
             },
             audioComments: {
-              type: 'array',
-              items: {
-                type: 'string',
-              },
-            },
-            audioNonConformity: {
               type: 'array',
               items: {
                 type: 'string',

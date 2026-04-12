@@ -205,12 +205,12 @@ describe('Session Store', () => {
         1: {
           id: '1',
           compliance: 'Compliant',
-          nonConformity: 'bla bla bla',
+          nonConformityDetails: { description: 'bla bla bla' },
         },
         2: {
           id: '2',
           compliance: 'Non-compliant',
-          nonConformity: 'bla bla bla',
+          nonConformityDetails: { description: 'bla bla bla', riskLevel: 'High' },
         },
       }
 
@@ -222,8 +222,8 @@ describe('Session Store', () => {
 
       await sessionStore.loadSession('VIG')
 
-      expect(sessionStore.responses['2'].nonConformity).toBeDefined()
-      expect(sessionStore.responses['1'].nonConformity).toBeUndefined()
+      expect(sessionStore.responses['2'].nonConformityDetails).toBeDefined()
+      expect(sessionStore.responses['1'].nonConformityDetails).toBeUndefined()
     })
   })
 
@@ -260,7 +260,7 @@ describe('Session Store', () => {
         id: '1',
         compliance: 'Compliant',
         comments: 'Test comments',
-        nonConformity: 'bla bla bla',
+        nonConformityDetails: { description: 'bla bla bla' },
         evidence: ['file1.txt'],
       }
 
@@ -281,20 +281,20 @@ describe('Session Store', () => {
         id: '1',
         compliance: 'Compliant',
         comments: 'Test comments',
-        nonConformity: 'bla bla bla',
+        nonConformityDetails: { description: 'bla bla bla' },
         evidence: ['file1.txt'],
       }
       sessionStore.responses['2'] = {
         id: '2',
         compliance: 'Non-compliant',
-        nonConformity: 'bla bla bla',
+        nonConformityDetails: { description: 'bla bla bla' },
         comments: 'Test comments',
         evidence: ['file2.txt'],
       }
       sessionStore.responses['3'] = {
         id: '2',
         comments: 'Test comments',
-        nonConformity: 'bla bla bla',
+        nonConformityDetails: { description: 'bla bla bla' },
         evidence: ['file2.txt'],
       }
       sessionStore.responses['4'] = {
@@ -306,9 +306,9 @@ describe('Session Store', () => {
 
       sessionStore.finalize()
 
-      expect(sessionStore.responses['1'].nonConformity).toBeUndefined()
-      expect(sessionStore.responses['2'].nonConformity).toBeDefined()
-      expect(sessionStore.responses['3'].nonConformity).toBeUndefined()
+      expect(sessionStore.responses['1'].nonConformityDetails).toBeUndefined()
+      expect(sessionStore.responses['2'].nonConformityDetails).toBeDefined()
+      expect(sessionStore.responses['3'].nonConformityDetails).toBeUndefined()
     })
   })
 })

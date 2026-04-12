@@ -92,6 +92,10 @@ const checklistSchema = {
           priorFindingId: {
             type: 'string',
           },
+          riskLevel: {
+            type: 'string',
+            enum: ['Low', 'Medium', 'High', 'Critical'],
+          },
         },
         required: ['id', 'topic', 'reference', 'question', 'verification'],
         additionalProperties: false,

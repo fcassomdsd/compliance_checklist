@@ -96,6 +96,10 @@ const checklistSchema = {
             type: 'string',
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
+          nominalRisklevel: {
+            type: 'string',
+            enum: ['Low', 'Medium', 'High', 'Critical'],
+          },
           evidence: {
             type: 'array',
             items: {
@@ -250,6 +254,13 @@ const normalizeCompliance = (value) => {
     return value
   }
   return 'Not applicable'
+}
+
+const normalizeRiskLevel = (value) => {
+  if (value === 'Low' || value === 'Medium' || value === 'High' || value === 'Critical') {
+    return value
+  }
+  return ''
 }
 
 const inferInspectionCode = (checklistObj) => {
@@ -435,6 +446,11 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
       }))
     }
 
+    const nominalRisklevel = normalizeRiskLevel(row?.riskLevel)
+    if (nominalRisklevel) {
+      item.nominalRisklevel = nominalRisklevel
+    }
+
     return item
   })
 
@@ -475,7 +491,9 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
         locationName:
           checklistPayload?.checklist?.locationName || safeString(checklistObj?.locationName),
         itemId: safeString(row?.id, `item-${index + 1}`),
-        description: safeString(response?.nonConformity || response?.comments || row?.question),
+        description: safeString(
+          response?.nonConformityDetails?.description || response?.comments || row?.question
+        ),
       },
     }
 
@@ -488,8 +506,10 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
 
     finding.finding.dateIssued = dateIssued
 
-    const riskLevel = safeString(response?.riskLevel || row?.riskLevel)
-    if (['Low', 'Medium', 'High', 'Critical'].includes(riskLevel)) {
+    const riskLevel = normalizeRiskLevel(
+      response?.nonConformityDetails?.riskLevel || row?.riskLevel
+    )
+    if (riskLevel) {
       finding.finding.riskLevel = riskLevel
     }
 

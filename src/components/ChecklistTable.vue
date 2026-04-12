@@ -3,9 +3,9 @@
     <colgroup>
       <col style="width: 5%" />
       <col style="width: 12%" />
+      <col style="width: 19%" />
       <col style="width: 20%" />
-      <col style="width: 21%" />
-      <col style="width: 12%" />
+      <col style="width: 14%" />
       <col style="width: 15%" />
       <col style="width: 15%" />
     </colgroup>
