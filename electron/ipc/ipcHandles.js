@@ -96,7 +96,7 @@ const checklistSchema = {
             type: 'string',
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
-          nominalRisklevel: {
+          nominalRiskLevel: {
             type: 'string',
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
@@ -446,9 +446,9 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
       }))
     }
 
-    const nominalRisklevel = normalizeRiskLevel(row?.riskLevel)
-    if (nominalRisklevel) {
-      item.nominalRisklevel = nominalRisklevel
+    const nominalRiskLevel = normalizeRiskLevel(row?.riskLevel)
+    if (nominalRiskLevel) {
+      item.nominalRiskLevel = nominalRiskLevel
     }
 
     return item

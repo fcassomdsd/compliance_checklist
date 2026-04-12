@@ -547,7 +547,7 @@ describe('ipcHandles', () => {
       ])
     })
 
-    it('maps checklist nominalRisklevel and finding riskLevel correctly', async () => {
+    it('maps checklist nominalRiskLevel and finding riskLevel correctly', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
@@ -610,8 +610,8 @@ describe('ipcHandles', () => {
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
       const findingsJson = JSON.parse(await zip.file('findings.json').async('string'))
 
-      expect(checklistJson.items[0].nominalRisklevel).toBe('High')
-      expect(checklistJson.items[1].nominalRisklevel).toBe('Medium')
+      expect(checklistJson.items[0].nominalRiskLevel).toBe('High')
+      expect(checklistJson.items[1].nominalRiskLevel).toBe('Medium')
       expect(findingsJson[0].finding.riskLevel).toBe('High')
       expect(findingsJson[1].finding.riskLevel).toBe('Critical')
     })
