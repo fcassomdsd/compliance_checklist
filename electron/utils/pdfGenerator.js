@@ -48,6 +48,9 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         )
       }
 
+      const normalizeRiskLevel = (value) =>
+        ['Low', 'Medium', 'High', 'Critical'].includes(value) ? value : 'Low'
+
       // Collect non-compliant findings
       const findings = []
       const validCompliance = ['Non-compliant']
@@ -67,12 +70,15 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
             : ''
           const guidanceText = row.reference?.guidance || ''
           const referenceText = [normativaText, guidanceText].filter(Boolean).join('\n')
+          const nominalRisk = normalizeRiskLevel(row?.riskLevel)
+          const assignedRisk = normalizeRiskLevel(sessionData.nonConformityDetails?.riskLevel || row?.riskLevel)
+          const description = sessionData.nonConformityDetails?.description || ''
           findings.push({
             code: questionCode,
             reference: referenceText,
             question: row.question || '',
             topic: row.topic || '',
-            nonConformity: sessionData.nonConformity || '',
+            nonConformity: `Nominal Risk: ${nominalRisk}\nAssigned Risk: ${assignedRisk}\nDescription: ${description}`,
             comments: sessionData.comments || '',
           })
         }

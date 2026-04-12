@@ -77,8 +77,11 @@ describe('session.js', () => {
           2: {
             id: '2',
             compliance: 'Non-compliant',
-            nonConformity: 'Description of issue',
-            audioNonConformity: ['audio-2-nonConformity-2023.webm'],
+            nonConformityDetails: {
+              description: 'Description of issue',
+              riskLevel: 'High',
+              audioNonConformity: ['audio-2-nonConformity-2023.webm'],
+            },
             evidence: ['file2.txt'],
           },
         },
@@ -86,7 +89,33 @@ describe('session.js', () => {
       const result = await parseSession(validJson)
       expect(result).toEqual(JSON.parse(validJson))
       expect(result.responses['1'].audioComments).toEqual(['audio-1-comments-2023.webm'])
-      expect(result.responses['2'].audioNonConformity).toEqual(['audio-2-nonConformity-2023.webm'])
+      expect(result.responses['2'].nonConformityDetails.audioNonConformity).toEqual(['audio-2-nonConformity-2023.webm'])
+    })
+
+    it('parses a valid session object with non-conformity details risk level', async () => {
+      const validJson = JSON.stringify({
+        summary: {
+          specialty: 'VIG',
+          finalized: false,
+          lastUpdated: '2023-01-01T10:00:00Z',
+        },
+        responses: {
+          'VIG-0001': {
+            id: '1',
+            code: 'VIG-0001',
+            compliance: 'Non-compliant',
+            nonConformityDetails: {
+              description: 'Issue description',
+              riskLevel: 'Critical',
+              pendingReview: true,
+            },
+          },
+        },
+      })
+
+      const result = await parseSession(validJson)
+      expect(result.responses['VIG-0001'].nonConformityDetails.riskLevel).toBe('Critical')
+      expect(result.responses['VIG-0001'].nonConformityDetails.pendingReview).toBe(true)
     })
 
     it('throws an error for a session object no summary', async () => {
@@ -157,7 +186,9 @@ describe('session.js', () => {
       },
       6: {
         evidence: ['Ex6.json', 'IHaveThree.txt', 'Ex4.json', 'Ex3.json'],
-        audioNonConformity: ['audio2.webm'],
+        nonConformityDetails: {
+          audioNonConformity: ['audio2.webm'],
+        },
         comments: 'a lot of evidence',
       },
     }

@@ -47,56 +47,14 @@
         <br />
       </label>
       <div class="non-conformity" :hidden="session.compliance != 'Non-compliant'">
-        <textarea
-          :name="`nonConformity-${domQuestionCode}`"
-          :value="session.nonConformity"
-          :disabled="isReadOnly"
-          placeholder="Describa la no conformidad"
-          @input="nonConformityChange($event)"
-        ></textarea>
-        <div class="audio-controls">
-          <button
-            :title="`${recordingNonConformity ? 'Stop' : 'Start'} Recording Non-conformity`"
-            :disabled="isReadOnly"
-            @click="toggleAudioRecordingNonConformity"
-            :class="{ recording: recordingNonConformity }"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
-              />
-              <path
-                d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"
-              />
-              <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z" />
-              <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z" />
-            </svg>
-          </button>
-          <div class="audio-list">
-            <div
-              v-for="(audio, index) in session.audioNonConformity || []"
-              :key="index"
-              class="audio-item"
-            >
-              <button @click="playAudio(audio)" title="Play recording">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </button>
-              <span>{{ audio }}</span>
-              <button
-                @click="removeAudio(index, 'nonConformity')"
-                :disabled="isReadOnly"
-                title="Delete recording"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
+        <button class="nc-modal-trigger" @click="openNonConformityModal">
+          {{ isReadOnly ? 'View Non-conformity' : 'Edit Non-conformity' }}
+        </button>
+        <div class="nc-summary">
+          <span class="risk-pill">{{ assignedRiskLevel }}</span>
+          <span class="nc-summary-text">
+            {{ nonConformityDescription ? 'Description added' : 'No description yet' }}
+          </span>
         </div>
       </div>
     </td>
@@ -218,6 +176,83 @@
       <button @click="showNormativaModal = false">Close</button>
     </div>
   </div>
+  <div v-if="showNonConformityModal" class="nc-modal-overlay" @click.self="closeNonConformityModal">
+    <div class="nc-modal">
+      <div class="nc-modal-header">
+        <h3>Non-conformity details</h3>
+        <button class="nc-close" @click="closeNonConformityModal">Close</button>
+      </div>
+      <div class="non-conformity-meta">
+        <div class="risk-row nominal-risk">
+          <span class="risk-label">Nominal Risk</span>
+          <span class="risk-value">{{ nominalRiskLevel }}</span>
+        </div>
+        <label class="risk-row" :for="`riskLevel-${domQuestionCode}`">
+          <span class="risk-label">Assigned Risk</span>
+          <select
+            :id="`riskLevel-${domQuestionCode}`"
+            :name="`riskLevel-${domQuestionCode}`"
+            :value="assignedRiskLevel"
+            :disabled="isReadOnly"
+            @change="riskLevelChange($event)"
+          >
+            <option v-for="level in riskLevels" :key="level" :value="level">{{ level }}</option>
+          </select>
+        </label>
+      </div>
+      <textarea
+        :name="`nonConformity-${domQuestionCode}`"
+        :value="nonConformityDescription"
+        :disabled="isReadOnly"
+        placeholder="Describa la no conformidad"
+        @input="nonConformityChange($event)"
+      ></textarea>
+      <div class="audio-controls">
+        <button
+          :title="`${recordingNonConformity ? 'Stop' : 'Start'} Recording Non-conformity`"
+          :disabled="isReadOnly"
+          @click="toggleAudioRecordingNonConformity"
+          :class="{ recording: recordingNonConformity }"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"
+            />
+            <path
+              d="M17 16.91c-1.48 1.46-3.51 2.36-5.7 2.36-2.19 0-4.22-.9-5.7-2.36m8.02-13.26l1.41 1.41A6.977 6.977 0 0 1 20 11h2c0-2.46-.98-4.7-2.58-6.35z"
+            />
+            <path d="M4.41 4.41L3 5.83A6.977 6.977 0 0 0 4 11H2c0-2.46.98-4.7 2.41-6.35z" />
+            <path d="M9 18c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z" />
+          </svg>
+        </button>
+        <div class="audio-list">
+          <div
+            v-for="(audio, index) in session.nonConformityDetails?.audioNonConformity || []"
+            :key="index"
+            class="audio-item"
+          >
+            <button @click="playAudio(audio)" title="Play recording">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+            <span>{{ audio }}</span>
+            <button
+              @click="removeAudio(index, 'nonConformity')"
+              :disabled="isReadOnly"
+              title="Delete recording"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -250,6 +285,23 @@
     'Non-compliant': 'border : 3px solid #FF5555',
   })
 
+  const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
+  const riskLevels = ref(validRiskLevels)
+
+  const normalizeRiskLevel = (value) =>
+    typeof value == 'string' && validRiskLevels.includes(value) ? value : 'Low'
+
+  const nominalRiskLevel = computed(() => normalizeRiskLevel(props.row?.riskLevel))
+
+  const assignedRiskLevel = computed(() => {
+    const detailsLevel = props.session?.nonConformityDetails?.riskLevel
+    return normalizeRiskLevel(detailsLevel || props.row?.riskLevel)
+  })
+
+  const nonConformityDescription = computed(
+    () => props.session?.nonConformityDetails?.description || ''
+  )
+
   const domQuestionCode = String(props.questionCode).replace(/[^A-Za-z0-9_-]/g, '-')
   const fileQuestionCode = String(props.questionCode).replace(/[^A-Za-z0-9._-]/g, '-')
 
@@ -265,10 +317,19 @@
   // Normativa detail modal state
   const showNormativaModal = ref(false)
   const selectedNormativa = ref(null)
+  const showNonConformityModal = ref(false)
 
   const openNormativa = (normativa) => {
     selectedNormativa.value = normativa
     showNormativaModal.value = true
+  }
+
+  const openNonConformityModal = () => {
+    showNonConformityModal.value = true
+  }
+
+  const closeNonConformityModal = () => {
+    showNonConformityModal.value = false
   }
 
   // Audio recording state
@@ -288,8 +349,24 @@
     sessionStore.updateSession(props.questionCode, props.row.id, field, value, props.row.code)
   }
 
+  const updateNonConformityDetail = (field, value) => {
+    const details = {
+      ...(props.session?.nonConformityDetails || {}),
+      [field]: value,
+    }
+    updateResponse('nonConformityDetails', details)
+  }
+
   const radioChange = (event) => {
-    updateResponse('compliance', event.target.value)
+    const complianceValue = event.target.value
+    updateResponse('compliance', complianceValue)
+
+    if (complianceValue == 'Non-compliant') {
+      const defaultRisk = assignedRiskLevel.value
+      updateNonConformityDetail('riskLevel', defaultRisk)
+    } else {
+      closeNonConformityModal()
+    }
   }
 
   const textAreaChange = (event) => {
@@ -297,7 +374,12 @@
   }
 
   const nonConformityChange = (event) => {
-    updateResponse('nonConformity', event.target.value)
+    updateNonConformityDetail('description', event.target.value)
+  }
+
+  const riskLevelChange = (event) => {
+    const nextRiskLevel = normalizeRiskLevel(event.target.value)
+    updateNonConformityDetail('riskLevel', nextRiskLevel)
   }
 
   const toggleAudioRecordingComments = async () => {
@@ -375,14 +457,19 @@
       }
 
       // Add to audio list in session
-      const audioFieldName = field === 'comments' ? 'audioComments' : 'audioNonConformity'
-      const currentAudioList = props.session[audioFieldName] || []
+      const currentAudioList = field === 'comments'
+        ? [...(props.session['audioComments'] || [])]
+        : [...(props.session?.nonConformityDetails?.audioNonConformity || [])]
       currentAudioList.push(fileName)
 
       // Update count in audio store
       audioStore.addCount(fileName)
 
-      updateResponse(audioFieldName, currentAudioList)
+      if (field === 'comments') {
+        updateResponse('audioComments', currentAudioList)
+      } else {
+        updateNonConformityDetail('audioNonConformity', currentAudioList)
+      }
       toast.success('Audio recording saved')
     } catch (error) {
       toast.error('Failed to save audio: ' + error.message)
@@ -407,8 +494,9 @@
   }
 
   const removeAudio = async (index, field) => {
-    const audioFieldName = field === 'comments' ? 'audioComments' : 'audioNonConformity'
-    const currentAudioList = props.session[audioFieldName] || []
+    const currentAudioList = field === 'comments'
+      ? [...(props.session['audioComments'] || [])]
+      : [...(props.session?.nonConformityDetails?.audioNonConformity || [])]
     const fileName = currentAudioList[index]
 
     try {
@@ -422,7 +510,11 @@
 
       // Remove from list
       const updatedAudioList = currentAudioList.filter((_, i) => i !== index)
-      updateResponse(audioFieldName, updatedAudioList)
+      if (field === 'comments') {
+        updateResponse('audioComments', updatedAudioList)
+      } else {
+        updateNonConformityDetail('audioNonConformity', updatedAudioList)
+      }
       toast.success('Audio recording removed')
     } catch (error) {
       toast.error('Failed to delete audio: ' + error.message)
@@ -537,6 +629,72 @@
     border-radius: 10px;
     padding: 0.15rem 0.4rem;
     cursor: pointer;
+  }
+
+  .nc-modal-trigger {
+    width: 100%;
+    margin-top: 0.35rem;
+    border: 1px solid #1e88e5;
+    background: #fff;
+    color: #1e88e5;
+    border-radius: 6px;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .nc-summary {
+    margin-top: 0.35rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .risk-pill {
+    background: #e8f1fb;
+    color: #0d4d8b;
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .nc-summary-text {
+    font-size: 0.72rem;
+    color: #555;
+  }
+
+  .non-conformity-meta {
+    display: grid;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .risk-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .risk-label {
+    font-weight: 600;
+    color: #3f3f3f;
+  }
+
+  .nominal-risk .risk-value {
+    font-weight: 600;
+    color: #0d4d8b;
+  }
+
+  .risk-row select {
+    min-width: 8rem;
+    border: 1px solid #c7c7c7;
+    border-radius: 4px;
+    padding: 0.2rem 0.4rem;
+    background: #fff;
   }
 
   .missing a {
@@ -767,5 +925,50 @@
 
   .normativa-modal button:hover {
     background-color: #1565c0;
+  }
+
+  .nc-modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 120;
+  }
+
+  .nc-modal {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    width: 560px;
+    max-width: 92vw;
+    padding: 18px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .nc-modal textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
+
+  .nc-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .nc-modal-header h3 {
+    margin: 0;
+  }
+
+  .nc-close {
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 6px;
+    padding: 0.35rem 0.65rem;
+    cursor: pointer;
   }
 </style>

@@ -424,7 +424,7 @@ describe('ipcHandles', () => {
           1: {
             id: 'q1',
             compliance: 'Non-compliant',
-            nonConformity: 'Issue found',
+            nonConformityDetails: { description: 'Issue found' },
           },
         },
       }
@@ -465,7 +465,13 @@ describe('ipcHandles', () => {
       }
       const session = {
         summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
-        responses: { 1: { id: 'q1', compliance: 'Non-compliant', nonConformity: 'Issue found' } },
+        responses: {
+          1: {
+            id: 'q1',
+            compliance: 'Non-compliant',
+            nonConformityDetails: { description: 'Issue found' },
+          },
+        },
       }
 
       await expect(
@@ -539,6 +545,75 @@ describe('ipcHandles', () => {
           evidenceSource: 'note.pdf',
         },
       ])
+    })
+
+    it('maps checklist nominalRiskLevel and finding riskLevel correctly', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const checklist = {
+        inspection: 'MDPP-2026-01',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
+        specialtyCode: 'VIG',
+        specialtyName: 'Sistemas de Vigilancia',
+        providerId: 'provider-1',
+        locationId: 'MDPP',
+        locationName: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [
+          {
+            id: 'q1',
+            code: 'VIG-0001',
+            question: 'Question 1?',
+            verification: 'Verify 1',
+            riskLevel: 'High',
+          },
+          {
+            id: 'q2',
+            code: 'VIG-0002',
+            question: 'Question 2?',
+            verification: 'Verify 2',
+            riskLevel: 'Medium',
+          },
+        ],
+      }
+
+      const session = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          'VIG-0001': {
+            id: 'q1',
+            code: 'VIG-0001',
+            compliance: 'Non-compliant',
+            nonConformityDetails: { description: 'Issue 1' },
+          },
+          'VIG-0002': {
+            id: 'q2',
+            code: 'VIG-0002',
+            compliance: 'Non-compliant',
+            nonConformityDetails: { description: 'Issue 2', riskLevel: 'Critical' },
+          },
+        },
+      }
+
+      await handles['export-inspection-payload']({}, {
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+      })
+
+      const zipBuffer = fileOps.saveFile.mock.calls[0][1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
+      const findingsJson = JSON.parse(await zip.file('findings.json').async('string'))
+
+      expect(checklistJson.items[0].nominalRiskLevel).toBe('High')
+      expect(checklistJson.items[1].nominalRiskLevel).toBe('Medium')
+      expect(findingsJson[0].finding.riskLevel).toBe('High')
+      expect(findingsJson[1].finding.riskLevel).toBe('Critical')
     })
   })
 

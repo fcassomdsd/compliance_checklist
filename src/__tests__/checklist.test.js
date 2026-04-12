@@ -131,4 +131,24 @@ describe('checklist.js', () => {
     const result = parseChecklist(validJson)
     expect(result.questions[0].priorFindingId).toBe('MDPP-VIG-2026-01')
   })
+
+  it('parses a checklist question with riskLevel', async () => {
+    const validJson = JSON.stringify({
+      specialtyName: 'VIG',
+      questions: [
+        {
+          id: '1',
+          code: 'VIG-0001',
+          topic: 'Topic 1',
+          reference: { normativa: {}, guidance: 'GM only text' },
+          question: 'Question 1',
+          verification: 'Verification 1',
+          riskLevel: 'High',
+        },
+      ],
+    })
+
+    const result = parseChecklist(validJson)
+    expect(result.questions[0].riskLevel).toBe('High')
+  })
 })
