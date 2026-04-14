@@ -70,6 +70,8 @@ describe('App.vue', () => {
       showFinalize: vi.fn(),
       exportChecklist: vi.fn(),
       exportUploadPayload: vi.fn(),
+      removeInspectionSession: vi.fn(),
+      removeFollowUpSession: vi.fn(),
       viewGeneratedReport: vi.fn(),
       checkDefaultPath: vi.fn(),
       confirmModal: vi.fn(),
@@ -78,6 +80,7 @@ describe('App.vue', () => {
 
     mockSession = {
       summary: { finalized: false, generalComments: '' },
+      responses: {},
       updateGeneralComments: vi.fn(),
       loadSession: vi.fn(),
     }
@@ -85,6 +88,7 @@ describe('App.vue', () => {
 
     mockFollowUp = {
       summary: { finalized: false },
+      responses: {},
       loadFollowUpSession: vi.fn(),
       finalize: vi.fn(),
     }
@@ -192,5 +196,44 @@ describe('App.vue', () => {
     wrapper = mount(App, { global: { plugins: [pinia] } })
 
     expect(wrapper.find('#exportUploadBtn').text()).toBe('Upload Follow-up')
+  })
+
+  it('disables remove button when inspection session is touched and not uploaded', async () => {
+    mockStore.specialty = 'VIG'
+    mockStore.activeWorkspace = {
+      locationId: 'MDSD',
+      checklistTouched: true,
+      checklistUploaded: false,
+      followUpTouched: false,
+      followUpUploaded: false,
+    }
+    wrapper.unmount()
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    await flushPromises()
+
+    expect(wrapper.find('#removeSessionBtn').attributes('disabled')).toBeDefined()
+  })
+
+  it('enables and routes remove button for uploaded follow-up session', async () => {
+    mockStore.uiMode = 'followUp'
+    mockStore.specialty = 'VIG'
+    mockStore.activeWorkspace = {
+      locationId: 'MDSD',
+      checklistTouched: false,
+      checklistUploaded: false,
+      followUpTouched: true,
+      followUpUploaded: true,
+    }
+    wrapper.unmount()
+    wrapper = mount(App, { global: { plugins: [pinia] } })
+    await flushPromises()
+
+    const removeBtn = wrapper.find('#removeSessionBtn')
+    expect(removeBtn.attributes('disabled')).toBeUndefined()
+    expect(removeBtn.text()).toBe('Remove Follow-up Session')
+
+    await removeBtn.trigger('click')
+    expect(mockStore.removeFollowUpSession).toHaveBeenCalledTimes(1)
+    expect(mockStore.removeInspectionSession).not.toHaveBeenCalled()
   })
 })

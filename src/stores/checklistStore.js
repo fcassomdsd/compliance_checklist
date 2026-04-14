@@ -143,6 +143,14 @@ export const useChecklistStore = defineStore('checklist', () => {
         ...workspace,
         displayName: getWorkspaceDisplayName(workspace),
       }))
+      if (activeWorkspaceKey.value) {
+        const refreshedActive = workspaceList.value.find(
+          (workspace) => workspace.workspaceKey == activeWorkspaceKey.value
+        )
+        if (refreshedActive) {
+          activeWorkspace.value = refreshedActive
+        }
+      }
     } catch (error) {
       workspaceList.value = []
       toast.error(`Failed to load workspaces: ${error.message}`)
@@ -275,6 +283,7 @@ export const useChecklistStore = defineStore('checklist', () => {
           specialty.value,
           activeWorkspace.value?.locationId || null
         )
+        await loadWorkspaces()
         toast.success('Follow-up payload exported and uploaded successfully')
       } else {
         if (checklist.value.questions.length == 0) {
@@ -289,6 +298,7 @@ export const useChecklistStore = defineStore('checklist', () => {
           activeWorkspace.value?.locationId || null
         )
         await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
+        await loadWorkspaces()
         toast.success('Payload exported and uploaded successfully')
       }
     } catch (error) {
@@ -332,6 +342,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         draftStatus: 'draft',
         checklistTouched: false,
         followUpTouched: false,
+        checklistUploaded: false,
+        followUpUploaded: false,
         checklistPresent: true,
         findingsPresent: false,
         updatedAt: new Date().toISOString(),
@@ -344,6 +356,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         draftStatus: 'draft',
         checklistTouched: false,
         followUpTouched: false,
+        checklistUploaded: false,
+        followUpUploaded: false,
         checklistPresent: true,
         findingsPresent: false,
       })
@@ -394,6 +408,8 @@ export const useChecklistStore = defineStore('checklist', () => {
             draftStatus: targetWorkspace.draftStatus || 'draft',
             checklistTouched: Boolean(targetWorkspace.checklistTouched),
             followUpTouched: Boolean(targetWorkspace.followUpTouched),
+            checklistUploaded: Boolean(targetWorkspace.checklistUploaded),
+            followUpUploaded: Boolean(targetWorkspace.followUpUploaded),
             checklistPresent: true,
             findingsPresent: Boolean(targetWorkspace.findingsPresent),
             updatedAt: new Date().toISOString(),
@@ -406,6 +422,8 @@ export const useChecklistStore = defineStore('checklist', () => {
             draftStatus: targetWorkspace.draftStatus || 'draft',
             checklistTouched: Boolean(targetWorkspace.checklistTouched),
             followUpTouched: Boolean(targetWorkspace.followUpTouched),
+            checklistUploaded: Boolean(targetWorkspace.checklistUploaded),
+            followUpUploaded: Boolean(targetWorkspace.followUpUploaded),
             checklistPresent: true,
             findingsPresent: Boolean(targetWorkspace.findingsPresent),
           })
@@ -464,6 +482,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         draftStatus: 'draft',
         checklistTouched: touchedState.checklistTouched,
         followUpTouched: false,
+        checklistUploaded: false,
+        followUpUploaded: false,
         checklistPresent: false,
         findingsPresent: true,
         updatedAt: new Date().toISOString(),
@@ -477,6 +497,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         draftStatus: 'draft',
         checklistTouched: touchedState.checklistTouched,
         followUpTouched: false,
+        checklistUploaded: false,
+        followUpUploaded: false,
         checklistPresent: false,
         findingsPresent: true,
       })
@@ -510,6 +532,68 @@ export const useChecklistStore = defineStore('checklist', () => {
       await window.electronAPI.openFile(generatedReportPath.value)
     } catch (error) {
       toast.error('Could not open report: ' + error.message)
+    }
+  }
+
+  const removeInspectionSession = async () => {
+    try {
+      if (!activeWorkspace.value?.locationId || !specialty.value || specialty.value == 'NONE') {
+        throw new Error('No active workspace selected')
+      }
+
+      const result = await fs.removeInspectionSession(specialty.value, activeWorkspace.value.locationId)
+      await loadWorkspaces()
+
+      if (result.workspaceDeleted) {
+        activeWorkspaceKey.value = ''
+        activeWorkspace.value = null
+        checklist.value = null
+        checklistLoaded.value = false
+        findings.value = []
+        findingsLoaded.value = false
+        specialty.value = 'NONE'
+        currentPath.value = ''
+        toast.success('Inspection session removed and workspace deleted')
+        return result
+      }
+
+      await sessionStore.loadSession(specialty.value, activeWorkspace.value.locationId)
+      toast.success('Inspection session removed')
+      return result
+    } catch (error) {
+      toast.error(error.message)
+      throw error
+    }
+  }
+
+  const removeFollowUpSession = async () => {
+    try {
+      if (!activeWorkspace.value?.locationId || !specialty.value || specialty.value == 'NONE') {
+        throw new Error('No active workspace selected')
+      }
+
+      const result = await fs.removeFollowUpSession(specialty.value, activeWorkspace.value.locationId)
+      await loadWorkspaces()
+
+      if (result.workspaceDeleted) {
+        activeWorkspaceKey.value = ''
+        activeWorkspace.value = null
+        checklist.value = null
+        checklistLoaded.value = false
+        findings.value = []
+        findingsLoaded.value = false
+        specialty.value = 'NONE'
+        currentPath.value = ''
+        toast.success('Follow-up session removed and workspace deleted')
+        return result
+      }
+
+      await followUpStore.loadFollowUpSession(specialty.value, activeWorkspace.value.locationId)
+      toast.success('Follow-up session removed')
+      return result
+    } catch (error) {
+      toast.error(error.message)
+      throw error
     }
   }
 
@@ -548,6 +632,8 @@ export const useChecklistStore = defineStore('checklist', () => {
     confirmModal,
     exportChecklist,
     exportUploadPayload,
+    removeInspectionSession,
+    removeFollowUpSession,
     viewGeneratedReport,
     importChecklist,
     importFindings,

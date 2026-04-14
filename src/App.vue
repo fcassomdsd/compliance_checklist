@@ -66,6 +66,9 @@
       >
         {{ store.isUploading ? 'Uploading...' : uploadLabel }}
       </button>
+      <button id="removeSessionBtn" class="danger-action" :disabled="removeSessionDisabled" @click="onRemoveSession">
+        {{ removeSessionLabel }}
+      </button>
       <button
         id="viewReportBtn"
         :disabled="!store.generatedReportPath"
@@ -277,6 +280,14 @@
     }
   }
 
+  const onRemoveSession = async () => {
+    if (store.uiMode == 'inspection') {
+      await store.removeInspectionSession()
+      return
+    }
+    await store.removeFollowUpSession()
+  }
+
   const importLabel = computed(() => {
     if (store.isImporting || store.isImportingFindings) {
       return 'Importing...'
@@ -320,6 +331,43 @@
   )
 
   const uploadLabel = computed(() => (store.uiMode == 'followUp' ? 'Upload Follow-up' : 'Upload'))
+
+  const localInspectionTouched = computed(() => {
+    const responsesCount = Object.keys(sessionStore.responses || {}).length
+    const generalComments = String(sessionStore.summary?.generalComments || '').trim()
+    return responsesCount > 0 || generalComments.length > 0
+  })
+
+  const localFollowUpTouched = computed(() => Object.keys(followUpStore.responses || {}).length > 0)
+
+  const canRemoveInspectionSession = computed(() => {
+    if (!store.activeWorkspace?.locationId || !store.specialty || store.specialty == 'NONE') {
+      return false
+    }
+    const touched = Boolean(store.activeWorkspace?.checklistTouched) || localInspectionTouched.value
+    const uploaded = Boolean(store.activeWorkspace?.checklistUploaded)
+    return uploaded || !touched
+  })
+
+  const canRemoveFollowUpSession = computed(() => {
+    if (!store.activeWorkspace?.locationId || !store.specialty || store.specialty == 'NONE') {
+      return false
+    }
+    const touched = Boolean(store.activeWorkspace?.followUpTouched) || localFollowUpTouched.value
+    const uploaded = Boolean(store.activeWorkspace?.followUpUploaded)
+    return uploaded || !touched
+  })
+
+  const removeSessionDisabled = computed(() => {
+    if (store.uiMode == 'inspection') {
+      return !canRemoveInspectionSession.value || store.isUploading
+    }
+    return !canRemoveFollowUpSession.value || store.isUploading
+  })
+
+  const removeSessionLabel = computed(() =>
+    store.uiMode == 'inspection' ? 'Remove Inspection Session' : 'Remove Follow-up Session'
+  )
 
   watch(
     () => store.uiMode,
@@ -457,6 +505,16 @@
   }
   .offline-action {
     color: #b91c1c;
+  }
+  .danger-action {
+    background-color: #b91c1c;
+    border-color: #991b1b;
+    color: #fff;
+  }
+  .danger-action:disabled {
+    background-color: #e5e7eb;
+    border-color: #d1d5db;
+    color: #6b7280;
   }
   .import-modal {
     width: min(520px, 94vw);

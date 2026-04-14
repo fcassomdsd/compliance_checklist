@@ -1,0 +1,5 @@
+## 2026-04-14
+
+- Model update: renamed finding property `vso:openedDate` to `vso:dateIssued` in the Alfresco model for naming uniformity.
+- Contract note: integrations and payload mappings should use `dateIssued` as the canonical field name for finding issue date.
+

@@ -12,6 +12,10 @@ export const createFileService = () => {
   const WORKSPACE_META_FILE = 'workspace.json'
   const WORKSPACES_FILE = 'workspaces.json'
 
+  const INSPECTION_PAYLOAD_PREFIX = 'inspection_payload_'
+  const FOLLOWUP_PAYLOAD_PREFIX = 'followup_payload_'
+  const FINDINGS_REPORT_PREFIX = 'reporte_hallazgos_'
+
   const ensureWorkspaceLeg = (value, label) => {
     if (typeof value != 'string' || value.trim().length == 0) {
       throw new Error(`Invalid ${label}: ${value}`)
@@ -767,6 +771,8 @@ export const createFileService = () => {
         draftStatus: entry?.draftStatus || existingEntry?.draftStatus || 'draft',
         checklistTouched: resolveBoolean('checklistTouched', false),
         followUpTouched: resolveBoolean('followUpTouched', false),
+        checklistUploaded: resolveBoolean('checklistUploaded', false),
+        followUpUploaded: resolveBoolean('followUpUploaded', false),
         checklistPresent: resolveBoolean('checklistPresent', false),
         findingsPresent: resolveBoolean('findingsPresent', false),
         updatedAt: new Date().toISOString(),
@@ -785,6 +791,20 @@ export const createFileService = () => {
       return normalizedEntry
     } catch (error) {
       throw new Error(`upsertWorkspaceRegistryEntry: could not update workspace registry: ${error.message}`)
+    }
+  }
+
+  const removeWorkspaceRegistryEntry = async (specialtyCode, locationId) => {
+    try {
+      const workspaceKey = getWorkspaceKey(locationId, specialtyCode)
+      const registry = await loadWorkspaceRegistry()
+      const filtered = registry.filter((entry) => entry.workspaceKey != workspaceKey)
+      if (filtered.length != registry.length) {
+        await saveWorkspaceRegistry(filtered)
+      }
+      return true
+    } catch (error) {
+      throw new Error(`removeWorkspaceRegistryEntry: could not update workspace registry: ${error.message}`)
     }
   }
 
@@ -825,6 +845,12 @@ export const createFileService = () => {
 
       const metadata = (await loadWorkspaceMetadata(specialtyCode, locationId)) || {}
       metadata[touchedKey] = true
+      if (touchedKey == 'checklistTouched') {
+        metadata.checklistUploaded = false
+      }
+      if (touchedKey == 'followUpTouched') {
+        metadata.followUpUploaded = false
+      }
       metadata.updatedAt = new Date().toISOString()
       await saveWorkspaceMetadata(specialtyCode, locationId, metadata)
 
@@ -836,6 +862,8 @@ export const createFileService = () => {
         draftStatus: metadata.draftStatus || 'draft',
         checklistTouched: touchedKey == 'checklistTouched' ? true : Boolean(metadata.checklistTouched),
         followUpTouched: touchedKey == 'followUpTouched' ? true : Boolean(metadata.followUpTouched),
+        checklistUploaded: Boolean(metadata.checklistUploaded),
+        followUpUploaded: Boolean(metadata.followUpUploaded),
       })
 
       return registryEntry
@@ -912,6 +940,32 @@ export const createFileService = () => {
       }
 
       const result = await window.electronAPI.exportInspectionPayload(payload)
+
+      if (resolvedLocationId) {
+        const metadata = (await loadWorkspaceMetadata(specialty, resolvedLocationId)) || {}
+        metadata.specialtyCode = metadata.specialtyCode || specialty
+        metadata.specialtyName = metadata.specialtyName || specialty
+        metadata.locationId = metadata.locationId || resolvedLocationId
+        metadata.locationName = metadata.locationName || resolvedLocationId
+        metadata.checklistUploaded = true
+        metadata.updatedAt = new Date().toISOString()
+        await saveWorkspaceMetadata(specialty, resolvedLocationId, metadata)
+
+        await upsertWorkspaceRegistryEntry({
+          specialtyCode: specialty,
+          specialtyName: metadata.specialtyName,
+          locationId: resolvedLocationId,
+          locationName: metadata.locationName,
+          draftStatus: metadata.draftStatus || 'draft',
+          checklistTouched: Boolean(metadata.checklistTouched),
+          followUpTouched: Boolean(metadata.followUpTouched),
+          checklistUploaded: true,
+          followUpUploaded: Boolean(metadata.followUpUploaded),
+          checklistPresent: metadata.checklistPresent,
+          findingsPresent: metadata.findingsPresent,
+        })
+      }
+
       console.log('exportInspectionPayload: payload exported and uploaded successfully')
       return result
     } catch (error) {
@@ -934,6 +988,32 @@ export const createFileService = () => {
         specialty,
         locationId,
       })
+
+      if (locationId) {
+        const metadata = (await loadWorkspaceMetadata(specialty, locationId)) || {}
+        metadata.specialtyCode = metadata.specialtyCode || specialty
+        metadata.specialtyName = metadata.specialtyName || specialty
+        metadata.locationId = metadata.locationId || locationId
+        metadata.locationName = metadata.locationName || locationId
+        metadata.followUpUploaded = true
+        metadata.updatedAt = new Date().toISOString()
+        await saveWorkspaceMetadata(specialty, locationId, metadata)
+
+        await upsertWorkspaceRegistryEntry({
+          specialtyCode: specialty,
+          specialtyName: metadata.specialtyName,
+          locationId,
+          locationName: metadata.locationName,
+          draftStatus: metadata.draftStatus || 'draft',
+          checklistTouched: Boolean(metadata.checklistTouched),
+          followUpTouched: Boolean(metadata.followUpTouched),
+          checklistUploaded: Boolean(metadata.checklistUploaded),
+          followUpUploaded: true,
+          checklistPresent: metadata.checklistPresent,
+          findingsPresent: metadata.findingsPresent,
+        })
+      }
+
       console.log('exportFollowUpPayload: payload exported and uploaded successfully')
       return result
     } catch (error) {
@@ -1051,6 +1131,184 @@ export const createFileService = () => {
       
       return { success: true, message: 'Default root created successfully' }
   }
+
+  const getWorkspaceSessionState = async (specialtyCode, locationId) => {
+    const metadata = (await loadWorkspaceMetadata(specialtyCode, locationId)) || {}
+    const registry = await loadWorkspaceRegistry()
+    const workspaceKey = getWorkspaceKey(locationId, specialtyCode)
+    const registryEntry = registry.find((entry) => entry.workspaceKey == workspaceKey) || {}
+
+    const resolveBool = (key, fallback = false) => {
+      if (typeof metadata?.[key] == 'boolean') {
+        return metadata[key]
+      }
+      if (typeof registryEntry?.[key] == 'boolean') {
+        return registryEntry[key]
+      }
+      return fallback
+    }
+
+    return {
+      metadata,
+      checklistTouched: resolveBool('checklistTouched', false),
+      followUpTouched: resolveBool('followUpTouched', false),
+      checklistUploaded: resolveBool('checklistUploaded', false),
+      followUpUploaded: resolveBool('followUpUploaded', false),
+    }
+  }
+
+  const removeWorkspaceArtifactsByPrefix = async (workspaceLegs, prefixes) => {
+    try {
+      const workspaceFiles = await window.electronAPI.listPath(DEFAULT_ROOT, ...workspaceLegs)
+      const targets = workspaceFiles.filter(
+        (entry) =>
+          typeof entry?.name == 'string' &&
+          prefixes.some((prefix) => entry.name.startsWith(prefix))
+      )
+
+      await Promise.all(
+        targets.map((entry) => window.electronAPI.deleteFile(DEFAULT_ROOT, ...workspaceLegs, entry.name))
+      )
+    } catch {
+      // Ignore list/delete errors for optional artifacts.
+    }
+  }
+
+  const removeInspectionSession = async (specialtyCode, locationId = null) => {
+    try {
+      if (!specialtyCode || !locationId) {
+        throw new Error('Missing required parameters: specialtyCode, locationId')
+      }
+
+      const paths = getWorkspacePaths(specialtyCode, locationId)
+      const state = await getWorkspaceSessionState(specialtyCode, locationId)
+      const canRemove = state.checklistUploaded || !state.checklistTouched
+      if (!canRemove) {
+        throw new Error('Inspection session cannot be removed until it is uploaded or remains untouched')
+      }
+
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.session)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.evidenceDir)) {
+        await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.evidenceDir)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.audioDir)) {
+        await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.audioDir)
+      }
+
+      await removeWorkspaceArtifactsByPrefix(paths.legs, [
+        INSPECTION_PAYLOAD_PREFIX,
+        FINDINGS_REPORT_PREFIX,
+      ])
+
+      const hasInspectionSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)
+      const hasFollowUpSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)
+
+      if (!hasInspectionSession && !hasFollowUpSession) {
+        if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.legs)) {
+          await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.legs)
+        }
+        await removeWorkspaceRegistryEntry(specialtyCode, locationId)
+        return { removed: true, workspaceDeleted: true }
+      }
+
+      const metadata = {
+        ...state.metadata,
+        specialtyCode: state.metadata?.specialtyCode || specialtyCode,
+        specialtyName: state.metadata?.specialtyName || specialtyCode,
+        locationId: state.metadata?.locationId || locationId,
+        locationName: state.metadata?.locationName || locationId,
+        checklistTouched: false,
+        checklistUploaded: false,
+        updatedAt: new Date().toISOString(),
+      }
+
+      await saveWorkspaceMetadata(specialtyCode, locationId, metadata)
+      await upsertWorkspaceRegistryEntry({
+        specialtyCode,
+        specialtyName: metadata.specialtyName,
+        locationId,
+        locationName: metadata.locationName,
+        draftStatus: metadata.draftStatus || 'draft',
+        checklistTouched: false,
+        followUpTouched: state.followUpTouched,
+        checklistUploaded: false,
+        followUpUploaded: state.followUpUploaded,
+        checklistPresent: metadata.checklistPresent,
+        findingsPresent: metadata.findingsPresent,
+      })
+
+      return { removed: true, workspaceDeleted: false }
+    } catch (error) {
+      throw new Error(`removeInspectionSession: could not remove inspection session: ${error.message}`)
+    }
+  }
+
+  const removeFollowUpSession = async (specialtyCode, locationId = null) => {
+    try {
+      if (!specialtyCode || !locationId) {
+        throw new Error('Missing required parameters: specialtyCode, locationId')
+      }
+
+      const paths = getWorkspacePaths(specialtyCode, locationId)
+      const state = await getWorkspaceSessionState(specialtyCode, locationId)
+      const canRemove = state.followUpUploaded || !state.followUpTouched
+      if (!canRemove) {
+        throw new Error('Follow-up session cannot be removed until it is uploaded or remains untouched')
+      }
+
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.followUpSession)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpEvidenceDir)) {
+        await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
+      }
+
+      await removeWorkspaceArtifactsByPrefix(paths.legs, [FOLLOWUP_PAYLOAD_PREFIX])
+
+      const hasInspectionSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)
+      const hasFollowUpSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)
+
+      if (!hasInspectionSession && !hasFollowUpSession) {
+        if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.legs)) {
+          await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.legs)
+        }
+        await removeWorkspaceRegistryEntry(specialtyCode, locationId)
+        return { removed: true, workspaceDeleted: true }
+      }
+
+      const metadata = {
+        ...state.metadata,
+        specialtyCode: state.metadata?.specialtyCode || specialtyCode,
+        specialtyName: state.metadata?.specialtyName || specialtyCode,
+        locationId: state.metadata?.locationId || locationId,
+        locationName: state.metadata?.locationName || locationId,
+        followUpTouched: false,
+        followUpUploaded: false,
+        updatedAt: new Date().toISOString(),
+      }
+
+      await saveWorkspaceMetadata(specialtyCode, locationId, metadata)
+      await upsertWorkspaceRegistryEntry({
+        specialtyCode,
+        specialtyName: metadata.specialtyName,
+        locationId,
+        locationName: metadata.locationName,
+        draftStatus: metadata.draftStatus || 'draft',
+        checklistTouched: state.checklistTouched,
+        followUpTouched: false,
+        checklistUploaded: state.checklistUploaded,
+        followUpUploaded: false,
+        checklistPresent: metadata.checklistPresent,
+        findingsPresent: metadata.findingsPresent,
+      })
+
+      return { removed: true, workspaceDeleted: false }
+    } catch (error) {
+      throw new Error(`removeFollowUpSession: could not remove follow-up session: ${error.message}`)
+    }
+  }
   
   return {
     getWorkspaceKey,
@@ -1073,6 +1331,7 @@ export const createFileService = () => {
     loadWorkspaceRegistry,
     saveWorkspaceRegistry,
     upsertWorkspaceRegistryEntry,
+    removeWorkspaceRegistryEntry,
     loadWorkspaceMetadata,
     saveWorkspaceMetadata,
     markWorkspaceTouched,
@@ -1093,6 +1352,8 @@ export const createFileService = () => {
     saveFindingsReport,
     exportInspectionPayload,
     exportFollowUpPayload,
+    removeInspectionSession,
+    removeFollowUpSession,
     notifyImportCanonical,
     checkServiceHealth,
     createDefaultRoot,
