@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkPath: (filePath, ...pathLegs) => ipcRenderer.invoke('check-path', filePath, pathLegs),
   createDir: (filePath, ...pathLegs) => ipcRenderer.invoke('create-dir', filePath, pathLegs),
   deleteFile: (filePath, ...pathLegs) => ipcRenderer.invoke('delete-file', filePath, pathLegs),
+  deletePath: (filePath, ...pathLegs) => ipcRenderer.invoke('delete-path', filePath, pathLegs),
   getPath: (filePath, ...pathLegs) => ipcRenderer.invoke('get-path', filePath, pathLegs),
   getFullPath: (filePath, pathLegs, fileName) => ipcRenderer.invoke('get-full-path', filePath, pathLegs, fileName),
   getStats: (filePath, ...pathLegs) => ipcRenderer.invoke('get-stats', filePath, pathLegs),

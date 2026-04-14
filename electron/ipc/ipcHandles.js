@@ -765,6 +765,21 @@ export function setupIpcHandles(ipcMain) {
     }
   })
 
+  ipcMain.handle('delete-path', async (event, filePath, pathLegs) => {
+    try {
+      const dirPath = filePath ? filePath : defaultSavePath
+      if (!Array.isArray(pathLegs) || pathLegs.length == 0) {
+        throw new Error('Missing required path segments for delete-path')
+      }
+      const toDeletePath = safeJoin(dirPath, pathLegs)
+      await fs.rm(toDeletePath, { recursive: true, force: true })
+      return true
+    } catch (err) {
+      logger.error(`delete-path: Could not delete path ${filePath} ${pathLegs} : ${err.message}`)
+      throw err
+    }
+  })
+
   ipcMain.handle('generate-pdf', async (event, { checklistString, sessionString, specialty, outputPath }) => {
     try {
       if (!checklistString || !sessionString || !specialty || !outputPath) {

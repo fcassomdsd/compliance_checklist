@@ -77,10 +77,11 @@ hotfix/ → for urgent production patches
 
 All merge requests should target the develop branch unless they are hotfixes.
 
+### Data Contract Note
+
+- Finding issue date uses `dateIssued` as the canonical field name.
+- Alfresco model property `vso:openedDate` was renamed to `vso:dateIssued` for consistency across model, forms, and messaging.
+
 🧩 Contributing
 
 We welcome contributions! Please refer to the CONTRIBUTING.md file for detailed guidelines on setting up your environment, code style, and submitting a Merge Request.
-
-
-
-```

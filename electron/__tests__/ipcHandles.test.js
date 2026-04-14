@@ -295,6 +295,23 @@ describe('ipcHandles', () => {
     })
   })
 
+  describe('delete-path', () => {
+    it('deletes directory recursively', async () => {
+      const result = await handles['delete-path']({}, '/mocked/path', ['workspace', 'Evidence'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['workspace', 'Evidence'])
+      expect(result).toBe(true)
+    })
+
+    it('rejects when path segments are missing', async () => {
+      await expect(handles['delete-path']({}, '/mocked/path', [])).rejects.toThrow(
+        'Missing required path segments for delete-path'
+      )
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('delete-path: Could not delete path /mocked/path')
+      )
+    })
+  })
+
   describe('get-full-path', () => {
     it('returns full path with all components', async () => {
       const result = await handles['get-full-path']({}, '/mocked/path', ['subdir'], 'file.pdf')

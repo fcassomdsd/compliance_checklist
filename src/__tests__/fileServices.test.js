@@ -30,6 +30,7 @@ const mockElectronAPI = {
   readFile: vi.fn(),
   listPath: vi.fn(),
   saveFile: vi.fn(),
+  deletePath: vi.fn(),
   getFullPath: vi.fn(),
   generatePDF: vi.fn(),
   exportInspectionPayload: vi.fn(),
@@ -71,6 +72,7 @@ describe('fileServices', () => {
     vi.clearAllMocks()
     window.electronAPI.createDir = vi.fn()
     window.electronAPI.deleteFile = vi.fn()
+    window.electronAPI.deletePath = vi.fn()
     window.electronAPI.getAppConfig.mockResolvedValue(mockAppConfig)
   })
 
@@ -1283,6 +1285,131 @@ describe('fileServices', () => {
         'LOC-001_VIG',
         'workspace.json'
       )
+    })
+  })
+
+  describe('session removal', () => {
+    it('removes inspection session when uploaded and keeps workspace if follow-up exists', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockImplementation(async (root, ...legs) => {
+        const key = legs.join('/')
+        if (key == 'LOC-001_VIG/workspace.json') return true
+        if (key == 'workspaces.json') return true
+        if (key == 'LOC-001_VIG/session.json') return true
+        if (key == 'LOC-001_VIG/Evidence') return true
+        if (key == 'LOC-001_VIG/Audio') return true
+        if (key == 'LOC-001_VIG/followup.session.json') return true
+        return false
+      })
+      window.electronAPI.readFile
+        .mockResolvedValueOnce(
+          JSON.stringify({ checklistTouched: true, checklistUploaded: true, followUpTouched: false })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify([
+            {
+              workspaceKey: 'loc-001__VIG',
+              specialtyCode: 'VIG',
+              locationId: 'loc-001',
+              checklistTouched: true,
+              checklistUploaded: true,
+              followUpTouched: false,
+              followUpUploaded: false,
+            },
+          ])
+        )
+      window.electronAPI.listPath.mockResolvedValue([
+        { name: 'inspection_payload_2026.zip' },
+        { name: 'reporte_hallazgos_2026-01-01.pdf' },
+        { name: 'workspace.json' },
+      ])
+      window.electronAPI.deleteFile.mockResolvedValue(true)
+      window.electronAPI.deletePath.mockResolvedValue(true)
+      window.electronAPI.createDir.mockResolvedValue(undefined)
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspace.json')
+
+      const result = await fs.removeInspectionSession('VIG', 'loc-001')
+
+      expect(result).toEqual({ removed: true, workspaceDeleted: false })
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'session.json')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Evidence')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Audio')
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('"checklistUploaded": false'),
+        null,
+        'LOC-001_VIG',
+        'workspace.json'
+      )
+    })
+
+    it('blocks inspection session removal when touched and not uploaded', async () => {
+      const fs = createFileService()
+      window.electronAPI.checkPath.mockImplementation(async (root, ...legs) => {
+        return legs.join('/') == 'LOC-001_VIG/workspace.json'
+      })
+      window.electronAPI.readFile.mockResolvedValue(
+        JSON.stringify({ checklistTouched: true, checklistUploaded: false })
+      )
+
+      await expect(fs.removeInspectionSession('VIG', 'loc-001')).rejects.toThrow(
+        'Inspection session cannot be removed until it is uploaded or remains untouched'
+      )
+    })
+
+    it('removes follow-up session and deletes workspace when no sessions remain', async () => {
+      const fs = createFileService()
+      let hasFollowUpSession = true
+      let hasWorkspaceFolder = true
+      window.electronAPI.checkPath.mockImplementation(async (root, ...legs) => {
+        const key = legs.join('/')
+        if (key == 'LOC-001_VIG/workspace.json') return true
+        if (key == 'workspaces.json') return true
+        if (key == 'LOC-001_VIG/followup.session.json') return hasFollowUpSession
+        if (key == 'LOC-001_VIG/FollowUpEvidence') return true
+        if (key == 'LOC-001_VIG/session.json') return false
+        if (key == 'LOC-001_VIG') return hasWorkspaceFolder
+        return false
+      })
+      window.electronAPI.readFile
+        .mockResolvedValueOnce(
+          JSON.stringify({ followUpTouched: false, followUpUploaded: false })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify([
+            {
+              workspaceKey: 'loc-001__VIG',
+              specialtyCode: 'VIG',
+              locationId: 'loc-001',
+            },
+          ])
+        )
+      window.electronAPI.listPath.mockResolvedValue([{ name: 'followup_payload_2026.zip' }])
+      window.electronAPI.deleteFile.mockImplementation(async (root, ...legs) => {
+        const key = legs.join('/')
+        if (key == 'LOC-001_VIG/followup.session.json') {
+          hasFollowUpSession = false
+        }
+        return true
+      })
+      window.electronAPI.deletePath.mockImplementation(async (root, ...legs) => {
+        const key = legs.join('/')
+        if (key == 'LOC-001_VIG') {
+          hasWorkspaceFolder = false
+        }
+        return true
+      })
+      window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
+
+      const result = await fs.removeFollowUpSession('VIG', 'loc-001')
+
+      expect(result).toEqual({ removed: true, workspaceDeleted: true })
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(
+        null,
+        'LOC-001_VIG',
+        'followup.session.json'
+      )
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'FollowUpEvidence')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG')
     })
   })
 })
