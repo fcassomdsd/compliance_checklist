@@ -285,6 +285,45 @@ describe('ChecklistRow.vue', () => {
       expect(wrapper.props().session.compliance).toBe('Non-compliant')
       expect(cell.attributes('hidden')).toBeUndefined()
     })
+
+    it('renders finding level selector with default in non-conformity modal', async () => {
+      await wrapper.setProps({
+        session: {
+          compliance: 'Non-compliant',
+          nonConformityDetails: {},
+        },
+      })
+
+      wrapper.vm.openNonConformityModal()
+      await wrapper.vm.$nextTick?.()
+
+      const findingLevelSelect = wrapper.find('select[name="findingLevel-VIG-0001"]')
+      expect(findingLevelSelect.exists()).toBe(true)
+      expect(findingLevelSelect.element.value).toBe('Non-Compliance')
+    })
+
+    it('updates finding level from non-conformity modal selector', async () => {
+      await wrapper.setProps({
+        session: {
+          compliance: 'Non-compliant',
+          nonConformityDetails: {},
+        },
+      })
+
+      wrapper.vm.openNonConformityModal()
+      await wrapper.vm.$nextTick?.()
+
+      const findingLevelSelect = wrapper.find('select[name="findingLevel-VIG-0001"]')
+      await findingLevelSelect.setValue('Observation')
+
+      expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
+        'VIG-0001',
+        'checklist-1',
+        'nonConformityDetails',
+        expect.objectContaining({ findingLevel: 'Observation' }),
+        'VIG-0001'
+      )
+    })
   })
 
   describe('Comments', () => {
@@ -394,7 +433,7 @@ describe('ChecklistRow.vue', () => {
       expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[1])
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith('VIG-0001', 'checklist-1', 'evidence', [
         'file1.jpg',
-        'newfile.jpg',
+        { name: 'newfile.jpg' },
       ], 'VIG-0001')
       expect(mockToast.success).toHaveBeenCalledWith('Evidence updated')
     })

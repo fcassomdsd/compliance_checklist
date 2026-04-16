@@ -44,6 +44,7 @@ describe('Follow Up Store', () => {
     mockFs = {
       loadFollowUpSession: vi.fn(),
       saveFollowUpSession: vi.fn(),
+      hashEvidence: vi.fn().mockImplementation(async (_ctx, evidence) => evidence),
       markWorkspaceTouched: vi.fn().mockResolvedValue(undefined),
     }
     createFileService.mockReturnValue(mockFs)
@@ -96,7 +97,7 @@ describe('Follow Up Store', () => {
               findingId: 'F1',
               percentComplete: 50,
               findingClosed: false,
-              evidence: ['proof.jpg'],
+              evidence: [{ name: 'proof.jpg' }],
             },
           },
         },
@@ -112,15 +113,15 @@ describe('Follow Up Store', () => {
       percentComplete: 50,
       effectivenessConfirmed: false,
       findingClosed: false,
-      evidence: ['proof.jpg'],
+      evidence: [{ name: 'proof.jpg', hashValue: '', immutable: false, sealedDate: '' }],
     })
   })
 
-  it('finalizes follow-up session and persists it', () => {
+  it('finalizes follow-up session and persists it', async () => {
     store.summary.value.specialty = 'VIG'
     store.context.value.locationId = 'loc-001'
 
-    store.finalize()
+    await store.finalize()
 
     expect(store.summary.value.finalized).toBe(true)
     expect(mockFs.saveFollowUpSession).toHaveBeenCalled()
@@ -151,7 +152,7 @@ describe('Follow Up Store', () => {
           closureVerificationMethod: 'onsite',
           followUpDate: '2026-04-01',
           followUpClosureDate: '2026-04-05',
-          evidence: ['a.jpg', 9],
+          evidence: [{ name: 'a.jpg' }, 9],
         },
       },
     })
@@ -168,7 +169,7 @@ describe('Follow Up Store', () => {
       closureVerificationMethod: 'onsite',
       followUpDate: '2026-04-01',
       followUpClosureDate: '2026-04-05',
-      evidence: ['a.jpg'],
+      evidence: [{ name: 'a.jpg', hashValue: '', immutable: false, sealedDate: '' }],
     })
   })
 

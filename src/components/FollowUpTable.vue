@@ -67,17 +67,17 @@
             </button>
           </div>
           <ul v-if="getEvidenceList(entry).length > 0" class="evidence-list">
-            <li v-for="(evidenceName, evidenceIndex) in getEvidenceList(entry)" :key="evidenceName + evidenceIndex">
+            <li v-for="(evidence, evidenceIndex) in getEvidenceList(entry)" :key="evidenceName(evidence) + evidenceIndex">
               <input
                 type="image"
                 :src="trash"
                 height="15"
                 width="15"
                 :disabled="followUpStore.summary.finalized"
-                @click="removeEvidence(entry, evidenceIndex, evidenceName)"
+                @click="removeEvidence(entry, evidenceIndex, evidenceName(evidence))"
               />
-              <a :href="evidenceStore.files[evidenceName]?.URL" download target="_blank">
-                {{ evidenceName }}
+              <a :href="evidenceStore.files[evidenceName(evidence)]?.URL" download target="_blank">
+                {{ evidenceName(evidence) }}
               </a>
             </li>
           </ul>
@@ -126,6 +126,9 @@
     }
   }
 
+  const evidenceName = (entry) =>
+    typeof entry == 'string' ? entry : typeof entry?.name == 'string' ? entry.name : ''
+
   const getEvidenceList = (entry) => {
     const findingId = getFindingId(entry)
     if (!findingId) {
@@ -167,14 +170,14 @@
           'followUp'
         )
 
-        const alreadyPresent = evidenceList.some((name) => name == file.name)
+        const alreadyPresent = evidenceList.some((item) => evidenceName(item) == file.name)
         if (alreadyPresent) {
           if (evidenceStore.files[file.name]?.count == 0) {
             evidenceStore.addCount(file.name)
           }
         } else {
           evidenceStore.addCount(file.name)
-          evidenceList.push(file.name)
+          evidenceList.push({ name: file.name })
         }
       } catch (error) {
         toast.error(error.message)

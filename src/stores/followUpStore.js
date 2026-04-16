@@ -57,7 +57,14 @@ export const useFollowUpStore = defineStore('followUp', () => {
     }
 
     if (Array.isArray(rawEntry?.evidence)) {
-      nextEntry.evidence = rawEntry.evidence.filter((item) => typeof item == 'string')
+      nextEntry.evidence = rawEntry.evidence
+        .filter((item) => item && typeof item == 'object' && typeof item.name == 'string')
+        .map((item) => ({
+          name: item.name,
+          hashValue: typeof item.hashValue == 'string' ? item.hashValue : '',
+          immutable: item.immutable === true,
+          sealedDate: typeof item.sealedDate == 'string' ? item.sealedDate : '',
+        }))
     }
 
     if (typeof rawEntry?.closureVerificationMethod == 'string') {
@@ -159,7 +166,19 @@ export const useFollowUpStore = defineStore('followUp', () => {
     })
   }
 
-  const finalize = () => {
+  const finalize = async () => {
+    for (const key of Object.keys(responses)) {
+      if (responses[key].evidence) {
+        const newEvidence = await fs.hashEvidence(
+          'followUp',
+          responses[key].evidence,
+          summary.value.specialty,
+          context.value.locationId
+        )
+        responses[key].evidence = newEvidence
+      }
+    }
+
     summary.value.finalized = true
     fs.saveFollowUpSession(summary.value, responses, displayToast, context.value.locationId)
   }

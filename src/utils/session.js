@@ -52,6 +52,10 @@ const sessionSchema = {
                 description: {
                   type: 'string',
                 },
+                findingLevel: {
+                  type: 'string',
+                  enum: ['Non-Compliance', 'Observation', 'Recommendation'],
+                },
                 riskLevel: {
                   type: 'string',
                   enum: ['Low', 'Medium', 'High', 'Critical'],
@@ -68,7 +72,15 @@ const sessionSchema = {
             evidence: {
               type: 'array',
               items: {
-                type: 'string',
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  hashValue: { type: 'string' },
+                  immutable: { type: 'boolean' },
+                  sealedDate: { type: 'string' },
+                },
+                additionalProperties: false,
+                required: ['name'],
               },
             },
             audioComments: {
@@ -115,10 +127,16 @@ export function getEvidenceLinks(sessionObj) {
   JSON.parse(sessionObj, (key, value) => {
     if (key == 'evidence' || key == 'audioComments' || key == 'audioNonConformity') {
       value.forEach((x) => {
-        if (!evidenceLinks[x]) {
-          evidenceLinks[x] = { count: 1 }
+        const linkName = key == 'evidence' ? x?.name : x
+
+        if (typeof linkName != 'string' || linkName.length == 0) {
+          return
+        }
+
+        if (!evidenceLinks[linkName]) {
+          evidenceLinks[linkName] = { count: 1 }
         } else {
-          evidenceLinks[x].count++
+          evidenceLinks[linkName].count++
         }
       })
     }

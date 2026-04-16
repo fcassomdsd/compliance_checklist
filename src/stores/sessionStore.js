@@ -46,18 +46,14 @@ export const useSessionStore = defineStore('session', () => {
       // load session, if exists
       let sessionRead = await fs.loadSession(specialty, locationId)
       if (sessionRead !== null) {
-        // can't assign session object directly;  use JSON.parse
-        JSON.parse(JSON.stringify(sessionRead), (key, value) => {
-          if (key.match('[0-9]+') && typeof value == 'object') {
-            responses[key] = value
-          } else {
-            if (key == 'summary') {
-              // assign session summary (expect no location here)
-              summary.value = value
-            }
+        // assign session summary and responses
+        summary.value = { ...(sessionRead.summary || {}) }
+        const loadedResponses = sessionRead.responses || {}
+        for (const [responseKey, responseValue] of Object.entries(loadedResponses)) {
+          if (responseValue && typeof responseValue == 'object') {
+            responses[responseKey] = JSON.parse(JSON.stringify(responseValue))
           }
-          return value
-        })
+        }
       } else {
         summary.value.finalized = false
       }
@@ -134,7 +130,7 @@ export const useSessionStore = defineStore('session', () => {
     toast.error(msg)
   }
 
-  const finalize = (specialty, locationId = null) => {
+  const finalize = async (specialty, locationId = null) => {
     for (const key of Object.keys(responses)) {
       if (responses[key].compliance != 'Non-compliant') {
         if (responses[key].nonConformityDetails) {
@@ -142,6 +138,13 @@ export const useSessionStore = defineStore('session', () => {
         }
       }
     }
+
+    for (const key of Object.keys(responses)) {
+      if (responses[key].evidence) {
+        const newEvidence = await fs.hashEvidence("inspection", responses[key].evidence, specialty, locationId)
+        responses[key].evidence = newEvidence
+      }
+    }    
 
     summary.value['finalized'] = true
     if (specialty && !summary.value['specialty']) {

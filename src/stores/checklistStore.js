@@ -208,7 +208,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       showModal.value = false
       switch (tituloModal.value) {
         case modalFinalizeTitle: {
-          sessionStore.finalize(specialty.value, activeWorkspace.value?.locationId)
+          await sessionStore.finalize(specialty.value, activeWorkspace.value?.locationId)
           toast.success(finalizeSuccess)
           break
         }

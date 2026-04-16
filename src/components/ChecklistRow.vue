@@ -150,12 +150,12 @@
               height="15"
               width="15"
               :disabled="isReadOnly"
-              @click="removeEvidence(index, evidence)"
+              @click="removeEvidence(index, evidenceName(evidence))"
             />
           </td>
-          <td :class="{ missing: evidenceStore.files[evidence]?.URL == '' }">
-            <a :href="evidenceStore.files[evidence]?.URL" download target="_blank">
-              {{ evidenceStore.files[evidence]?.count }}{{ evidence }}
+          <td :class="{ missing: evidenceStore.files[evidenceName(evidence)]?.URL == '' }">
+            <a :href="evidenceStore.files[evidenceName(evidence)]?.URL" download target="_blank">
+              {{ evidenceStore.files[evidenceName(evidence)]?.count }}{{ evidenceName(evidence) }}
             </a>
           </td>
         </tr>
@@ -183,6 +183,18 @@
         <button class="nc-close" @click="closeNonConformityModal">Close</button>
       </div>
       <div class="non-conformity-meta">
+        <label class="risk-row" :for="`findingLevel-${domQuestionCode}`">
+          <span class="risk-label">Finding Level</span>
+          <select
+            :id="`findingLevel-${domQuestionCode}`"
+            :name="`findingLevel-${domQuestionCode}`"
+            :value="assignedFindingLevel"
+            :disabled="isReadOnly"
+            @change="findingLevelChange($event)"
+          >
+            <option v-for="level in findingLevels" :key="level" :value="level">{{ level }}</option>
+          </select>
+        </label>
         <div class="risk-row nominal-risk">
           <span class="risk-label">Nominal Risk</span>
           <span class="risk-value">{{ nominalRiskLevel }}</span>
@@ -287,6 +299,11 @@
 
   const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
   const riskLevels = ref(validRiskLevels)
+  const validFindingLevels = ['Non-Compliance', 'Observation', 'Recommendation']
+  const findingLevels = ref(validFindingLevels)
+
+  const normalizeFindingLevel = (value) =>
+    typeof value == 'string' && validFindingLevels.includes(value) ? value : 'Non-Compliance'
 
   const normalizeRiskLevel = (value) =>
     typeof value == 'string' && validRiskLevels.includes(value) ? value : 'Low'
@@ -296,6 +313,11 @@
   const assignedRiskLevel = computed(() => {
     const detailsLevel = props.session?.nonConformityDetails?.riskLevel
     return normalizeRiskLevel(detailsLevel || props.row?.riskLevel)
+  })
+
+  const assignedFindingLevel = computed(() => {
+    const detailsLevel = props.session?.nonConformityDetails?.findingLevel
+    return normalizeFindingLevel(detailsLevel)
   })
 
   const nonConformityDescription = computed(
@@ -309,6 +331,9 @@
     const inputControl = document.getElementById('fileInput-' + questionCode)
     inputControl.click()
   }
+
+  const evidenceName = (entry) =>
+    typeof entry == 'string' ? entry : typeof entry?.name == 'string' ? entry.name : ''
 
   const showCameraModal = ref(false)
   const video = ref(null)
@@ -364,6 +389,8 @@
     if (complianceValue == 'Non-compliant') {
       const defaultRisk = assignedRiskLevel.value
       updateNonConformityDetail('riskLevel', defaultRisk)
+      const defaultFindingLevel = assignedFindingLevel.value
+      updateNonConformityDetail('findingLevel', defaultFindingLevel)
     } else {
       closeNonConformityModal()
     }
@@ -380,6 +407,11 @@
   const riskLevelChange = (event) => {
     const nextRiskLevel = normalizeRiskLevel(event.target.value)
     updateNonConformityDetail('riskLevel', nextRiskLevel)
+  }
+
+  const findingLevelChange = (event) => {
+    const nextFindingLevel = normalizeFindingLevel(event.target.value)
+    updateNonConformityDetail('findingLevel', nextFindingLevel)
   }
 
   const toggleAudioRecordingComments = async () => {
@@ -523,7 +555,7 @@
 
   const evidenceChange = async (event) => {
     const files = event.target.files
-    const table = props.session.evidence || []
+    const table = Array.isArray(props.session.evidence) ? [...props.session.evidence] : []
 
     for (const file of files) {
       try {
@@ -535,7 +567,7 @@
           await evidenceStore.add(sessionStore.summary.specialty, file)
         }
 
-        const inTable = table.some((item) => item === file.name)
+        const inTable = table.some((item) => evidenceName(item) === file.name)
 
         if (inTable) {
           // it's already there
@@ -545,7 +577,7 @@
           }
         } else {
           evidenceStore.addCount(file.name)
-          table.push(file.name)
+          table.push({ name: file.name })
         }
       } catch (error) {
         console.log('evidenceChanged failed: ' + error)
@@ -590,16 +622,16 @@
     const file = new File([blob], `evidence-${fileQuestionCode}-${timestamp}.jpg`, {
       type: 'image/jpeg',
     })
-    const table = props.session.evidence || []
+    const table = Array.isArray(props.session.evidence) ? [...props.session.evidence] : []
     const locationId = currentLocationId()
     if (locationId) {
       await evidenceStore.add(sessionStore.summary.specialty, file, locationId, 'inspection')
     } else {
       await evidenceStore.add(sessionStore.summary.specialty, file)
     }
-    if (!table.some((item) => item === file.name)) {
+    if (!table.some((item) => evidenceName(item) === file.name)) {
       evidenceStore.addCount(file.name)
-      table.push(file.name)
+      table.push({ name: file.name })
     }
     updateResponse('evidence', table)
     toast.success('Evidence updated')

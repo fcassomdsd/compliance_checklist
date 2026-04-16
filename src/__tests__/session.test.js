@@ -29,7 +29,7 @@ describe('session.js', () => {
             id: '1',
             compliance: 'Compliant',
             comments: 'Test comments',
-            evidence: ['file1.txt'],
+            evidence: [{ name: 'file1.txt' }],
           },
         },
       })
@@ -50,7 +50,7 @@ describe('session.js', () => {
             code: 'VIG-0054',
             compliance: 'Compliant',
             comments: 'Test comments',
-            evidence: ['file1.txt', 'file2.txt'],
+            evidence: [{ name: 'file1.txt' }, { name: 'file2.txt' }],
           },
         },
       })
@@ -72,23 +72,25 @@ describe('session.js', () => {
             compliance: 'Compliant',
             comments: 'Test comments',
             audioComments: ['audio-1-comments-2023.webm'],
-            evidence: ['file1.txt'],
+            evidence: [{ name: 'file1.txt' }],
           },
           2: {
             id: '2',
             compliance: 'Non-compliant',
             nonConformityDetails: {
               description: 'Description of issue',
+              findingLevel: 'Observation',
               riskLevel: 'High',
               audioNonConformity: ['audio-2-nonConformity-2023.webm'],
             },
-            evidence: ['file2.txt'],
+            evidence: [{ name: 'file2.txt' }],
           },
         },
       })
       const result = await parseSession(validJson)
       expect(result).toEqual(JSON.parse(validJson))
       expect(result.responses['1'].audioComments).toEqual(['audio-1-comments-2023.webm'])
+      expect(result.responses['2'].nonConformityDetails.findingLevel).toBe('Observation')
       expect(result.responses['2'].nonConformityDetails.audioNonConformity).toEqual(['audio-2-nonConformity-2023.webm'])
     })
 
@@ -106,6 +108,7 @@ describe('session.js', () => {
             compliance: 'Non-compliant',
             nonConformityDetails: {
               description: 'Issue description',
+              findingLevel: 'Recommendation',
               riskLevel: 'Critical',
               pendingReview: true,
             },
@@ -115,6 +118,7 @@ describe('session.js', () => {
 
       const result = await parseSession(validJson)
       expect(result.responses['VIG-0001'].nonConformityDetails.riskLevel).toBe('Critical')
+      expect(result.responses['VIG-0001'].nonConformityDetails.findingLevel).toBe('Recommendation')
       expect(result.responses['VIG-0001'].nonConformityDetails.pendingReview).toBe(true)
     })
 
@@ -125,7 +129,7 @@ describe('session.js', () => {
             id: '1',
             compliance: 'Compliant',
             comments: 'Test comments',
-            evidence: ['file1.txt'],
+            evidence: [{ name: 'file1.txt' }],
           },
         },
       })
@@ -169,11 +173,11 @@ describe('session.js', () => {
     const sampleJson = {
       1: {
         comments: 'several evidences',
-        evidence: ['onlyOne.txt', 'IHaveThree.txt'],
+        evidence: [{ name: 'onlyOne.txt' }, { name: 'IHaveThree.txt' }],
         audioComments: ['audio1.webm'],
       },
       2: {
-        evidence: ['IHaveThree.txt'],
+        evidence: [{ name: 'IHaveThree.txt' }],
         comments: 'one evidence',
         audioComments: ['audio1.webm'],
       },
@@ -185,7 +189,12 @@ describe('session.js', () => {
         comments: 'empty evidence',
       },
       6: {
-        evidence: ['Ex6.json', 'IHaveThree.txt', 'Ex4.json', 'Ex3.json'],
+        evidence: [
+          { name: 'Ex6.json' },
+          { name: 'IHaveThree.txt' },
+          { name: 'Ex4.json' },
+          { name: 'Ex3.json' },
+        ],
         nonConformityDetails: {
           audioNonConformity: ['audio2.webm'],
         },

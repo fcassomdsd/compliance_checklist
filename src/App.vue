@@ -265,12 +265,12 @@
     }
   }
 
-  const onFinalize = () => {
+  const onFinalize = async () => {
     if (store.uiMode == 'inspection') {
       store.showFinalize()
       return
     }
-    followUpStore.finalize()
+    await followUpStore.finalize()
   }
 
   const onModeChange = async () => {
