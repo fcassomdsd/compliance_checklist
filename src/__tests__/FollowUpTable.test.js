@@ -89,13 +89,13 @@ describe('FollowUpTable.vue', () => {
 
     expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', file, 'loc-001', 'followUp')
     expect(mockEvidenceStore.addCount).toHaveBeenCalledWith('proof.jpg')
-    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'evidence', ['proof.jpg'])
+    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'evidence', [{ name: 'proof.jpg' }])
   })
 
   it('removes follow-up evidence with trash icon control', async () => {
     mockFollowUpStore.responses['F-1'] = {
       findingId: 'F-1',
-      evidence: ['proof.jpg'],
+      evidence: [{ name: 'proof.jpg' }],
     }
     mockEvidenceStore.files = {
       'proof.jpg': { URL: 'file:///tmp/proof.jpg', count: 1 },

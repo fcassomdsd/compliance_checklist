@@ -16,6 +16,7 @@ import {
   saveFile,
   deleteFile,
   getFileStats,
+  hashFile,
 } from '../utils/fileOps.js'
 import { safeJoin } from '../utils/fileSec.js'
 import { logger } from '../utils/logger.js'
@@ -59,7 +60,6 @@ const checklistSchema = {
           type: 'string',
           pattern: '^CHK-[A-Z0-9]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
         },
-        domain: { type: 'string' },
         providerId: { type: 'string' },
         providerName: { type: 'string' },
         inspectors: {
@@ -78,25 +78,25 @@ const checklistSchema = {
             type: 'string',
             pattern: '^[A-Z]{3}-\\d{4}$',
           },
-          requirement: { type: 'string' },
-          verificationMethod: { type: 'string' },
-          comment: { type: 'string' },
+          requirementText: { type: 'string' },
+          itemVerificationMethod: { type: 'string' },
+          inspectorComment: { type: 'string' },
           reference: {
+            type: 'object',
             properties: {
-        specialtyId: { type: 'string' },
               icaoReference: { type: 'string' },
               nationalRegulation: { type: 'string' },
             },
           },
-          compliance: {
+          complianceStatus: {
             type: 'string',
-            enum: ['Compliant', 'Non-compliant', 'Not applicable'],
+            enum: ['Compliant', 'Non-Compliant', 'Not Applicable'],
           },
-          riskLevel: {
+          riskClassification: {
             type: 'string',
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
-          nominalRiskLevel: {
+          nominalRisk: {
             type: 'string',
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
@@ -108,7 +108,10 @@ const checklistSchema = {
               properties: {
                 evidenceId: { type: 'string' },
                 evidenceType: { type: 'string' },
-                evidenceSource: { type: 'string' },
+                source: { type: 'string' },
+                hashValue: { type: 'string' },
+                immutable: { type: 'boolean' },
+                sealedDate: { type: 'string', format: 'date-time' },
               },
             },
           },
@@ -134,7 +137,7 @@ const findingSchema = {
         'providerId',
         'locationId',
         'locationName',
-        'itemId',
+        'itemCode',
         'description',
       ],
       properties: {
@@ -143,16 +146,18 @@ const findingSchema = {
           pattern: '^[A-Z0-9]{4}-[A-Z]{3}-\\d{4}-\\d{2}$',
         },
         specialtyId: { type: 'string' },
-        domain: { type: 'string' },
         providerId: { type: 'string' },
         locationId: { type: 'string' },
         locationName: { type: 'string' },
-        itemId: { type: 'string' },
-        requirementBreached: { type: 'string' },
+        itemCode: { type: 'string' },
+        regulationBreached: { type: 'string' },
         dateIssued: { type: 'string', format: 'date' },
-        findingLevel: { type: 'string' },
+        findingLevel: {
+          type: 'string',
+          enum: ['Non-Compliance', 'Observation', 'Recommendation'],
+        },
         description: { type: 'string' },
-        riskLevel: {
+        riskClassification: {
           type: 'string',
           enum: ['Low', 'Medium', 'High', 'Critical'],
         },
@@ -185,8 +190,6 @@ const followUpReportSchema = {
       properties: {
         findingId: { type: 'string' },
         specialtyId: { type: 'string' },
-        capId: { type: 'string' },
-        domain: { type: 'string' },
         providerId: { type: 'string' },
         locationId: { type: 'string' },
         locationName: { type: 'string' },
@@ -196,7 +199,7 @@ const followUpReportSchema = {
         followUpClosureDate: { type: 'string', format: 'date' },
         closureVerificationMethod: { type: 'string' },
         effectivenessConfirmed: { type: 'boolean' },
-        comment: { type: 'string' },
+        followUpComment: { type: 'string' },
         evidence: {
           type: 'array',
           items: {
@@ -205,7 +208,10 @@ const followUpReportSchema = {
             properties: {
               evidenceId: { type: 'string' },
               evidenceType: { type: 'string' },
-              evidenceSource: { type: 'string' },
+              source: { type: 'string' },
+              hashValue: { type: 'string' },
+              immutable: { type: 'boolean' },
+              sealedDate: { type: 'string', format: 'date-time' },
             },
           },
         },
@@ -250,10 +256,10 @@ const asDateOnly = (value) => {
 }
 
 const normalizeCompliance = (value) => {
-  if (value === 'Compliant' || value === 'Non-compliant' || value === 'Not applicable') {
+  if (value === 'Compliant' || value === 'Non-Compliant' || value === 'Not Applicable') {
     return value
   }
-  return 'Not applicable'
+  return 'Not Applicable'
 }
 
 const normalizeRiskLevel = (value) => {
@@ -261,6 +267,13 @@ const normalizeRiskLevel = (value) => {
     return value
   }
   return ''
+}
+
+const normalizeFindingLevel = (value) => {
+  if (value === 'Non-Compliance' || value === 'Observation' || value === 'Recommendation') {
+    return value
+  }
+  return 'Non-Compliance'
 }
 
 const inferInspectionCode = (checklistObj) => {
@@ -290,7 +303,6 @@ const inferSpecialtyCode = (checklistObj, specialty) => {
 const inferDomainName = (checklistObj, specialty, specialtyCode) => {
   return (
     safeString(checklistObj?.specialtyName) ||
-    safeString(checklistObj?.domain) ||
     safeString(specialty) ||
     specialtyCode
   )
@@ -355,6 +367,19 @@ const inferEvidenceType = (fileName = '') => {
   return 'document'
 }
 
+const normalizeEvidenceEntry = (entry) => {
+  if (!entry || typeof entry !== 'object' || typeof entry.name !== 'string') {
+    return null
+  }
+  return {
+    name: entry.name,
+    ...entry,
+    hashValue: safeString(entry.hashValue),
+    immutable: entry.immutable === true,
+    sealedDate: safeString(entry.sealedDate),
+  }
+}
+
 const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
@@ -364,7 +389,6 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     checklistObj?.specialtyId,
     safeString(sessionObj?.summary?.specialtyId, specialtyCode)
   )
-  const domainName = inferDomainName(checklistObj, specialty, specialtyCode)
 
   const inspectionCode = inferInspectionCode(checklistObj)
   const icaoCode = safeString(checklistObj?.icaoCode, safeString(checklistObj?.locationCode))
@@ -375,7 +399,6 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     specialtyId,
     specialtyCode,
     specialtyName,
-    domain: domainName,
     providerId: safeString(checklistObj?.providerId),
   }
 
@@ -401,22 +424,22 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     const item = {
       itemId: safeString(row?.id, `item-${index + 1}`),
       itemCode: inferItemCode(row, specialtyCode, index),
-      compliance: normalizeCompliance(response?.compliance),
+      complianceStatus: normalizeCompliance(response?.compliance),
     }
 
     const requirement = safeString(row?.question)
     if (requirement) {
-      item.requirement = requirement
+      item.requirementText = requirement
     }
 
     const verificationMethod = safeString(row?.verification)
     if (verificationMethod) {
-      item.verificationMethod = verificationMethod
+      item.itemVerificationMethod = verificationMethod
     }
 
     const comment = safeString(response?.comments)
     if (comment) {
-      item.comment = comment
+      item.inspectorComment = comment
     }
 
     const rowReference = row?.reference || {}
@@ -438,17 +461,30 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     }
 
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
-    if (evidenceList.length > 0) {
-      item.evidence = evidenceList.map((evidenceSource, evidenceIndex) => ({
-        evidenceId: `EV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
-        evidenceType: inferEvidenceType(evidenceSource),
-        evidenceSource,
-      }))
+    const normalizedEvidence = evidenceList.map((entry) => normalizeEvidenceEntry(entry)).filter(Boolean)
+    if (normalizedEvidence.length > 0) {
+      item.evidence = normalizedEvidence.map((ev, evidenceIndex) => {
+        const mapped = {
+          evidenceId: `EV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
+          evidenceType: inferEvidenceType(ev.name),
+          source: ev.name,
+        }
+        if (ev.hashValue) {
+          mapped.hashValue = ev.hashValue
+        }
+        if (ev.immutable) {
+          mapped.immutable = true
+        }
+        if (ev.sealedDate) {
+          mapped.sealedDate = ev.sealedDate
+        }
+        return mapped
+      })
     }
 
     const nominalRiskLevel = normalizeRiskLevel(row?.riskLevel)
     if (nominalRiskLevel) {
-      item.nominalRiskLevel = nominalRiskLevel
+      item.nominalRisk = nominalRiskLevel
     }
 
     return item
@@ -465,7 +501,6 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
   const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
-  const domainName = inferDomainName(checklistObj, specialty, specialtyCode)
 
   const dateIssued = asDateOnly(sessionObj?.summary?.lastUpdated || checklistObj?.startDate)
   const locationToken = sanitizeUpperAlnum(checklistPayload?.checklist?.inspectionCode).slice(0, 4)
@@ -474,7 +509,7 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
 
   questions.forEach((row, index) => {
     const response = findResponseForRow(responses, row, index) || {}
-    if (normalizeCompliance(response?.compliance) !== 'Non-compliant') {
+    if (normalizeCompliance(response?.compliance) !== 'Non-Compliant') {
       return
     }
 
@@ -485,12 +520,11 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
         findingId: `${(locationToken || 'XXXX').padEnd(4, 'X')}-${specialtyCode}-${asDateOnly(
           checklistObj?.startDate
         ).slice(0, 4)}-${String(findingNumber).padStart(2, '0')}`,
-        domain: checklistPayload?.checklist?.domain || domainName,
         providerId: checklistPayload?.checklist?.providerId || '',
         locationId: checklistPayload?.checklist?.locationId || '',
         locationName:
           checklistPayload?.checklist?.locationName || safeString(checklistObj?.locationName),
-        itemId: safeString(row?.id, `item-${index + 1}`),
+        itemCode: inferItemCode(row, specialtyCode, index),
         description: safeString(
           response?.nonConformityDetails?.description || response?.comments || row?.question
         ),
@@ -501,7 +535,7 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       safeString(row?.reference?.normativa?.reglamento) ||
       safeString(row?.reference?.nationalRegulation)
     if (requirementBreached) {
-      finding.finding.requirementBreached = requirementBreached
+      finding.finding.regulationBreached = requirementBreached
     }
 
     finding.finding.dateIssued = dateIssued
@@ -510,13 +544,12 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       response?.nonConformityDetails?.riskLevel || row?.riskLevel
     )
     if (riskLevel) {
-      finding.finding.riskLevel = riskLevel
+      finding.finding.riskClassification = riskLevel
     }
 
-    const findingLevel = safeString(response?.findingLevel)
-    if (findingLevel) {
-      finding.finding.findingLevel = findingLevel
-    }
+    finding.finding.findingLevel = normalizeFindingLevel(
+      response?.nonConformityDetails?.findingLevel || response?.findingLevel
+    )
 
     findings.push(finding)
   })
@@ -563,16 +596,6 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       report.followUpReport.specialtyId = specialtyId
     }
 
-    const domain = safeString(finding?.domain)
-    if (domain) {
-      report.followUpReport.domain = domain
-    }
-
-    const capId = safeString(finding?.correctiveAction?.capId)
-    if (capId) {
-      report.followUpReport.capId = capId
-    }
-
     const closureVerificationMethod = safeString(response?.closureVerificationMethod)
     if (closureVerificationMethod) {
       report.followUpReport.closureVerificationMethod = closureVerificationMethod
@@ -580,7 +603,7 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
 
     const comment = safeString(response?.comments)
     if (comment) {
-      report.followUpReport.comment = comment
+      report.followUpReport.followUpComment = comment
     }
 
     if (report.followUpReport.findingClosed) {
@@ -590,12 +613,25 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
     }
 
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
-    if (evidenceList.length > 0) {
-      report.followUpReport.evidence = evidenceList.map((evidenceSource, evidenceIndex) => ({
-        evidenceId: `FUEV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
-        evidenceType: inferEvidenceType(evidenceSource),
-        evidenceSource,
-      }))
+    const normalizedEvidence = evidenceList.map((entry) => normalizeEvidenceEntry(entry)).filter(Boolean)
+    if (normalizedEvidence.length > 0) {
+      report.followUpReport.evidence = normalizedEvidence.map((ev, evidenceIndex) => {
+        const mapped = {
+          evidenceId: `FUEV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
+          evidenceType: inferEvidenceType(ev.name),
+          source: ev.name,
+        }
+        if (ev.hashValue) {
+          mapped.hashValue = ev.hashValue
+        }
+        if (ev.immutable) {
+          mapped.immutable = true
+        }
+        if (ev.sealedDate) {
+          mapped.sealedDate = ev.sealedDate
+        }
+        return mapped
+      })
     }
 
     return report
@@ -607,9 +643,32 @@ const normalizeFindingForFollowUpExport = (entry) => {
     ...(entry?.finding || entry || {}),
   }
 
+  if (!finding.riskClassification && finding.riskLevel) {
+    finding.riskClassification = finding.riskLevel
+  }
+  delete finding.riskLevel
+
+  if (!finding.regulationBreached && finding.requirementBreached) {
+    finding.regulationBreached = finding.requirementBreached
+  }
+  delete finding.requirementBreached
+
+  if (!finding.itemCode && finding.itemId) {
+    finding.itemCode = finding.itemId
+  }
+  delete finding.itemId
+
+  if (finding.comment && !finding.followUpComment) {
+    finding.followUpComment = finding.comment
+  }
+  delete finding.comment
+
+  delete finding.domain
+  delete finding.capId
+
   const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
-  if (finding.riskLevel && !validRiskLevels.includes(finding.riskLevel)) {
-    delete finding.riskLevel
+  if (finding.riskClassification && !validRiskLevels.includes(finding.riskClassification)) {
+    delete finding.riskClassification
   }
 
   return {
@@ -836,6 +895,37 @@ export function setupIpcHandles(ipcMain) {
       return {}
     }
   })
+
+  /**
+   * Hash a list of evidence file names and return their SHA-256 digests.
+   * Files are streamed so memory usage stays constant regardless of file size.
+   *
+   * @param {string[]} filePaths  Evidence file names relative to the resolved parent directory.
+   * @param {string} filePath  Base directory path for the files.
+   * @param {string[]} pathLegs  Additional path segments appended to filePath to resolve the parent directory.
+   * @returns {Promise<Object>} Object mapping each evidence file name to its hash value.
+   */
+  ipcMain.handle('hash-evidence-files', async (event, filePaths, filePath, pathLegs) => {
+    if (!Array.isArray(filePaths)) {
+      throw new Error('hash-evidence-files: filePaths must be an array')
+    }
+    const dirPath = filePath ? filePath : defaultSavePath
+    const parentDir = safeJoin(dirPath, pathLegs)
+
+    const resultObj = {}
+    try {
+      for (const evidencePath of filePaths) {
+        const fullFilePath = safeJoin(parentDir, evidencePath)
+        const hashValue = await hashFile(fullFilePath)
+        resultObj[evidencePath] = hashValue
+      }
+      return resultObj
+    } catch (err) {
+      logger.warn(`hash-evidence-files: could not hash: ${err.message}`)
+      throw err
+    }
+  })
+
 
   ipcMain.handle('check-service-health', async (event, params) => {
     try {

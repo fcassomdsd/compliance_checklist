@@ -1,5 +1,7 @@
 import * as fs from 'node:fs/promises'
+import * as fsSync from 'node:fs'
 import * as path from 'node:path'
+import { createHash } from 'node:crypto'
 import { logger } from './logger.js'
 import { safePath } from './fileSec.js'
 
@@ -107,4 +109,24 @@ export async function getFileStats(filePath) {
       throw error
     }
   }
+}
+
+/**
+ * Compute the SHA-256 digest of a file using a read stream so that the
+ * file is never fully loaded into memory.
+ *
+ * @param {string} filePath  Absolute path to the file.
+ * @returns {Promise<string>}  Lowercase hex digest.
+ */
+export function hashFile(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256')
+    fsSync.createReadStream(safePath(filePath))
+      .on('data', (chunk) => hash.update(chunk))
+      .on('end', () => resolve(hash.digest('hex')))
+      .on('error', (err) => {
+        logger.error(`hashFile: Could not hash file ${filePath}: ${err.message}`)
+        reject(err)
+      })
+  })
 }

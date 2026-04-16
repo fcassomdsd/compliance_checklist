@@ -48,6 +48,7 @@ describe('Session Store', () => {
     mockFs = {
       loadSession: vi.fn(),
       saveSession: vi.fn(),
+      hashEvidence: vi.fn().mockImplementation(async (_ctx, evidence) => evidence),
       markWorkspaceTouched: vi.fn().mockResolvedValue(undefined),
     }
     createFileService.mockReturnValue(mockFs)
@@ -179,13 +180,13 @@ describe('Session Store', () => {
     it('updates evidence counts after loading', async () => {
       mockFs.loadSession.mockResolvedValue({
         summary: { location: '/path' },
-        responses: { 1: { evidence: ['file.txt'] } },
+        responses: { 1: { evidence: [{ name: 'file.txt' }] } },
       })
 
       await sessionStore.loadSession('VIG')
 
       expect(mockEvidence.load).toHaveBeenCalledWith('VIG', null, 'inspection')
-      expect(mockEvidence.updateCount).toHaveBeenCalledWith({ 1: { evidence: ['file.txt'] } })
+      expect(mockEvidence.updateCount).toHaveBeenCalledWith({ 1: { evidence: [{ name: 'file.txt' }] } })
     })
 
     it('updates audio counts after loading', async () => {
@@ -249,7 +250,7 @@ describe('Session Store', () => {
   })
 
   describe('finalize', () => {
-    it('sets finalized to true and triggers saveSession', () => {
+    it('sets finalized to true, saves session, and hashes evidence', async () => {
       sessionStore.summary.value = {
         specialty: 'VIG',
         finalized: false,
@@ -261,16 +262,17 @@ describe('Session Store', () => {
         compliance: 'Compliant',
         comments: 'Test comments',
         nonConformityDetails: { description: 'bla bla bla' },
-        evidence: ['file1.txt'],
+        evidence: [{ name: 'file1.txt' }],
       }
 
-      sessionStore.finalize()
+      await sessionStore.finalize()
 
       expect(sessionStore.summary.value.finalized).toBe(true)
       expect(mockFs.saveSession).toBeCalled()
+      expect(mockFs.hashEvidence).toHaveBeenCalled()
     })
 
-    it('removes dangling non-conformity entries', () => {
+    it('removes dangling non-conformity entries', async () => {
       sessionStore.summary.value = {
         specialty: 'VIG',
         finalized: false,
@@ -282,29 +284,29 @@ describe('Session Store', () => {
         compliance: 'Compliant',
         comments: 'Test comments',
         nonConformityDetails: { description: 'bla bla bla' },
-        evidence: ['file1.txt'],
+        evidence: [{ name: 'file1.txt' }],
       }
       sessionStore.responses['2'] = {
         id: '2',
         compliance: 'Non-compliant',
         nonConformityDetails: { description: 'bla bla bla' },
         comments: 'Test comments',
-        evidence: ['file2.txt'],
+        evidence: [{ name: 'file2.txt' }],
       }
       sessionStore.responses['3'] = {
         id: '2',
         comments: 'Test comments',
         nonConformityDetails: { description: 'bla bla bla' },
-        evidence: ['file2.txt'],
+        evidence: [{ name: 'file2.txt' }],
       }
       sessionStore.responses['4'] = {
         id: '2',
         compliance: 'Non-compliant',
         comments: 'Test comments',
-        evidence: ['file2.txt'],
+        evidence: [{ name: 'file2.txt' }],
       }
 
-      sessionStore.finalize()
+      await sessionStore.finalize()
 
       expect(sessionStore.responses['1'].nonConformityDetails).toBeUndefined()
       expect(sessionStore.responses['2'].nonConformityDetails).toBeDefined()

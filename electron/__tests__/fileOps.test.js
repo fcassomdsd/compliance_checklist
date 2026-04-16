@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as fs from 'node:fs/promises'
+import * as fsSync from 'node:fs'
 import * as path from 'node:path'
+import os from 'node:os'
 import { logger } from '../utils/logger.js'
 import * as fileSec from '../utils/fileSec.js'
 import {
@@ -11,6 +13,7 @@ import {
   saveFile,
   deleteFile,
   getFileStats,
+  hashFile,
 } from '../utils/fileOps.js'
 
 // Mock dependencies
@@ -242,6 +245,38 @@ describe('fileOps', () => {
       vi.spyOn(fs, 'stat').mockRejectedValue(error)
       await expect(getFileStats('/path/file.txt')).rejects.toThrow('Permission denied')
       expect(logger.error).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('hashFile', () => {
+    let tmpDir, tmpFile
+
+    beforeEach(() => {
+      vi.spyOn(fileSec, 'safePath').mockImplementation((p) => p)
+      tmpDir = fsSync.mkdtempSync(os.tmpdir() + '/vitest-hash-')
+      tmpFile = fsSync.realpathSync(tmpDir) + '/evidence.bin'
+    })
+
+    afterEach(() => {
+      try { fsSync.unlinkSync(tmpFile) } catch { /* ignore */ }
+      try { fsSync.rmdirSync(tmpDir) } catch { /* ignore */ }
+    })
+
+    it('returns a SHA-256 hex digest for file content', async () => {
+      fsSync.writeFileSync(tmpFile, 'hello world')
+      const result = await hashFile(tmpFile)
+      expect(result).toMatch(/^[0-9a-f]{64}$/)
+      // Deterministic: calling again returns the same digest
+      const result2 = await hashFile(tmpFile)
+      expect(result2).toBe(result)
+    })
+
+    it('rejects and logs when the file does not exist', async () => {
+      const missingPath = tmpFile + '.missing'
+      await expect(hashFile(missingPath)).rejects.toThrow()
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('hashFile: Could not hash file')
+      )
     })
   })
 })

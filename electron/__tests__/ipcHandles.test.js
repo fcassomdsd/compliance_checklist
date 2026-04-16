@@ -440,7 +440,7 @@ describe('ipcHandles', () => {
         responses: {
           1: {
             id: 'q1',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             nonConformityDetails: { description: 'Issue found' },
           },
         },
@@ -485,7 +485,7 @@ describe('ipcHandles', () => {
         responses: {
           1: {
             id: 'q1',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             nonConformityDetails: { description: 'Issue found' },
           },
         },
@@ -527,7 +527,11 @@ describe('ipcHandles', () => {
             id: 'q1',
             code: 'VIG-0054',
             compliance: 'Compliant',
-            evidence: ['photo-1.jpg', 'voice-1.webm', 'note.pdf'],
+            evidence: [
+              { name: 'photo-1.jpg' },
+              { name: 'voice-1.webm' },
+              { name: 'note.pdf' },
+            ],
           },
         },
       }
@@ -538,7 +542,7 @@ describe('ipcHandles', () => {
         specialty: 'VIG',
       })
 
-      const zipBuffer = fileOps.saveFile.mock.calls[0][1]
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
       const zip = await JSZip.loadAsync(zipBuffer)
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
 
@@ -549,22 +553,22 @@ describe('ipcHandles', () => {
         {
           evidenceId: 'EV-0001-01',
           evidenceType: 'image',
-          evidenceSource: 'photo-1.jpg',
+          source: 'photo-1.jpg',
         },
         {
           evidenceId: 'EV-0001-02',
           evidenceType: 'audio',
-          evidenceSource: 'voice-1.webm',
+          source: 'voice-1.webm',
         },
         {
           evidenceId: 'EV-0001-03',
           evidenceType: 'document',
-          evidenceSource: 'note.pdf',
+          source: 'note.pdf',
         },
       ])
     })
 
-    it('maps checklist nominalRiskLevel and finding riskLevel correctly', async () => {
+    it('maps checklist nominalRisk and finding riskClassification correctly', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
@@ -604,13 +608,13 @@ describe('ipcHandles', () => {
           'VIG-0001': {
             id: 'q1',
             code: 'VIG-0001',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             nonConformityDetails: { description: 'Issue 1' },
           },
           'VIG-0002': {
             id: 'q2',
             code: 'VIG-0002',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             nonConformityDetails: { description: 'Issue 2', riskLevel: 'Critical' },
           },
         },
@@ -622,15 +626,15 @@ describe('ipcHandles', () => {
         specialty: 'VIG',
       })
 
-      const zipBuffer = fileOps.saveFile.mock.calls[0][1]
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
       const zip = await JSZip.loadAsync(zipBuffer)
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
       const findingsJson = JSON.parse(await zip.file('findings.json').async('string'))
 
-      expect(checklistJson.items[0].nominalRiskLevel).toBe('High')
-      expect(checklistJson.items[1].nominalRiskLevel).toBe('Medium')
-      expect(findingsJson[0].finding.riskLevel).toBe('High')
-      expect(findingsJson[1].finding.riskLevel).toBe('Critical')
+      expect(checklistJson.items[0].nominalRisk).toBe('High')
+      expect(checklistJson.items[1].nominalRisk).toBe('Medium')
+      expect(findingsJson[0].finding.riskClassification).toBe('High')
+      expect(findingsJson[1].finding.riskClassification).toBe('Critical')
     })
   })
 

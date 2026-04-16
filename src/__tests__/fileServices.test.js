@@ -460,7 +460,7 @@ describe('fileServices', () => {
   describe('follow-up session persistence', () => {
     it('loads follow-up session when file exists', async () => {
       const fs = createFileService()
-      const payload = { summary: { finalized: false }, responses: { F1: { findingId: 'F1' } } }
+      const payload = { summary: { specialty: 'VIG', finalized: false }, responses: { F1: { findingId: 'F1' } } }
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(payload))
 
@@ -543,6 +543,7 @@ describe('fileServices', () => {
       await fs.loadChecklist('VIG')
 
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'FollowUpEvidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalled()
     })
 
@@ -967,6 +968,7 @@ describe('fileServices', () => {
       await fs.saveChecklist('VIG', mockChecklist)
 
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'FollowUpEvidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         JSON.stringify(mockChecklist, null, 2),
         null,

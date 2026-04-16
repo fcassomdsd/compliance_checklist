@@ -1,6 +1,7 @@
 import { parseChecklist } from './checklist.js'
 import { parseFindings } from './findings.js'
 import { parseSession } from './session.js'
+import { parseFollowUpSession } from './followUpSession.js'
 
 export const createFileService = () => {
   // Default maximum file upload size
@@ -191,6 +192,7 @@ export const createFileService = () => {
       // check that the path exists
       if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.legs) == false) {
         await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.evidenceDir)
+        await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
         // create dummy checklist.json
         const dummyChecklist = {
           specialtyName: 'Demo Specialty',
@@ -446,6 +448,7 @@ export const createFileService = () => {
 
       const paths = getWorkspacePaths(specialty, locationId)
       await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.evidenceDir)
+      await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
       const payload = JSON.stringify(checklistObj, null, 2)
       await window.electronAPI.saveFile(payload, DEFAULT_ROOT, ...paths.checklist)
     } catch (error) {
@@ -512,6 +515,30 @@ export const createFileService = () => {
     return true
   }
 
+  const hashEvidence = async (evidenceContext, evidenceArray, specialty, locationId) => {
+  
+    try {
+      const paths = getWorkspacePaths(specialty, locationId)
+      const evidenceDir = evidenceContext == 'followUp' ? paths.followUpEvidenceDir : paths.evidenceDir
+      const evidenceFiles = evidenceArray.map( (x) => (x.hashValue ? null : x.name) ).filter( (y) => (y !== null))
+      const hashObj = await window.electronAPI.hashEvidenceFiles(evidenceFiles, DEFAULT_ROOT, ...evidenceDir)
+      const result = evidenceArray.map( (x) => ({
+          "name" : x.name,
+          "hashValue" : (x.hashValue ? x.hashValue : hashObj[x.name]),
+          "immutable" : true,
+          "sealedDate" : (x.sealedDate ? x.sealedDate : new Date().toISOString())
+        })
+      )
+      return result
+    } catch (error) {
+      throw new Error(
+        `hashEvidence: could not hash evidence files` +
+          (error.message ? `: ${error.message}` : '')
+      )
+    }
+  
+  }
+
   const loadFollowUpSession = async (specialty, locationId = null) => {
     try {
       const paths = getWorkspacePaths(specialty, locationId)
@@ -521,7 +548,7 @@ export const createFileService = () => {
       }
 
       const fileContents = await window.electronAPI.readFile(DEFAULT_ROOT, ...paths.followUpSession)
-      return typeof fileContents == 'string' ? JSON.parse(fileContents) : fileContents
+      return parseFollowUpSession(fileContents)
     } catch (error) {
       throw new Error(
         `loadFollowUpSession: could not load follow-up session for ${specialty}${locationId ? `/${locationId}` : ''} : ${error.message}`
@@ -1342,6 +1369,7 @@ export const createFileService = () => {
     readEvidence,
     saveExportFile,
     saveSession,
+    hashEvidence,
     loadFollowUpSession,
     saveFollowUpSession,
     loadSpecialties,
