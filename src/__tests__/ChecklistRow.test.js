@@ -239,7 +239,7 @@ describe('ChecklistRow.vue', () => {
   describe('Compliance', () => {
     it('renders compliance radio buttons', () => {
       const radios = wrapper.findAll('input[type="radio"]')
-      expect(radios.length).toBe(3) // Not applicable, Compliant, Non-compliant
+      expect(radios.length).toBe(3) // Not applicable, Compliant, Non-Compliant
       expect(radios[0].attributes('name')).toBe('compliance-VIG-0001')
       expect(radios[1].attributes('value')).toBe('Compliant')
       expect(radios[1].element.checked).toBe(true) // Matches session.compliance
@@ -259,13 +259,13 @@ describe('ChecklistRow.vue', () => {
     })
 
     it('triggers radioChange on compliance change', async () => {
-      const radio = wrapper.find('input[value="Non-compliant"]')
+      const radio = wrapper.find('input[value="Non-Compliant"]')
       await radio.setValue(true)
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
         'VIG-0001',
         'checklist-1',
         'compliance',
-        'Non-compliant',
+        'Non-Compliant',
         'VIG-0001'
       )
     })
@@ -273,23 +273,23 @@ describe('ChecklistRow.vue', () => {
     it('correctly changes style of radio button cell on compliance change', async () => {
       const cell = wrapper.find('td.compliance')
       expect(cell.attributes('style')).toBe('border: 3px solid rgb(85, 255, 85);')
-      await wrapper.setProps({ session: { compliance: 'Non-compliant' } })
-      expect(wrapper.props().session.compliance).toBe('Non-compliant')
+      await wrapper.setProps({ session: { compliance: 'Non-Compliant' } })
+      expect(wrapper.props().session.compliance).toBe('Non-Compliant')
       expect(cell.attributes('style')).toBe('border: 3px solid rgb(255, 85, 85);')
     })
 
     it('correctly shows or hides non-conformity text area', async () => {
       const cell = wrapper.find('div.non-conformity')
       expect(cell.attributes('hidden')).toBeDefined()
-      await wrapper.setProps({ session: { compliance: 'Non-compliant' } })
-      expect(wrapper.props().session.compliance).toBe('Non-compliant')
+      await wrapper.setProps({ session: { compliance: 'Non-Compliant' } })
+      expect(wrapper.props().session.compliance).toBe('Non-Compliant')
       expect(cell.attributes('hidden')).toBeUndefined()
     })
 
     it('renders finding level selector with default in non-conformity modal', async () => {
       await wrapper.setProps({
         session: {
-          compliance: 'Non-compliant',
+          compliance: 'Non-Compliant',
           nonConformityDetails: {},
         },
       })
@@ -305,7 +305,7 @@ describe('ChecklistRow.vue', () => {
     it('updates finding level from non-conformity modal selector', async () => {
       await wrapper.setProps({
         session: {
-          compliance: 'Non-compliant',
+          compliance: 'Non-Compliant',
           nonConformityDetails: {},
         },
       })

@@ -210,7 +210,7 @@ describe('Session Store', () => {
         },
         2: {
           id: '2',
-          compliance: 'Non-compliant',
+          compliance: 'Non-Compliant',
           nonConformityDetails: { description: 'bla bla bla', riskLevel: 'High' },
         },
       }
@@ -288,7 +288,7 @@ describe('Session Store', () => {
       }
       sessionStore.responses['2'] = {
         id: '2',
-        compliance: 'Non-compliant',
+        compliance: 'Non-Compliant',
         nonConformityDetails: { description: 'bla bla bla' },
         comments: 'Test comments',
         evidence: [{ name: 'file2.txt' }],
@@ -301,7 +301,7 @@ describe('Session Store', () => {
       }
       sessionStore.responses['4'] = {
         id: '2',
-        compliance: 'Non-compliant',
+        compliance: 'Non-Compliant',
         comments: 'Test comments',
         evidence: [{ name: 'file2.txt' }],
       }

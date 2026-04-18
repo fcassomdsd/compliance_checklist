@@ -59,8 +59,8 @@ describe('ChecklistTable.vue', () => {
     mockSession = {
       responses: {
         'VIG-0001': { compliance: 'Compliant', id: 'checklist-1', code: 'VIG-0001' },
-        'VIG-0002': { compliance: 'Non-compliant', id: 'checklist-2', code: 'VIG-0002' },
-        'VIG-0003': { compliance: 'Non-compliant', id: 'checklist-3', code: 'VIG-0003' },
+        'VIG-0002': { compliance: 'Non-Compliant', id: 'checklist-2', code: 'VIG-0002' },
+        'VIG-0003': { compliance: 'Non-Compliant', id: 'checklist-3', code: 'VIG-0003' },
       },
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
@@ -134,7 +134,7 @@ describe('ChecklistTable.vue', () => {
         question: 'Question 2?',
         verification: 'Verify 2',
       },
-      session: { compliance: 'Non-compliant', id: 'checklist-2', code: 'VIG-0002' },
+      session: { compliance: 'Non-Compliant', id: 'checklist-2', code: 'VIG-0002' },
       readOnly: false,
       linkedFindingId: '',
     })
@@ -149,7 +149,7 @@ describe('ChecklistTable.vue', () => {
         question: 'Question 3?',
         verification: 'Verify 3',
       },
-      session: { compliance: 'Non-compliant', id: 'checklist-3', code: 'VIG-0003' },
+      session: { compliance: 'Non-Compliant', id: 'checklist-3', code: 'VIG-0003' },
       readOnly: false,
       linkedFindingId: '',
     })

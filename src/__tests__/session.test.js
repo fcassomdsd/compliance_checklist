@@ -76,7 +76,7 @@ describe('session.js', () => {
           },
           2: {
             id: '2',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             nonConformityDetails: {
               description: 'Description of issue',
               findingLevel: 'Observation',
@@ -105,7 +105,7 @@ describe('session.js', () => {
           'VIG-0001': {
             id: '1',
             code: 'VIG-0001',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             nonConformityDetails: {
               description: 'Issue description',
               findingLevel: 'Recommendation',

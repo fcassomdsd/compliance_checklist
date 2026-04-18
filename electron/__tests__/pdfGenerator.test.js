@@ -154,7 +154,7 @@ describe('pdfGenerator', () => {
         responses: {
           1: {
             id: '1',
-            compliance: 'Non-compliant',
+            compliance: 'Non-Compliant',
             comments: 'Needs fixing',
             nonConformityDetails: { description: 'Issue found' },
             evidence: [],

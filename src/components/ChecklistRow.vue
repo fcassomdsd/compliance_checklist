@@ -46,7 +46,7 @@
         {{ radioBtn }}
         <br />
       </label>
-      <div class="non-conformity" :hidden="session.compliance != 'Non-compliant'">
+      <div class="non-conformity" :hidden="session.compliance != 'Non-Compliant'">
         <button class="nc-modal-trigger" @click="openNonConformityModal">
           {{ isReadOnly ? 'View Non-conformity' : 'Edit Non-conformity' }}
         </button>
@@ -289,12 +289,12 @@
   const emit = defineEmits(['go-follow-up'])
 
   const toast = useToast()
-  const radioButtons = ref(['Not applicable', 'Compliant', 'Non-compliant'])
+  const radioButtons = ref(['Not applicable', 'Compliant', 'Non-Compliant'])
 
   const radioColors = ref({
     'Not applicable': 'border : 3px solid #aaaaaa',
     Compliant: 'border : 3px solid #55FF55',
-    'Non-compliant': 'border : 3px solid #FF5555',
+    'Non-Compliant': 'border : 3px solid #FF5555',
   })
 
   const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
@@ -386,7 +386,7 @@
     const complianceValue = event.target.value
     updateResponse('compliance', complianceValue)
 
-    if (complianceValue == 'Non-compliant') {
+    if (complianceValue == 'Non-Compliant') {
       const defaultRisk = assignedRiskLevel.value
       updateNonConformityDetail('riskLevel', defaultRisk)
       const defaultFindingLevel = assignedFindingLevel.value

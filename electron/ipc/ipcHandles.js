@@ -178,6 +178,7 @@ const followUpReportSchema = {
     followUpReport: {
       type: 'object',
       required: [
+        'followUpId',
         'findingId',
         'providerId',
         'locationId',
@@ -188,6 +189,7 @@ const followUpReportSchema = {
         'effectivenessConfirmed',
       ],
       properties: {
+        followUpId: { type: 'string' },
         findingId: { type: 'string' },
         specialtyId: { type: 'string' },
         providerId: { type: 'string' },
@@ -254,6 +256,8 @@ const asDateOnly = (value) => {
   }
   return parsed.toISOString().split('T')[0]
 }
+
+const toYYYYMMDD = (value) => asDateOnly(value).replace(/-/g, '')
 
 const normalizeCompliance = (value) => {
   if (value === 'Compliant' || value === 'Non-Compliant' || value === 'Not Applicable') {
@@ -443,11 +447,10 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     }
 
     const rowReference = row?.reference || {}
+    const nationalRegulation = (rowReference?.normativa?.reglamento ? safeString(rowReference?.normativa?.reglamento + ' ' + rowReference?.normativa?.articulo, '') :  '')
     const referenceObj = {
       icaoReference: safeString(rowReference?.normativa?.ICAOref || rowReference?.icaoReference),
-      nationalRegulation: safeString(
-        rowReference?.normativa?.reglamento || rowReference?.nationalRegulation
-      ),
+      nationalRegulation: nationalRegulation || safeString(rowReference?.nationalRegulation)
     }
 
     if (referenceObj.icaoReference || referenceObj.nationalRegulation) {
@@ -531,8 +534,9 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       },
     }
 
+    const nationalRegulation = (row?.reference?.normativa?.reglamento ? safeString(row?.reference?.normativa?.reglamento + ' ' + row?.reference?.normativa?.articulo, '') :  '')
     const requirementBreached =
-      safeString(row?.reference?.normativa?.reglamento) ||
+      safeString(nationalRegulation) ||
       safeString(row?.reference?.nationalRegulation)
     if (requirementBreached) {
       finding.finding.regulationBreached = requirementBreached
@@ -578,6 +582,7 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       schemaVersion: '1.0',
       followUpReport: {
         findingId: effectiveFindingId,
+        followUpId: '',
         providerId: safeString(finding.providerId),
         locationId: safeString(finding.locationId),
         locationName: safeString(finding.locationName),
@@ -590,6 +595,8 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
         effectivenessConfirmed: Boolean(response?.effectivenessConfirmed),
       },
     }
+
+    report.followUpReport.followUpId = `FU-${report.followUpReport.findingId}-${toYYYYMMDD(report.followUpReport.followUpDate)}`
 
     const specialtyId = safeString(finding?.specialtyId)
     if (specialtyId) {
@@ -1110,7 +1117,7 @@ export function setupIpcHandles(ipcMain) {
       await ensureDir(workspacePath)
 
       const zip = new JSZip()
-      zip.file('findings.json', JSON.stringify(normalizedFindingsObj, null, 2))
+      zip.file('prior-findings.json', JSON.stringify(normalizedFindingsObj, null, 2))
       zip.file('followup-reports.json', JSON.stringify(followUpReportsPayload, null, 2))
 
       if (await fileExists(followUpEvidencePath)) {

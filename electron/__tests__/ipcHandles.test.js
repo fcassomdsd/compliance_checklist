@@ -690,6 +690,12 @@ describe('ipcHandles', () => {
         'http://localhost:8000/followup-import',
         expect.objectContaining({ method: 'POST' })
       )
+
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const reportsJson = JSON.parse(await zip.file('followup-reports.json').async('string'))
+      expect(reportsJson[0].followUpReport.followUpId).toBe('FU-MDPP-VIG-2026-01-20260321')
+
       expect(result).toEqual(
         expect.objectContaining({
           uploadStatus: 200,
