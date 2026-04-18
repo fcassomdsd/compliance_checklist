@@ -69,7 +69,7 @@ def fill_table_row(table, row, question_data, session_data, sequence):
 
     # color cell backgrounds.
     match compliance:
-        case "Non-compliant":
+        case "Non-Compliant":
             bcolor = 0xFF5555
         case "Compliant":
             bcolor = 0x55FF55

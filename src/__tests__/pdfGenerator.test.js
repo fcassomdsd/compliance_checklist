@@ -112,7 +112,7 @@ describe('PDF Generator', () => {
       summary: { generalComments: 'This is a general comment.'},        
       responses: {
         1: {
-          compliance: 'Non-compliant',
+          compliance: 'Non-Compliant',
           nonConformityDetails: { description: 'No security measures found' },
         },
       },
@@ -162,8 +162,8 @@ describe('PDF Generator', () => {
     const session = {
       summary: { generalComments: 'This is a general comment.'},        
       responses: {
-        1: { compliance: 'Non-compliant', nonConformityDetails: { description: 'No documentation' } },
-        2: { compliance: 'Non-compliant', nonConformityDetails: { description: 'No monitoring' } },
+        1: { compliance: 'Non-Compliant', nonConformityDetails: { description: 'No documentation' } },
+        2: { compliance: 'Non-Compliant', nonConformityDetails: { description: 'No monitoring' } },
         3: { compliance: 'Compliant', comments: 'Good system' },
       },
     }
@@ -229,7 +229,7 @@ describe('PDF Generator', () => {
     const session = {
       summary: { generalComments: 'This is a general comment.'},        
       responses: {
-        1: { compliance: 'Non-compliant', nonConformity: 'Issue found' },
+        1: { compliance: 'Non-Compliant', nonConformity: 'Issue found' },
       },
     }
 
@@ -319,7 +319,7 @@ describe('PDF Generator', () => {
     const session = {
       summary: { generalComments: 'This is a general comment.'},        
       responses: {
-        1: { compliance: 'Non-compliant', nonConformity: longText },
+        1: { compliance: 'Non-Compliant', nonConformity: longText },
       },
     }
 

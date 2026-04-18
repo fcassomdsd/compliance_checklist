@@ -41,7 +41,7 @@ const sessionSchema = {
             },
             compliance: {
               type: 'string',
-              enum: ['Not applicable', 'Compliant', 'Non-compliant'],
+              enum: ['Not applicable', 'Compliant', 'Non-Compliant'],
             },
             comments: {
               type: 'string',

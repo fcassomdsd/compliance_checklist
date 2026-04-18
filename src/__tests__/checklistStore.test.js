@@ -342,14 +342,14 @@ describe('Checklist Store', () => {
 
       mockSession.responses['4'] = {
         id: '3',
-        compliance: 'Non-compliant',
+        compliance: 'Non-Compliant',
         comments: 'Multiline\nTest comments',
         nonConformity: 'Non-conformity details 1',
       }
 
       mockSession.responses['5'] = {
         id: '4',
-        compliance: 'Non-compliant',
+        compliance: 'Non-Compliant',
         nonConformity: 'Non-conformity details 2',
       }
 

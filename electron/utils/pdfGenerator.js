@@ -53,7 +53,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
 
       // Collect non-compliant findings
       const findings = []
-      const validCompliance = ['Non-compliant']
+      const validCompliance = ['Non-Compliant']
       const validQuestions = checklist.questions.entries()
 
       for (const [index, row] of validQuestions) {
