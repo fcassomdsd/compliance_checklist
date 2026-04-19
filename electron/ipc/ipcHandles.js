@@ -53,6 +53,7 @@ const checklistSchema = {
         locationId: { type: 'string' },
         locationName: { type: 'string' },
         icaoCode: { type: 'string' },
+        completionDate: { type: 'string', format: 'date' },
         specialtyId: { type: 'string' },
         specialtyCode: { type: 'string' },
         specialtyName: { type: 'string' },
@@ -444,6 +445,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     locationId: safeString(checklistObj?.locationId),
     locationName: safeString(checklistObj?.locationName, safeString(checklistObj?.location)),
     icaoCode,
+    completionDate: safeString(checklistObj?.endDate),
     checklistId: inferChecklistId(inspectionCode, specialtyCode),
     providerName: safeString(checklistObj?.providerName),
     inspectors: Array.isArray(checklistObj?.inspectors)

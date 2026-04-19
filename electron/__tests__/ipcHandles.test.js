@@ -433,6 +433,7 @@ describe('ipcHandles', () => {
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
+        endDate: '2026-03-22',
         questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
       }
       const session = {
@@ -457,6 +458,10 @@ describe('ipcHandles', () => {
         'http://localhost:8000/inspection-import',
         expect.objectContaining({ method: 'POST' })
       )
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
+      expect(checklistJson.checklist.completionDate).toBe('2026-03-22')
       expect(result).toEqual(
         expect.objectContaining({
           uploadStatus: 200,
