@@ -123,13 +123,13 @@ describe('checklist.js', () => {
           reference: { normativa: {}, guidance: 'GM only text' },
           question: 'Question 1',
           verification: 'Verification 1',
-          priorFindingId: 'MDPP-VIG-2026-01',
+          priorFindingId: 'MDPP001-VIG-01',
         },
       ],
     })
 
     const result = parseChecklist(validJson)
-    expect(result.questions[0].priorFindingId).toBe('MDPP-VIG-2026-01')
+    expect(result.questions[0].priorFindingId).toBe('MDPP001-VIG-01')
   })
 
   it('parses a checklist question with riskLevel', async () => {

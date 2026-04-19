@@ -48,7 +48,7 @@ const checklistSchema = {
         inspectionId: { type: 'string' },
         inspectionCode: {
           type: 'string',
-          pattern: '^[A-Z0-9]{4}-\\d{4}-\\d{2}$',
+          pattern: '^[A-Z0-9]{4}-\\d{3}$',
         },
         locationId: { type: 'string' },
         locationName: { type: 'string' },
@@ -58,7 +58,7 @@ const checklistSchema = {
         specialtyName: { type: 'string' },
         checklistId: {
           type: 'string',
-          pattern: '^CHK-[A-Z0-9]{4}-\\d{4}-\\d{2}-[A-Z]{3}$',
+          pattern: '^CHK-[A-Z0-9]{7}-[A-Z0-9]{3,6}$',
         },
         providerId: { type: 'string' },
         providerName: { type: 'string' },
@@ -76,7 +76,7 @@ const checklistSchema = {
           itemId: { type: 'string' },
           itemCode: {
             type: 'string',
-            pattern: '^[A-Z]{3}-\\d{4}$',
+            pattern: '^[A-Z0-9]{3,6}-\\d{4}$',
           },
           requirementText: { type: 'string' },
           itemVerificationMethod: { type: 'string' },
@@ -143,7 +143,7 @@ const findingSchema = {
       properties: {
         findingId: {
           type: 'string',
-          pattern: '^[A-Z0-9]{4}-[A-Z]{3}-\\d{4}-\\d{2}$',
+          pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
         },
         specialtyId: { type: 'string' },
         providerId: { type: 'string' },
@@ -189,8 +189,14 @@ const followUpReportSchema = {
         'effectivenessConfirmed',
       ],
       properties: {
-        followUpId: { type: 'string' },
-        findingId: { type: 'string' },
+        followUpId: {
+          type: 'string',
+          pattern: '^FU-[A-Z0-9]{7}[A-Z0-9]{3,6}-\\d{2}-\\d{6}$',
+        },
+        findingId: {
+          type: 'string',
+          pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
+        },
         specialtyId: { type: 'string' },
         providerId: { type: 'string' },
         locationId: { type: 'string' },
@@ -257,7 +263,7 @@ const asDateOnly = (value) => {
   return parsed.toISOString().split('T')[0]
 }
 
-const toYYYYMMDD = (value) => asDateOnly(value).replace(/-/g, '')
+const toYYMMDD = (value) => asDateOnly(value).slice(2).replace(/-/g, '')
 
 const normalizeCompliance = (value) => {
   if (value === 'Compliant' || value === 'Non-Compliant' || value === 'Not Applicable') {
@@ -280,28 +286,58 @@ const normalizeFindingLevel = (value) => {
   return 'Non-Compliance'
 }
 
+const compactInspectionCode = (inspectionCode = '') =>
+  sanitizeUpperAlnum(inspectionCode)
+    .slice(0, 7)
+    .padEnd(7, 'X')
+
+const normalizeInspectionSequence = (rawValue, fallback = '001') => {
+  const digits = String(rawValue || '').replace(/\D/g, '')
+  const seq = digits.slice(-3) || fallback
+  return seq.padStart(3, '0').slice(-3)
+}
+
+const compactFindingIdForFollowUp = (findingId = '') => {
+  const normalized = String(findingId).toUpperCase()
+  const matched = normalized.match(/^([A-Z0-9]{7})-([A-Z0-9]{3,6})-(\d{2})$/)
+  if (matched) {
+    return `${matched[1]}${matched[2]}-${matched[3]}`
+  }
+  return sanitizeUpperAlnum(normalized)
+}
+
 const inferInspectionCode = (checklistObj) => {
   const existing = safeString(checklistObj?.inspection)
-  if (/^[A-Z]{4}-\d{4}-\d{2}$/.test(existing)) {
+  if (/^[A-Z0-9]{4}-\d{3}$/.test(existing)) {
     return existing
+  }
+
+  const legacyMatch = existing.match(/^([A-Z0-9]{4})-(\d{4})-(\d{2})$/)
+  if (legacyMatch) {
+    return `${legacyMatch[1]}-${legacyMatch[3].padStart(3, '0')}`
   }
 
   const locationToken =
     sanitizeUpperAlnum(checklistObj?.locationCode || checklistObj?.locationId || checklistObj?.location)
       .slice(0, 4)
       .padEnd(4, 'X')
-  const year = asDateOnly(checklistObj?.startDate).slice(0, 4)
-  const seq = String(checklistObj?.inspection || checklistObj?.inspectionNumber || '01').replace(
-    /\D/g,
-    ''
+  const seq3 = normalizeInspectionSequence(
+    checklistObj?.inspectionNumber || checklistObj?.inspection,
+    '001'
   )
-  const seq2 = (seq.slice(-2) || '01').padStart(2, '0')
-  return `${locationToken}-${year}-${seq2}`
+  return `${locationToken}-${seq3}`
 }
 
 const inferSpecialtyCode = (checklistObj, specialty) => {
   const existing = safeString(checklistObj?.specialtyCode, safeString(specialty))
-  return sanitizeUpperAlnum(existing).slice(0, 3).padEnd(3, 'X')
+  const normalized = sanitizeUpperAlnum(existing)
+  if (normalized.length == 0) {
+    return 'XXX'
+  }
+  if (normalized.length < 3) {
+    return normalized.padEnd(3, 'X')
+  }
+  return normalized.slice(0, 6)
 }
 
 const inferDomainName = (checklistObj, specialty, specialtyCode) => {
@@ -313,9 +349,7 @@ const inferDomainName = (checklistObj, specialty, specialtyCode) => {
 }
 
 const inferChecklistId = (inspectionCode, domainCode) => {
-  const [locationPart = 'XXXX', year = '0000', sequence = '00'] = String(inspectionCode).split('-')
-  const checklistLocation = locationPart.replace(/[^A-Z]/g, '').padEnd(4, 'X').slice(0, 4)
-  return `CHK-${checklistLocation}-${year}-${sequence}-${domainCode}`
+  return `CHK-${compactInspectionCode(inspectionCode)}-${domainCode}`
 }
 
 const inferItemCode = (row, domainCode, index) => {
@@ -325,7 +359,7 @@ const inferItemCode = (row, domainCode, index) => {
   }
 
   const existing = safeString(row?.itemCode)
-  if (/^[A-Z]{3}-\d{4}$/.test(existing)) {
+  if (/^[A-Z0-9]{3,6}-\d{4}$/.test(existing)) {
     return existing
   }
 
@@ -506,7 +540,7 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
   const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
 
   const dateIssued = asDateOnly(sessionObj?.summary?.lastUpdated || checklistObj?.startDate)
-  const locationToken = sanitizeUpperAlnum(checklistPayload?.checklist?.inspectionCode).slice(0, 4)
+  const inspectionCompact = compactInspectionCode(checklistPayload?.checklist?.inspectionCode)
 
   const findings = []
 
@@ -520,9 +554,7 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
     const finding = {
       schemaVersion: '1.0',
       finding: {
-        findingId: `${(locationToken || 'XXXX').padEnd(4, 'X')}-${specialtyCode}-${asDateOnly(
-          checklistObj?.startDate
-        ).slice(0, 4)}-${String(findingNumber).padStart(2, '0')}`,
+        findingId: `${inspectionCompact}-${specialtyCode}-${String(findingNumber).padStart(2, '0')}`,
         providerId: checklistPayload?.checklist?.providerId || '',
         locationId: checklistPayload?.checklist?.locationId || '',
         locationName:
@@ -596,7 +628,7 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       },
     }
 
-    report.followUpReport.followUpId = `FU-${report.followUpReport.findingId}-${toYYYYMMDD(report.followUpReport.followUpDate)}`
+    report.followUpReport.followUpId = `FU-${compactFindingIdForFollowUp(report.followUpReport.findingId)}-${toYYMMDD(report.followUpReport.followUpDate)}`
 
     const specialtyId = safeString(finding?.specialtyId)
     if (specialtyId) {
