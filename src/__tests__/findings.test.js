@@ -6,7 +6,7 @@ describe('findings.js', () => {
     const validJson = JSON.stringify([
       {
         schemaVersion: '1.0',
-        findingId: 'MDPP-VIG-2026-01',
+        findingId: 'MDPP001-VIG-01',
         locationId: 'a01-location',
         locationName: 'MDPP',
         domain: 'VIG',
@@ -15,14 +15,14 @@ describe('findings.js', () => {
     ])
 
     const result = parseFindings(validJson)
-    expect(result[0].findingId).toBe('MDPP-VIG-2026-01')
+    expect(result[0].findingId).toBe('MDPP001-VIG-01')
   })
 
   it('throws for invalid findings payload', () => {
     const invalidJson = JSON.stringify([
       {
         schemaVersion: '1.0',
-        findingId: 'MDPP-VIG-2026-01',
+        findingId: 'MDPP001-VIG-01',
       },
     ])
 

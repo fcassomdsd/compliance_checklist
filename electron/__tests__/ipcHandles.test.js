@@ -433,6 +433,7 @@ describe('ipcHandles', () => {
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
+        endDate: '2026-03-22',
         questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
       }
       const session = {
@@ -457,6 +458,10 @@ describe('ipcHandles', () => {
         'http://localhost:8000/inspection-import',
         expect.objectContaining({ method: 'POST' })
       )
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
+      expect(checklistJson.checklist.completionDate).toBe('2026-03-22')
       expect(result).toEqual(
         expect.objectContaining({
           uploadStatus: 200,
@@ -656,7 +661,7 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP-VIG-2026-01',
+            findingId: 'MDPP001-VIG-01',
             domain: 'VIG',
             providerId: 'provider-1',
             locationId: 'loc-1',
@@ -669,8 +674,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP-VIG-2026-01': {
-            findingId: 'MDPP-VIG-2026-01',
+          'MDPP001-VIG-01': {
+            findingId: 'MDPP001-VIG-01',
             percentComplete: 100,
             effectivenessConfirmed: true,
             findingClosed: true,
@@ -694,7 +699,7 @@ describe('ipcHandles', () => {
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
       const zip = await JSZip.loadAsync(zipBuffer)
       const reportsJson = JSON.parse(await zip.file('followup-reports.json').async('string'))
-      expect(reportsJson[0].followUpReport.followUpId).toBe('FU-MDPP-VIG-2026-01-20260321')
+      expect(reportsJson[0].followUpReport.followUpId).toBe('FU-MDPP001VIG-01-260321')
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -715,7 +720,7 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP-VIG-2026-01',
+            findingId: 'MDPP001-VIG-01',
             domain: 'VIG',
             providerId: 'provider-1',
             locationId: 'loc-1',
@@ -728,8 +733,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP-VIG-2026-01': {
-            findingId: 'MDPP-VIG-2026-01',
+          'MDPP001-VIG-01': {
+            findingId: 'MDPP001-VIG-01',
             percentComplete: 10,
             effectivenessConfirmed: false,
             findingClosed: false,
@@ -758,7 +763,7 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP-VIG-2025-02',
+            findingId: 'MDPP001-VIG-02',
             domain: 'VIG',
             providerId: 'provider-1',
             locationId: 'MDPP',
@@ -772,7 +777,7 @@ describe('ipcHandles', () => {
         summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           orphan_key: {
-            findingId: 'MDPP-VIG-2025-02',
+            findingId: 'MDPP001-VIG-02',
             percentComplete: 20,
             effectivenessConfirmed: false,
             findingClosed: false,
@@ -804,7 +809,7 @@ describe('ipcHandles', () => {
 
       const findings = [
         {
-          findingId: 'MDPP-VIG-2025-02',
+          findingId: 'MDPP001-VIG-02',
           domain: 'VIG',
           providerId: 'provider-1',
           locationId: 'MDPP',
@@ -816,8 +821,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP-VIG-2025-02': {
-            findingId: 'MDPP-VIG-2025-02',
+          'MDPP001-VIG-02': {
+            findingId: 'MDPP001-VIG-02',
             percentComplete: 50,
             effectivenessConfirmed: false,
             findingClosed: false,
@@ -849,7 +854,7 @@ describe('ipcHandles', () => {
 
       const findings = [
         {
-          findingId: 'MDPP-VIG-2025-03',
+          findingId: 'MDPP001-VIG-03',
           specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
           providerId: 'provider-1',
           locationId: 'MDPP',
@@ -862,8 +867,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP-VIG-2025-03': {
-            findingId: 'MDPP-VIG-2025-03',
+          'MDPP001-VIG-03': {
+            findingId: 'MDPP001-VIG-03',
             percentComplete: 80,
             effectivenessConfirmed: false,
             findingClosed: false,
