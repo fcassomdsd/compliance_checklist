@@ -95,8 +95,8 @@ describe('Follow Up Store', () => {
           responses: {
             F1: {
               findingId: 'F1',
+              followUpType: 'Progress Verification',
               percentComplete: 50,
-              findingClosed: false,
               evidence: [{ name: 'proof.jpg' }],
             },
           },
@@ -110,9 +110,9 @@ describe('Follow Up Store', () => {
     expect(store.responses.responses).toBeUndefined()
     expect(store.responses.F1).toEqual({
       findingId: 'F1',
+      followUpType: 'Progress Verification',
       percentComplete: 50,
-      effectivenessConfirmed: false,
-      findingClosed: false,
+      effectivenessConfirmed: null,
       evidence: [{ name: 'proof.jpg', hashValue: '', immutable: false, sealedDate: '' }],
     })
   })
@@ -145,9 +145,9 @@ describe('Follow Up Store', () => {
       summary: { finalized: false, generalComments: 123 },
       responses: {
         F2: {
+          followUpType: 'Closure Verification',
           percentComplete: 120,
           effectivenessConfirmed: true,
-          findingClosed: true,
           comments: 'done',
           closureVerificationMethod: 'onsite',
           followUpDate: '2026-04-01',
@@ -163,8 +163,8 @@ describe('Follow Up Store', () => {
     expect(store.responses.F2).toEqual({
       findingId: 'F2',
       percentComplete: 100,
+      followUpType: 'Closure Verification',
       effectivenessConfirmed: true,
-      findingClosed: true,
       comments: 'done',
       closureVerificationMethod: 'onsite',
       followUpDate: '2026-04-01',

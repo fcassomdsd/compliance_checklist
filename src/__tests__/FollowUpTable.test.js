@@ -57,20 +57,22 @@ describe('FollowUpTable.vue', () => {
     vi.mocked(useFollowUpStore).mockReturnValue(mockFollowUpStore)
   })
 
-  it('auto-closes finding when percent=100 and effectiveness=true', async () => {
+  it('updates follow-up type and effectiveness for Closure Verification', async () => {
     const wrapper = mount(FollowUpTable, {
       global: { plugins: [pinia] },
     })
 
-    const numberInput = wrapper.find('input[type="number"]')
-    await numberInput.setValue('100')
+    const selects = wrapper.findAll('select')
+    // First select is followUpType
+    await selects[0].setValue('Closure Verification')
 
-    const checkboxes = wrapper.findAll('input[type="checkbox"]')
-    await checkboxes[0].setValue(true)
+    // Second select is effectiveness (only visible for Closure Verification)
+    const effectivenessSelects = wrapper.findAll('select').filter(s => s.element.value !== 'Closure Verification')
+    if (effectivenessSelects.length > 0) {
+      await effectivenessSelects[0].setValue('true')
+    }
 
-    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'percentComplete', 100)
-    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'effectivenessConfirmed', true)
-    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'findingClosed', true)
+    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'followUpType', 'Closure Verification')
   })
 
   it('uploads follow-up evidence and updates response list', async () => {

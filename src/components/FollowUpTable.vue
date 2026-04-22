@@ -4,17 +4,17 @@
       <col style="width: 14%" />
       <col style="width: 28%" />
       <col style="width: 12%" />
-      <col style="width: 10%" />
-      <col style="width: 10%" />
-      <col style="width: 26%" />
+      <col style="width: 16%" />
+      <col style="width: 30%" />
     </colgroup>
     <thead>
       <tr>
         <th>Finding ID</th>
         <th>Description</th>
         <th>Percent Complete</th>
-        <th>Effective</th>
-        <th>Closed</th>
+        <th>Follow-Up Type</th>
+        <th>Effectiveness Confirmed</th>
+        <th>Follow-Up Comment</th>
         <th>Evidence</th>
       </tr>
     </thead>
@@ -33,20 +33,39 @@
           />
         </td>
         <td>
-          <input
-            type="checkbox"
+          <select
             :disabled="followUpStore.summary.finalized"
-            :checked="getField(entry, 'effectivenessConfirmed')"
-            @change="onFieldChange(entry, 'effectivenessConfirmed', $event.target.checked)"
-          />
+            :value="getField(entry, 'followUpType')"
+            @change="onFieldChange(entry, 'followUpType', $event.target.value)"
+          >
+            <option value="Progress Verification">Progress Verification</option>
+            <option value="Closure Verification">Closure Verification</option>
+          </select>
         </td>
         <td>
-          <input
-            type="checkbox"
+          <template v-if="getField(entry, 'followUpType') === 'Closure Verification'">
+            <select
+              :disabled="followUpStore.summary.finalized"
+              :value="effectivenessValue(getField(entry, 'effectivenessConfirmed'))"
+              @change="onFieldChange(entry, 'effectivenessConfirmed', parseEffectiveness($event.target.value))"
+            >
+              <option :value="null">Unset</option>
+              <option :value="true">Yes</option>
+              <option :value="false">No</option>
+            </select>
+          </template>
+          <template v-else>
+            <span style="color: #888">N/A</span>
+          </template>
+        </td>
+        <td>
+          <textarea
             :disabled="followUpStore.summary.finalized"
-            :checked="getField(entry, 'findingClosed')"
-            @change="onFieldChange(entry, 'findingClosed', $event.target.checked)"
-          />
+            :value="getField(entry, 'comments')"
+            @input="onFieldChange(entry, 'comments', $event.target.value)"
+            placeholder="Enter follow-up comment"
+            rows="3"
+          ></textarea>
         </td>
         <td class="evidence-cell">
           <div class="evidence-controls">
@@ -79,6 +98,7 @@
               <a :href="evidenceStore.files[evidenceName(evidence)]?.URL" download target="_blank">
                 {{ evidenceName(evidence) }}
               </a>
+              <span v-if="evidence.evidenceRole" class="evidence-role">({{ evidence.evidenceRole }})</span>
             </li>
           </ul>
         </td>
@@ -117,13 +137,6 @@
       return
     }
     followUpStore.updateFollowUp(findingId, field, value)
-
-    // Immediate closure update when completion is 100% and effectiveness is confirmed.
-    if (field == 'percentComplete' || field == 'effectivenessConfirmed') {
-      const current = followUpStore.responses[findingId] || {}
-      const isClosed = Number(current.percentComplete) == 100 && current.effectivenessConfirmed === true
-      followUpStore.updateFollowUp(findingId, 'findingClosed', isClosed)
-    }
   }
 
   const evidenceName = (entry) =>
@@ -208,6 +221,19 @@
     const updatedEvidence = getEvidenceList(entry).filter((_, index) => index != evidenceIndex)
     followUpStore.updateFollowUp(findingId, 'evidence', updatedEvidence)
   }
+
+  const effectivenessValue = (val) => {
+    if (val === null || typeof val === 'undefined') return null
+    if (val === true) return true
+    if (val === false) return false
+    return null
+  }
+
+  const parseEffectiveness = (val) => {
+    if (val === 'true' || val === true) return true
+    if (val === 'false' || val === false) return false
+    return null
+  }
 </script>
 
 <style scoped>
@@ -254,5 +280,11 @@
     white-space: nowrap;
     max-width: 170px;
     display: inline-block;
+  }
+
+  .evidence-role {
+    color: #888;
+    font-size: 0.9em;
+    margin-left: 0.5em;
   }
 </style>

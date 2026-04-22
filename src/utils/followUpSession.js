@@ -2,18 +2,6 @@ import Ajv from 'ajv'
 
 const ajv = new Ajv({ allErrors: true, verbose: true })
 
-const evidenceItemSchema = {
-  type: 'object',
-  properties: {
-    name: { type: 'string' },
-    hashValue: { type: 'string' },
-    immutable: { type: 'boolean' },
-    sealedDate: { type: 'string' },
-  },
-  additionalProperties: false,
-  required: ['name'],
-}
-
 const followUpSessionSchema = {
   type: 'object',
   properties: {
@@ -37,19 +25,30 @@ const followUpSessionSchema = {
           properties: {
             findingId: { type: 'string' },
             percentComplete: { type: 'number', minimum: 0, maximum: 100 },
-            effectivenessConfirmed: { type: 'boolean' },
-            findingClosed: { type: 'boolean' },
+            followUpType: { type: 'string', enum: ['Progress Verification', 'Closure Verification'] },
+            effectivenessConfirmed: { anyOf: [ { type: 'boolean' }, { type: 'null' } ] },
             comments: { type: 'string' },
             closureVerificationMethod: { type: 'string' },
             followUpDate: { type: 'string' },
             followUpClosureDate: { type: 'string' },
             evidence: {
               type: 'array',
-              items: evidenceItemSchema,
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  hashValue: { type: 'string' },
+                  immutable: { type: 'boolean' },
+                  sealedDate: { type: 'string' },
+                  evidenceRole: { type: 'string', enum: ['Progress Evidence', 'Closure Evidence'] },
+                },
+                required: ['name'],
+                additionalProperties: false,
+              },
             },
           },
           additionalProperties: false,
-          required: ['findingId'],
+          required: ['findingId', 'followUpType'],
         },
       },
       additionalProperties: false,
