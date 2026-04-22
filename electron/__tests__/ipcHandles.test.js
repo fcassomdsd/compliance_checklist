@@ -554,21 +554,24 @@ describe('ipcHandles', () => {
       expect(checklistJson.checklist.specialtyId).toBe('a01k0f67dskef2a475yzd8a5dxd')
       expect(checklistJson.checklist.specialtyCode).toBe('VIG')
       expect(checklistJson.checklist.specialtyName).toBe('Sistemas de Vigilancia')
-      expect(checklistJson.items[0].evidence).toEqual([
+      expect(checklistJson.items[0].evidenceItems).toEqual([
         {
           evidenceId: 'EV-0001-01',
           evidenceType: 'image',
           source: 'photo-1.jpg',
+          evidenceRole: 'Compliance Evidence',
         },
         {
           evidenceId: 'EV-0001-02',
           evidenceType: 'audio',
           source: 'voice-1.webm',
+          evidenceRole: 'Compliance Evidence',
         },
         {
           evidenceId: 'EV-0001-03',
           evidenceType: 'document',
           source: 'note.pdf',
+          evidenceRole: 'Compliance Evidence',
         },
       ])
     })
@@ -676,9 +679,9 @@ describe('ipcHandles', () => {
         responses: {
           'MDPP001-VIG-01': {
             findingId: 'MDPP001-VIG-01',
+            followUpType: 'Closure Verification',
             percentComplete: 100,
             effectivenessConfirmed: true,
-            findingClosed: true,
           },
         },
       }
@@ -699,7 +702,7 @@ describe('ipcHandles', () => {
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
       const zip = await JSZip.loadAsync(zipBuffer)
       const reportsJson = JSON.parse(await zip.file('followup-reports.json').async('string'))
-      expect(reportsJson[0].followUpReport.followUpId).toBe('FU-MDPP001VIG-01-260321')
+      expect(reportsJson[0].followUpReport.followUpId).toBe('FU-MDPP001VIG-01-260321-01')
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -735,9 +738,9 @@ describe('ipcHandles', () => {
         responses: {
           'MDPP001-VIG-01': {
             findingId: 'MDPP001-VIG-01',
+            followUpType: 'Progress Verification',
             percentComplete: 10,
-            effectivenessConfirmed: false,
-            findingClosed: false,
+            effectivenessConfirmed: null,
           },
         },
       }
@@ -778,9 +781,9 @@ describe('ipcHandles', () => {
         responses: {
           orphan_key: {
             findingId: 'MDPP001-VIG-02',
+            followUpType: 'Progress Verification',
             percentComplete: 20,
-            effectivenessConfirmed: false,
-            findingClosed: false,
+            effectivenessConfirmed: null,
           },
         },
       }
@@ -823,9 +826,9 @@ describe('ipcHandles', () => {
         responses: {
           'MDPP001-VIG-02': {
             findingId: 'MDPP001-VIG-02',
-            percentComplete: 50,
-            effectivenessConfirmed: false,
-            findingClosed: false,
+            followUpType: 'Progress Verification',
+            percentComplete: 5,
+            effectivenessConfirmed: null,
           },
         },
       }
@@ -869,9 +872,9 @@ describe('ipcHandles', () => {
         responses: {
           'MDPP001-VIG-03': {
             findingId: 'MDPP001-VIG-03',
+            followUpType: 'Progress Verification',
             percentComplete: 80,
-            effectivenessConfirmed: false,
-            findingClosed: false,
+            effectivenessConfirmed: null,
           },
         },
       }
