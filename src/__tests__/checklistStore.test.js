@@ -78,12 +78,15 @@ describe('Checklist Store', () => {
         followUpTouched: false,
       }),
       saveWorkspaceMetadata: vi.fn().mockResolvedValue(undefined),
+      removeInspectionSession: vi.fn().mockResolvedValue({ removed: true, workspaceDeleted: false }),
+      removeFollowUpSession: vi.fn().mockResolvedValue({ removed: true, workspaceDeleted: false }),
     }
     createFileService.mockReturnValue(mockFs)
 
     mockSession = {
       summary: { value: {} },
       responses: {},
+      reset: vi.fn(),
       loadSession: vi.fn(),
       updateSession: vi.fn(),
       finalize: vi.fn(),
@@ -93,6 +96,8 @@ describe('Checklist Store', () => {
     mockFollowUp = {
       summary: { finalized: true, specialty: 'VIG' },
       responses: {},
+      reset: vi.fn(),
+      loadFollowUpSession: vi.fn(),
     }
     vi.mocked(useFollowUpStore).mockReturnValue(mockFollowUp)
 
@@ -259,6 +264,54 @@ describe('Checklist Store', () => {
       )
       expect(store.accionModal.value).toBe('create the default path')
       expect(store.showModal.value).toBe(true)
+    })
+  })
+
+  describe('session removal behavior', () => {
+    it('removing inspection session resets local inspection state without reloading', async () => {
+      store.specialty.value = 'VIG'
+      store.activeWorkspace.value = {
+        workspaceKey: 'loc-001__VIG',
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+      }
+      store.activeWorkspaceKey.value = 'loc-001__VIG'
+      mockFs.loadWorkspaceRegistry.mockResolvedValue([
+        {
+          workspaceKey: 'loc-001__VIG',
+          specialtyCode: 'VIG',
+          locationId: 'loc-001',
+        },
+      ])
+
+      await store.removeInspectionSession()
+
+      expect(mockFs.removeInspectionSession).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(mockSession.reset).toHaveBeenCalledTimes(1)
+      expect(mockSession.loadSession).not.toHaveBeenCalled()
+    })
+
+    it('removing follow-up session resets local follow-up state without reloading', async () => {
+      store.specialty.value = 'VIG'
+      store.activeWorkspace.value = {
+        workspaceKey: 'loc-001__VIG',
+        specialtyCode: 'VIG',
+        locationId: 'loc-001',
+      }
+      store.activeWorkspaceKey.value = 'loc-001__VIG'
+      mockFs.loadWorkspaceRegistry.mockResolvedValue([
+        {
+          workspaceKey: 'loc-001__VIG',
+          specialtyCode: 'VIG',
+          locationId: 'loc-001',
+        },
+      ])
+
+      await store.removeFollowUpSession()
+
+      expect(mockFs.removeFollowUpSession).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(mockFollowUp.reset).toHaveBeenCalledTimes(1)
+      expect(mockFollowUp.loadFollowUpSession).not.toHaveBeenCalled()
     })
   })
 

@@ -557,7 +557,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
-      await sessionStore.loadSession(specialty.value, activeWorkspace.value.locationId)
+      sessionStore.reset(false)
       toast.success('Inspection session removed')
       return result
     } catch (error) {
@@ -588,7 +588,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
-      await followUpStore.loadFollowUpSession(specialty.value, activeWorkspace.value.locationId)
+      followUpStore.reset(false)
       toast.success('Follow-up session removed')
       return result
     } catch (error) {
