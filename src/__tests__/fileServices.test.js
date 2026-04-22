@@ -112,12 +112,34 @@ describe('fileServices', () => {
 
   it('readEvidence returns a list of files', async () => {
     const mockDirList = [{ name: 'file1' }]
+    mockElectronAPI.checkPath.mockResolvedValue(true)
     mockElectronAPI.listPath.mockResolvedValue(mockDirList)
 
     const result = await fs.readEvidence('VIG')
 
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
     expect(mockElectronAPI.listPath).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
     expect(result).toEqual(mockDirList)
+  })
+
+  it('readEvidence returns empty list when evidence directory is missing', async () => {
+    mockElectronAPI.checkPath.mockResolvedValue(false)
+
+    const result = await fs.readEvidence('VIG', 'MDPP')
+
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_VIG', 'Evidence')
+    expect(mockElectronAPI.listPath).not.toHaveBeenCalled()
+    expect(result).toEqual([])
+  })
+
+  it('readAudio returns empty list when audio directory is missing', async () => {
+    mockElectronAPI.checkPath.mockResolvedValue(false)
+
+    const result = await fs.readAudio('VIG', 'MDPP')
+
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_VIG', 'Audio')
+    expect(mockElectronAPI.listPath).not.toHaveBeenCalled()
+    expect(result).toEqual([])
   })
 
   describe('saveEvidence', () => {
@@ -458,9 +480,9 @@ describe('fileServices', () => {
   })
 
   describe('follow-up session persistence', () => {
-    it('loads follow-up session when file exists', async () => {
+    it('loads follow-up session with required followUpType', async () => {
       const fs = createFileService()
-      const payload = { summary: { specialty: 'VIG', finalized: false }, responses: { F1: { findingId: 'F1' } } }
+      const payload = { summary: { specialty: 'VIG', finalized: false }, responses: { F1: { findingId: 'F1', followUpType: 'Progress Verification' } } }
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(payload))
 
@@ -515,6 +537,7 @@ describe('fileServices', () => {
 
     it('readEvidence throws error', async () => {
       const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockRejectedValue(new Error('fail'))
       await expect(fs.readEvidence('VIG')).rejects.toThrow(
         'readEvidence: could not read evidence for VIG : fail'
@@ -543,7 +566,6 @@ describe('fileServices', () => {
       await fs.loadChecklist('VIG')
 
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'FollowUpEvidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalled()
     })
 
@@ -624,6 +646,7 @@ describe('fileServices', () => {
     it('readAudio returns list of audio files', async () => {
       const fs = createFileService()
       const mockAudioList = ['audio1.webm', 'audio2.webm']
+      window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockResolvedValue(mockAudioList)
 
       const result = await fs.readAudio('VIG')
@@ -634,6 +657,7 @@ describe('fileServices', () => {
 
     it('readAudio throws error', async () => {
       const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockRejectedValue(new Error('list failed'))
 
       await expect(fs.readAudio('VIG')).rejects.toThrow(
@@ -968,7 +992,6 @@ describe('fileServices', () => {
       await fs.saveChecklist('VIG', mockChecklist)
 
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'FollowUpEvidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         JSON.stringify(mockChecklist, null, 2),
         null,

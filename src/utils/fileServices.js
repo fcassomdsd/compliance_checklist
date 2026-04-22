@@ -192,7 +192,6 @@ export const createFileService = () => {
       // check that the path exists
       if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.legs) == false) {
         await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.evidenceDir)
-        await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
         // create dummy checklist.json
         const dummyChecklist = {
           specialtyName: 'Demo Specialty',
@@ -448,7 +447,6 @@ export const createFileService = () => {
 
       const paths = getWorkspacePaths(specialty, locationId)
       await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.evidenceDir)
-      await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
       const payload = JSON.stringify(checklistObj, null, 2)
       await window.electronAPI.saveFile(payload, DEFAULT_ROOT, ...paths.checklist)
     } catch (error) {
@@ -478,6 +476,10 @@ export const createFileService = () => {
     try {
       const paths = getWorkspacePaths(specialty, locationId)
       const evidenceDir = evidenceContext == 'followUp' ? paths.followUpEvidenceDir : paths.evidenceDir
+      const exists = await window.electronAPI.checkPath(DEFAULT_ROOT, ...evidenceDir)
+      if (!exists) {
+        return []
+      }
       const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, ...evidenceDir)
       return dirList
     } catch (error) {
@@ -542,6 +544,7 @@ export const createFileService = () => {
   const loadFollowUpSession = async (specialty, locationId = null) => {
     try {
       const paths = getWorkspacePaths(specialty, locationId)
+      await window.electronAPI.createDir(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
       const found = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)
       if (!found) {
         return null
@@ -568,6 +571,7 @@ export const createFileService = () => {
       try {
         const sessionString = JSON.stringify(sessionObj, null, 2)
         const paths = getWorkspacePaths(newSummary.specialty, locationId)
+        window.electronAPI.createDir(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
         window.electronAPI.saveFile(sessionString, DEFAULT_ROOT, ...paths.followUpSession)
         return true
       } catch (err) {
@@ -732,6 +736,10 @@ export const createFileService = () => {
   const readAudio = async (specialty, locationId = null) => {
     try {
       const paths = getWorkspacePaths(specialty, locationId)
+      const exists = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.audioDir)
+      if (!exists) {
+        return []
+      }
       const dirList = await window.electronAPI.listPath(DEFAULT_ROOT, ...paths.audioDir)
       return dirList
     } catch (error) {
