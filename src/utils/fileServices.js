@@ -1024,6 +1024,37 @@ export const createFileService = () => {
         locationId,
       })
 
+      const uploadBody =
+        typeof result?.uploadBody == 'string'
+          ? (() => {
+              try {
+                return JSON.parse(result.uploadBody)
+              } catch {
+                return null
+              }
+            })()
+          : typeof result?.uploadBody == 'object' && result?.uploadBody !== null
+            ? result.uploadBody
+            : null
+
+      const followUpFilenames = Array.isArray(uploadBody?.followUpFilenames)
+        ? uploadBody.followUpFilenames
+        : []
+
+      const appConfig = await window.electronAPI.getAppConfig()
+      const host = appConfig?.api?.host || 'http://localhost:1880'
+      const importFollowUpsResponse = await fetch(`${host}/importFollowUps`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(followUpFilenames),
+      })
+
+      if (!importFollowUpsResponse.ok) {
+        throw new Error(`importFollowUps API failed with status ${importFollowUpsResponse.status}`)
+      }
+
       if (locationId) {
         const metadata = (await loadWorkspaceMetadata(specialty, locationId)) || {}
         metadata.specialtyCode = metadata.specialtyCode || specialty
@@ -1225,6 +1256,9 @@ export const createFileService = () => {
       if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)) {
         await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.session)
       }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.checklist)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.checklist)
+      }
       if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.evidenceDir)) {
         await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.evidenceDir)
       }
@@ -1256,6 +1290,7 @@ export const createFileService = () => {
         locationName: state.metadata?.locationName || locationId,
         checklistTouched: false,
         checklistUploaded: false,
+        checklistPresent: false,
         updatedAt: new Date().toISOString(),
       }
 
@@ -1270,7 +1305,7 @@ export const createFileService = () => {
         followUpTouched: state.followUpTouched,
         checklistUploaded: false,
         followUpUploaded: state.followUpUploaded,
-        checklistPresent: metadata.checklistPresent,
+        checklistPresent: false,
         findingsPresent: metadata.findingsPresent,
       })
 

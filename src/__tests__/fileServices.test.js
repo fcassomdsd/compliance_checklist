@@ -374,10 +374,30 @@ describe('fileServices', () => {
   })
 
   describe('exportFollowUpPayload', () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue({ success: true }),
+        })
+      )
+    })
+
     it('calls electron exportFollowUpPayload with stringified data', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
       const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
-      const expectedResult = { zipPath: '/tmp/followup.zip', uploadStatus: 200 }
+      const expectedResult = {
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({
+          status: 'imported',
+          followUpReportsImported: 2,
+          followUpEvidenceImported: 5,
+          followUpFilenames: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+        }),
+      }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue(expectedResult)
 
       const result = await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
@@ -388,7 +408,35 @@ describe('fileServices', () => {
         specialty: 'VIG',
         locationId: 'loc-1',
       })
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01']),
+      })
       expect(result).toEqual(expectedResult)
+    })
+
+    it('throws when importFollowUps API fails', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({ followUpFilenames: ['FU-MDPP001VIG-01-01'] }),
+      })
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+        })
+      )
+
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload: importFollowUps API failed with status 500'
+      )
     })
 
     it('throws for missing parameters', async () => {
@@ -1321,6 +1369,7 @@ describe('fileServices', () => {
         if (key == 'LOC-001_VIG/workspace.json') return true
         if (key == 'workspaces.json') return true
         if (key == 'LOC-001_VIG/session.json') return true
+        if (key == 'LOC-001_VIG/checklist.json') return true
         if (key == 'LOC-001_VIG/Evidence') return true
         if (key == 'LOC-001_VIG/Audio') return true
         if (key == 'LOC-001_VIG/followup.session.json') return true
@@ -1357,10 +1406,17 @@ describe('fileServices', () => {
 
       expect(result).toEqual({ removed: true, workspaceDeleted: false })
       expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'session.json')
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'checklist.json')
       expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Evidence')
       expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Audio')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         expect.stringContaining('"checklistUploaded": false'),
+        null,
+        'LOC-001_VIG',
+        'workspace.json'
+      )
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('"checklistPresent": false'),
         null,
         'LOC-001_VIG',
         'workspace.json'
