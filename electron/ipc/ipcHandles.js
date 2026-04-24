@@ -21,7 +21,6 @@ import {
 import { safeJoin } from '../utils/fileSec.js'
 import { logger } from '../utils/logger.js'
 import { generateFindingsReport } from '../utils/pdfGenerator.js'
-import { type } from 'node:os'
 
 const ajv = new Ajv2020({ allErrors: true })
 addFormats(ajv)
@@ -60,7 +59,6 @@ const checklistSchema = {
     schemaVersion: {
       type: 'string',
     },
-    contentType: { type: 'string' },
     checklist: {
       type: 'object',
       additionalProperties: false,
@@ -73,6 +71,7 @@ const checklistSchema = {
         'providerId',
       ],
       properties: {
+        contentType: { type: 'string' },
         inspectionId: { type: 'string' },
         inspectionCode: {
           type: 'string',
@@ -155,7 +154,6 @@ const findingSchema = {
     schemaVersion: {
       type: 'string',
     },
-    contentType: { type: 'string' },
     finding: {
       type: 'object',
       additionalProperties: false,
@@ -164,10 +162,11 @@ const findingSchema = {
         'providerId',
         'locationId',
         'locationName',
-        'itemCode',
+        'checklistItemCode',
         'description',
       ],
       properties: {
+        contentType: { type: 'string' },
         findingId: {
           type: 'string',
           pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
@@ -216,23 +215,54 @@ const findingSchema = {
           enum: ['Low', 'Medium', 'High', 'Critical'],
         },
         correctiveAction: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              capId: {
-                type: 'string',
-                pattern: '^CA-([A-Z0-9]{4}\d{3})([A-Z0-9]{3,6})-(\d{2})-(\d{2})$'
-              },
-              proposedAction: { type: 'string' },
-              responsibleEntity: { type: 'string' },
-              dueDate: { type: 'string', format: 'date' },
-              acceptanceStatus: {
-                type: 'string',
-                enum: ['Pending', 'Accepted', 'Rejected', 'Returned']
-              },
+          type: 'object',
+          properties: {
+            capId: {
+              type: 'string',
+              pattern: '^CA-([A-Z0-9]{4}[0-9]{3})([A-Z0-9]{3,6})-([0-9]{2})-([0-9]{2})$'
+            },
+            proposedAction: { type: 'string' },
+            responsibleEntity: { type: 'string' },
+            dueDate: { type: 'string', format: 'date' },
+            acceptanceStatus: {
+              type: 'string',
+              enum: ['Pending', 'Accepted', 'Rejected', 'Returned']
             },
           },
+        },
+      },
+    },
+  },
+}
+
+const sourceFindingSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'SourceFindingForFollowUp',
+  type: 'object',
+  additionalProperties: false,
+  required: ['schemaVersion', 'finding'],
+  properties: {
+    schemaVersion: { type: 'string' },
+    finding: {
+      type: 'object',
+      additionalProperties: true,
+      required: ['findingId', 'locationId'],
+      properties: {
+        findingId: { type: 'string' },
+        locationId: { type: 'string' },
+        locationName: { type: 'string' },
+        providerId: { type: 'string' },
+        providerName: { type: 'string' },
+        itemCode: { type: 'string' },
+        checklistItemCode: { type: 'string' },
+        itemId: { type: 'string' },
+        description: { type: 'string' },
+        dateIssued: { type: 'string' },
+        resolutionDeadline: { type: 'string' },
+        findingClosureDate: { type: 'string' },
+        correctiveAction: {
+          type: 'object',
+          additionalProperties: true,
         },
       },
     },
@@ -247,7 +277,6 @@ const followUpReportSchema = {
   required: ['schemaVersion', 'followUpReport'],
   properties: {
     schemaVersion: { type: 'string' },
-    contentType: { type: 'string' },
     followUpReport: {
       type: 'object',
       additionalProperties: false,
@@ -262,9 +291,10 @@ const followUpReportSchema = {
         'followUpType',
       ],
       properties: {
+        contentType: { type: 'string' },
         followUpId: {
           type: 'string',
-          pattern: '^FU-[A-Z0-9]{7}[A-Z0-9]{3,6}-\\d{2}-\\d{6}-\\d{2}$',
+          pattern: '^FU-[A-Z0-9]{7}[A-Z0-9]{3,6}-\\d{2}-\\d{6}$',
         },
         findingId: {
           type: 'string',
@@ -531,6 +561,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   const locationCode = safeString(checklistObj?.locationCode, safeString(checklistObj?.icaoCode))
 
   const checklistSection = {
+    contentType: 'InspectionChecklist',
     inspectionId: safeString(checklistObj?.inspectionId, safeString(checklistObj?.inspection)),
     inspectionCode,
     specialtyId,
@@ -635,7 +666,6 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
 
   return {
     schemaVersion: '1.0',
-    contentType: 'InspectionChecklist',
     checklist: checklistSection,
     items,
   }
@@ -660,8 +690,8 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
     const findingNumber = findings.length + 1
     const finding = {
       schemaVersion: '1.0',
-      contentType: 'Finding',
       finding: {
+        contentType: 'Finding',
         findingId: `${inspectionCompact}-${specialtyCode}-${String(findingNumber).padStart(2, '0')}`,
         providerId: checklistPayload?.checklist?.providerId || '',
         providerName: checklistPayload?.checklist?.providerName || safeString(checklistObj?.providerName),
@@ -673,7 +703,6 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
         specialtyCode,
         specialtyName: checklistPayload?.checklist?.specialtyName || safeString(specialty),
         inspectionId: checklistPayload?.checklist?.inspectionId || '',
-        itemCode: inferItemCode(row, specialtyCode, index),
         checklistItemCode: inferItemCode(row, specialtyCode, index),
         description: safeString(
           response?.nonConformityDetails?.description || response?.comments || row?.question
@@ -733,9 +762,11 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       throw new Error(`Could not find source finding for follow-up response ${effectiveFindingId}`)
     }
 
+    const correctiveAction = finding?.correctiveAction
+
     // Compose followUpType and CAP logic
     const followUpType = response?.followUpType || 'Progress Review'
-    const capId = finding?.correctiveAction?.capId || null
+    const capId = correctiveAction?.capId || null
     // Only allow CAP Verification if capId exists
     const allowedTypes = capId
       ? ['Progress Review', 'CAP Verification', 'Closure Verification', 'Ad-hoc Inquiry']
@@ -754,10 +785,10 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
 
     const report = {
       schemaVersion: '1.0',
-      contentType: 'FollowUpReport',
       followUpReport: {
+        contentType: 'FollowUpReport',
         findingId: effectiveFindingId,
-        followUpId: `FU-${compactFindingIdForFollowUp(effectiveFindingId)}-${toYYMMDD(response?.followUpDate || followUpSessionObj?.summary?.lastUpdated || new Date().toISOString())}-${String(index + 1).padStart(2, '0')}`,
+        followUpId: `FU-${compactFindingIdForFollowUp(effectiveFindingId)}-${toYYMMDD(response?.followUpDate || followUpSessionObj?.summary?.lastUpdated || new Date().toISOString())}`,
         providerId: safeString(finding.providerId),
         providerName: safeString(finding.providerName),
         locationId: safeString(finding.locationId),
@@ -850,10 +881,15 @@ const normalizeFindingForFollowUpExport = (entry) => {
   }
   delete finding.regulationBreached
 
-  if (!finding.itemCode && finding.itemId) {
-    finding.itemCode = finding.itemId
+  if (!finding.checklistItemCode) {
+    finding.checklistItemCode = safeString(finding.itemCode, safeString(finding.itemId))
   }
   delete finding.itemId
+  delete finding.itemCode
+
+  if (!finding.checklistItemCode) {
+    finding.checklistItemCode = 'UNKNOWN'
+  }
 
   if (finding.comment && !finding.followUpComment) {
     finding.followUpComment = finding.comment
@@ -862,6 +898,35 @@ const normalizeFindingForFollowUpExport = (entry) => {
 
   delete finding.domain
   delete finding.capId
+
+  const normalizeDateField = (fieldName) => {
+    const value = safeString(finding[fieldName])
+    if (!value) {
+      delete finding[fieldName]
+      return
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      delete finding[fieldName]
+      return
+    }
+    finding[fieldName] = value
+  }
+
+  normalizeDateField('dateIssued')
+  normalizeDateField('submissionDeadline')
+  normalizeDateField('findingClosureDate')
+  normalizeDateField('lastStatusChange')
+  normalizeDateField('resolutionDeadline')
+
+  if (Array.isArray(finding.correctiveAction)) {
+    finding.correctiveAction = finding.correctiveAction.find((item) => item && typeof item == 'object') || null
+  }
+  if (finding.correctiveAction && typeof finding.correctiveAction != 'object') {
+    delete finding.correctiveAction
+  }
+  if (finding.correctiveAction === null) {
+    delete finding.correctiveAction
+  }
 
   const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
   if (finding.riskClassification && !validRiskLevels.includes(finding.riskClassification)) {
@@ -1279,7 +1344,7 @@ export function setupIpcHandles(ipcMain) {
         followUpSessionObj,
       })
 
-      const validateFinding = ajv.compile(findingSchema)
+      const validateFinding = ajv.compile(sourceFindingSchema)
       const validateFollowUpReport = ajv.compile(followUpReportSchema)
 
       normalizedFindingsObj.forEach((finding, index) => {

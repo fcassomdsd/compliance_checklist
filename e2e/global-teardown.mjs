@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs'
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { homedir } from 'node:os'
+import { rename } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 
 export default async function globalTeardown() {
   const runtimeDir = join(process.cwd(), 'e2e', '.runtime')
@@ -8,6 +11,7 @@ export default async function globalTeardown() {
   const appConfigBackupFile = join(runtimeDir, 'app.config.backup.json')
   const pidFile = join(runtimeDir, 'mock-server.pid')
   const readyFile = join(runtimeDir, 'mock-server.ready')
+  const stateBackupDir = join(runtimeDir, 'state-backup')
 
   if (existsSync(pidFile)) {
     try {
@@ -32,5 +36,29 @@ export default async function globalTeardown() {
     const backup = await readFile(appConfigBackupFile, 'utf8')
     await writeFile(appConfigPath, backup, 'utf8')
     await rm(appConfigBackupFile)
+  }
+
+  const currentInspectionDir = join(homedir(), 'Documents', 'Current_inspection')
+  const workspaceDir = join(currentInspectionDir, 'MDSD_VIG')
+  const registryFile = join(currentInspectionDir, 'workspaces.json')
+  const backupWorkspaceDir = join(stateBackupDir, 'MDSD_VIG')
+  const backupRegistryFile = join(stateBackupDir, 'workspaces.json')
+
+  if (existsSync(backupWorkspaceDir) || existsSync(backupRegistryFile)) {
+    await mkdir(currentInspectionDir, { recursive: true })
+  }
+
+  if (existsSync(backupWorkspaceDir)) {
+    if (existsSync(workspaceDir)) {
+      await rm(workspaceDir, { recursive: true, force: true })
+    }
+    await rename(backupWorkspaceDir, workspaceDir)
+  }
+
+  if (existsSync(backupRegistryFile)) {
+    if (existsSync(registryFile)) {
+      await rm(registryFile, { force: true })
+    }
+    await rename(backupRegistryFile, registryFile)
   }
 }

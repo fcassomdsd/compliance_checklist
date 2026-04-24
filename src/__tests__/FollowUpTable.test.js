@@ -28,6 +28,8 @@ describe('FollowUpTable.vue', () => {
         {
           findingId: 'F-1',
           description: 'Sample finding',
+          dateIssued: '2026-04-01',
+          resolutionDeadline: '2026-05-01',
         },
       ],
     }
@@ -73,6 +75,90 @@ describe('FollowUpTable.vue', () => {
     }
 
     expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'followUpType', 'Closure Verification')
+  })
+
+  it('stores default followUpType when editing another field', async () => {
+    const wrapper = mount(FollowUpTable, {
+      global: { plugins: [pinia] },
+    })
+
+    const numberInput = wrapper.find('input[type="number"]')
+    await numberInput.setValue('25')
+
+    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'followUpType', 'Progress Verification')
+    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'percentComplete', 25)
+  })
+
+  it('shows CAP Verification option only when corrective action exists', async () => {
+    const wrapperWithoutCap = mount(FollowUpTable, {
+      global: { plugins: [pinia] },
+    })
+    expect(wrapperWithoutCap.html()).not.toContain('CAP Verification')
+
+    mockChecklistStore.findings = [
+      {
+        findingId: 'F-1',
+        description: 'Sample finding',
+        dateIssued: '2026-04-01',
+        resolutionDeadline: '2026-05-01',
+        correctiveAction: {
+          capId: 'CA-ABCD001VIG-01-01',
+          dueDate: '2026-05-12',
+        },
+      },
+    ]
+    const wrapperWithCap = mount(FollowUpTable, {
+      global: { plugins: [pinia] },
+    })
+    expect(wrapperWithCap.html()).toContain('CAP Verification')
+  })
+
+  it('opens CAP modal when clicking CAP badge', async () => {
+    mockChecklistStore.findings = [
+      {
+        findingId: 'F-1',
+        description: 'Sample finding',
+        dateIssued: '2026-04-01',
+        resolutionDeadline: '2026-05-01',
+        correctiveAction: {
+          capId: 'CA-ABCD001VIG-01-01',
+          proposedAction: 'Replace module',
+          responsibleEntity: 'Ops',
+          dueDate: '2026-05-12',
+          acceptanceStatus: 'Pending',
+        },
+      },
+    ]
+
+    const wrapper = mount(FollowUpTable, {
+      global: { plugins: [pinia] },
+    })
+
+    await wrapper.find('.cap-badge').trigger('click')
+
+    expect(wrapper.find('.cap-modal').exists()).toBe(true)
+    expect(wrapper.text()).toContain('CA-ABCD001VIG-01-01')
+    expect(wrapper.text()).toContain('Replace module')
+  })
+
+  it('makes row read-only when finding is overdue at import time', async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    mockChecklistStore.findings = [
+      {
+        findingId: 'F-1',
+        description: 'Sample finding',
+        dateIssued: '2026-04-01',
+        resolutionDeadline: yesterday,
+      },
+    ]
+
+    const wrapper = mount(FollowUpTable, {
+      global: { plugins: [pinia] },
+    })
+
+    expect(wrapper.find('input[type="number"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('textarea').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('button').attributes('disabled')).toBeDefined()
   })
 
   it('uploads follow-up evidence and updates response list', async () => {

@@ -74,6 +74,21 @@ describe('followUpSession.js', () => {
       expect(() => parseFollowUpSession(JSON.stringify(session))).not.toThrow()
     })
 
+    it('accepts legacy response entries without followUpType', () => {
+      const session = {
+        summary: { specialty: 'VIG' },
+        responses: {
+          'FIND-001': {
+            findingId: 'FIND-001',
+            percentComplete: 25,
+            comments: 'Legacy entry',
+          },
+        },
+      }
+
+      expect(() => parseFollowUpSession(JSON.stringify(session))).not.toThrow()
+    })
+
     it('throws on invalid JSON', () => {
       expect(() => parseFollowUpSession('not json')).toThrow()
     })

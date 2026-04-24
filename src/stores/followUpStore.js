@@ -40,6 +40,14 @@ export const useFollowUpStore = defineStore('followUp', () => {
   }
 
   const normalizeResponse = (findingId, rawEntry) => {
+    const allowedFollowUpTypes = [
+      'Progress Verification',
+      'Progress Review',
+      'CAP Verification',
+      'Closure Verification',
+      'Ad-hoc Inquiry',
+    ]
+
     const nextEntry = {
       findingId:
         typeof rawEntry?.findingId == 'string' && rawEntry.findingId.length > 0
@@ -48,7 +56,7 @@ export const useFollowUpStore = defineStore('followUp', () => {
       percentComplete: Number.isFinite(Number(rawEntry?.percentComplete))
         ? Math.max(0, Math.min(100, Number(rawEntry.percentComplete)))
         : 0,
-      followUpType: ['Progress Verification', 'Closure Verification'].includes(rawEntry?.followUpType)
+      followUpType: allowedFollowUpTypes.includes(rawEntry?.followUpType)
         ? rawEntry.followUpType
         : 'Progress Verification',
       effectivenessConfirmed:

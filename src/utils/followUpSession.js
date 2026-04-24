@@ -25,7 +25,16 @@ const followUpSessionSchema = {
           properties: {
             findingId: { type: 'string' },
             percentComplete: { type: 'number', minimum: 0, maximum: 100 },
-            followUpType: { type: 'string', enum: ['Progress Verification', 'Closure Verification'] },
+            followUpType: {
+              type: 'string',
+              enum: [
+                'Progress Verification',
+                'Progress Review',
+                'CAP Verification',
+                'Closure Verification',
+                'Ad-hoc Inquiry',
+              ],
+            },
             effectivenessConfirmed: { anyOf: [ { type: 'boolean' }, { type: 'null' } ] },
             comments: { type: 'string' },
             closureVerificationMethod: { type: 'string' },
@@ -48,7 +57,7 @@ const followUpSessionSchema = {
             },
           },
           additionalProperties: false,
-          required: ['findingId', 'followUpType'],
+          required: ['findingId'],
         },
       },
       additionalProperties: false,
