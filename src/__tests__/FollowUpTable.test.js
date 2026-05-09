@@ -29,7 +29,7 @@ describe('FollowUpTable.vue', () => {
           findingId: 'F-1',
           description: 'Sample finding',
           dateIssued: '2026-04-01',
-          resolutionDeadline: '2026-05-01',
+          resolutionDeadline: '2099-05-01',
         },
       ],
     }
@@ -100,7 +100,7 @@ describe('FollowUpTable.vue', () => {
         findingId: 'F-1',
         description: 'Sample finding',
         dateIssued: '2026-04-01',
-        resolutionDeadline: '2026-05-01',
+        resolutionDeadline: '2099-05-01',
         correctiveAction: {
           capId: 'CA-ABCD001VIG-01-01',
           dueDate: '2026-05-12',
@@ -119,7 +119,7 @@ describe('FollowUpTable.vue', () => {
         findingId: 'F-1',
         description: 'Sample finding',
         dateIssued: '2026-04-01',
-        resolutionDeadline: '2026-05-01',
+        resolutionDeadline: '2099-05-01',
         correctiveAction: {
           capId: 'CA-ABCD001VIG-01-01',
           proposedAction: 'Replace module',
