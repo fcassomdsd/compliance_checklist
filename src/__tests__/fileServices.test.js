@@ -413,9 +413,98 @@ describe('fileServices', () => {
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify(['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01']),
+        body: JSON.stringify({
+          specialtyName: 'Sistemas de Vigilancia',
+          followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+        }),
       })
       expect(result).toEqual(expectedResult)
+    })
+
+    it('waits followUpImportDelay before calling importFollowUps', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.getAppConfig.mockResolvedValue({
+        ...mockAppConfig,
+        api: {
+          ...mockAppConfig.api,
+          followUpImportDelay: 200,
+        },
+      })
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({
+          followUpFilenames: ['FU-MDPP001VIG-01-01'],
+        }),
+      })
+
+      const pending = fs.exportFollowUpPayload(findings, followUpSession, 'VIG')
+
+      await vi.advanceTimersByTimeAsync(199)
+      expect(fetch).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      await pending
+
+      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', expect.any(Object))
+    })
+
+    it('falls back to result.followUpFiles when uploadBody does not include names', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: 'ok',
+        followUpFiles: ['FU-MDPP001VIG-01-01'],
+      })
+
+      await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
+
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          specialtyName: 'Sistemas de Vigilancia',
+          followUpFiles: ['FU-MDPP001VIG-01-01'],
+        }),
+      })
+    })
+
+    it('throws when first upload API does not return follow-up files', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: 'ok',
+      })
+
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload: No follow-up files were returned by follow-up import API'
+      )
+    })
+
+    it('throws when specialtyName cannot be resolved', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'UNK' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({ followUpFilenames: ['FU-UNK-01'] }),
+      })
+      mockElectronAPI.getAppConfig.mockResolvedValue({
+        ...mockAppConfig,
+        fallback: { specialties: [] },
+      })
+
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'UNK', 'loc-1')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload: specialtyName could not be resolved for follow-up import payload'
+      )
     })
 
     it('throws when importFollowUps API fails', async () => {

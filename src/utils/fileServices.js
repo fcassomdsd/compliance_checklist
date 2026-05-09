@@ -50,6 +50,46 @@ export const createFileService = () => {
     }
   }
 
+  const resolveSpecialtyName = async (specialtyCode, preferredName = '') => {
+    const normalizedCode = String(specialtyCode || '').trim().toUpperCase()
+    const normalizedPreferred = String(preferredName || '').trim()
+
+    if (normalizedPreferred && normalizedPreferred.toUpperCase() != normalizedCode) {
+      return normalizedPreferred
+    }
+
+    try {
+      const appConfig = await window.electronAPI.getAppConfig()
+      const configuredSpecialties = [
+        ...(Array.isArray(appConfig?.specialties) ? appConfig.specialties : []),
+        ...(Array.isArray(appConfig?.fallback?.specialties) ? appConfig.fallback.specialties : []),
+      ]
+
+      const specialtyEntry = configuredSpecialties.find((entry) => {
+        const code = typeof entry?.code == 'string' ? entry.code.trim().toUpperCase() : ''
+        return code == normalizedCode
+      })
+
+      const resolvedName =
+        typeof specialtyEntry?.name == 'string' ? specialtyEntry.name.trim() : ''
+      if (resolvedName) {
+        return resolvedName
+      }
+    } catch {
+      // Gracefully fallback when app config is temporarily unavailable.
+    }
+
+    return normalizedPreferred || specialtyCode
+  }
+
+  const delay = async (ms) => {
+    const delayMs = Number(ms)
+    if (!Number.isFinite(delayMs) || delayMs <= 0) {
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+
   const getWorkspaceKey = (locationId, specialtyCode) => {
     const safeLocationId = sanitizeWorkspaceLeg(ensureWorkspaceLeg(locationId, 'locationId'))
     const safeSpecialtyCode = sanitizeWorkspaceLeg(
@@ -797,10 +837,15 @@ export const createFileService = () => {
         return fallback
       }
 
+      const resolvedSpecialtyName = await resolveSpecialtyName(
+        specialtyCode,
+        entry?.specialtyName || existingEntry?.specialtyName
+      )
+
       const normalizedEntry = {
         workspaceKey,
         specialtyCode,
-        specialtyName: entry?.specialtyName || existingEntry?.specialtyName || specialtyCode,
+        specialtyName: resolvedSpecialtyName,
         locationId,
         locationName: entry?.locationName || existingEntry?.locationName || locationId,
         draftStatus: entry?.draftStatus || existingEntry?.draftStatus || 'draft',
@@ -891,7 +936,7 @@ export const createFileService = () => {
 
       const registryEntry = await upsertWorkspaceRegistryEntry({
         specialtyCode,
-        specialtyName: metadata.specialtyName || specialtyCode,
+        specialtyName: await resolveSpecialtyName(specialtyCode, metadata.specialtyName),
         locationId,
         locationName: metadata.locationName || locationId,
         draftStatus: metadata.draftStatus || 'draft',
@@ -979,7 +1024,10 @@ export const createFileService = () => {
       if (resolvedLocationId) {
         const metadata = (await loadWorkspaceMetadata(specialty, resolvedLocationId)) || {}
         metadata.specialtyCode = metadata.specialtyCode || specialty
-        metadata.specialtyName = metadata.specialtyName || specialty
+        metadata.specialtyName = await resolveSpecialtyName(
+          specialty,
+          metadata.specialtyName || checklist?.specialtyName
+        )
         metadata.locationId = metadata.locationId || resolvedLocationId
         metadata.locationName = metadata.locationName || resolvedLocationId
         metadata.checklistUploaded = true
@@ -1017,6 +1065,8 @@ export const createFileService = () => {
         throw new Error('Missing required parameters: findings, followUpSession, specialty')
       }
 
+      const appConfig = await window.electronAPI.getAppConfig()
+
       const result = await window.electronAPI.exportFollowUpPayload({
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
@@ -1039,16 +1089,62 @@ export const createFileService = () => {
 
       const followUpFilenames = Array.isArray(uploadBody?.followUpFilenames)
         ? uploadBody.followUpFilenames
-        : []
+        : Array.isArray(uploadBody?.followUpFiles)
+          ? uploadBody.followUpFiles
+          : Array.isArray(result?.followUpFiles)
+            ? result.followUpFiles
+            : []
 
-      const appConfig = await window.electronAPI.getAppConfig()
+      if (followUpFilenames.length == 0) {
+        throw new Error('No follow-up files were returned by follow-up import API')
+      }
+
+      const specialtyNameFromSummary =
+        typeof followUpSession?.summary?.specialtyName == 'string'
+          ? followUpSession.summary.specialtyName.trim()
+          : ''
+
+      let specialtyName = specialtyNameFromSummary
+
+      if (!specialtyName && locationId) {
+        const metadata = (await loadWorkspaceMetadata(specialty, locationId)) || {}
+        if (typeof metadata?.specialtyName == 'string' && metadata.specialtyName.trim().length > 0) {
+          specialtyName = metadata.specialtyName.trim()
+        }
+      }
+
+      if (!specialtyName) {
+        const configuredSpecialties = [
+          ...(Array.isArray(appConfig?.specialties) ? appConfig.specialties : []),
+          ...(Array.isArray(appConfig?.fallback?.specialties) ? appConfig.fallback.specialties : []),
+        ]
+        const specialtyEntry = configuredSpecialties.find((entry) => {
+          const code = typeof entry?.code == 'string' ? entry.code.trim().toUpperCase() : ''
+          return code == String(specialty).trim().toUpperCase()
+        })
+        if (typeof specialtyEntry?.name == 'string' && specialtyEntry.name.trim().length > 0) {
+          specialtyName = specialtyEntry.name.trim()
+        }
+      }
+
+      if (!specialtyName) {
+        throw new Error('specialtyName could not be resolved for follow-up import payload')
+      }
+
+      const followUpImportDelayMs =
+        appConfig?.api?.followUpImportDelay ?? appConfig?.api?.importCanonicalDelay ?? 300
+      await delay(followUpImportDelayMs)
+
       const host = appConfig?.api?.host || 'http://localhost:1880'
       const importFollowUpsResponse = await fetch(`${host}/importFollowUps`, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify(followUpFilenames),
+        body: JSON.stringify({
+          specialtyName,
+          followUpFiles: followUpFilenames,
+        }),
       })
 
       if (!importFollowUpsResponse.ok) {
@@ -1058,7 +1154,10 @@ export const createFileService = () => {
       if (locationId) {
         const metadata = (await loadWorkspaceMetadata(specialty, locationId)) || {}
         metadata.specialtyCode = metadata.specialtyCode || specialty
-        metadata.specialtyName = metadata.specialtyName || specialty
+        metadata.specialtyName = await resolveSpecialtyName(
+          specialty,
+          metadata.specialtyName || specialtyName
+        )
         metadata.locationId = metadata.locationId || locationId
         metadata.locationName = metadata.locationName || locationId
         metadata.followUpUploaded = true
@@ -1285,7 +1384,7 @@ export const createFileService = () => {
       const metadata = {
         ...state.metadata,
         specialtyCode: state.metadata?.specialtyCode || specialtyCode,
-        specialtyName: state.metadata?.specialtyName || specialtyCode,
+        specialtyName: await resolveSpecialtyName(specialtyCode, state.metadata?.specialtyName),
         locationId: state.metadata?.locationId || locationId,
         locationName: state.metadata?.locationName || locationId,
         checklistTouched: false,
@@ -1351,7 +1450,7 @@ export const createFileService = () => {
       const metadata = {
         ...state.metadata,
         specialtyCode: state.metadata?.specialtyCode || specialtyCode,
-        specialtyName: state.metadata?.specialtyName || specialtyCode,
+        specialtyName: await resolveSpecialtyName(specialtyCode, state.metadata?.specialtyName),
         locationId: state.metadata?.locationId || locationId,
         locationName: state.metadata?.locationName || locationId,
         followUpTouched: false,
