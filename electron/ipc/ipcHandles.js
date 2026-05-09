@@ -281,7 +281,6 @@ const followUpReportSchema = {
       type: 'object',
       additionalProperties: false,
       required: [
-        'followUpId',
         'findingId',
         'providerId',
         'locationId',
@@ -387,8 +386,6 @@ const asDateOnly = (value) => {
   return parsed.toISOString().split('T')[0]
 }
 
-const toYYMMDD = (value) => asDateOnly(value).slice(2).replace(/-/g, '')
-
 const normalizeCompliance = (value) => {
   if (value === 'Compliant' || value === 'Non-Compliant' || value === 'Not Applicable') {
     return value
@@ -419,15 +416,6 @@ const normalizeInspectionSequence = (rawValue, fallback = '001') => {
   const digits = String(rawValue || '').replace(/\D/g, '')
   const seq = digits.slice(-3) || fallback
   return seq.padStart(3, '0').slice(-3)
-}
-
-const compactFindingIdForFollowUp = (findingId = '') => {
-  const normalized = String(findingId).toUpperCase()
-  const matched = normalized.match(/^([A-Z0-9]{7})-([A-Z0-9]{3,6})-(\d{2})$/)
-  if (matched) {
-    return `${matched[1]}${matched[2]}-${matched[3]}`
-  }
-  return sanitizeUpperAlnum(normalized)
 }
 
 const inferInspectionCode = (checklistObj) => {
@@ -788,7 +776,6 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       followUpReport: {
         contentType: 'FollowUpReport',
         findingId: effectiveFindingId,
-        followUpId: `FU-${compactFindingIdForFollowUp(effectiveFindingId)}-${toYYMMDD(response?.followUpDate || followUpSessionObj?.summary?.lastUpdated || new Date().toISOString())}`,
         providerId: safeString(finding.providerId),
         providerName: safeString(finding.providerName),
         locationId: safeString(finding.locationId),
@@ -1404,10 +1391,24 @@ export function setupIpcHandles(ipcMain) {
         throw new Error(`Follow-up import API failed with status ${response.status}: ${responseText}`)
       }
 
+      let uploadBodyJson = null
+      try {
+        uploadBodyJson = JSON.parse(responseText)
+      } catch {
+        uploadBodyJson = null
+      }
+
+      const followUpFiles = Array.isArray(uploadBodyJson?.followUpFiles)
+        ? uploadBodyJson.followUpFiles
+        : Array.isArray(uploadBodyJson?.followUpFilenames)
+          ? uploadBodyJson.followUpFilenames
+          : []
+
       return {
         zipPath,
         uploadStatus: response.status,
         uploadBody: responseText,
+        followUpFiles,
         reportsCount: followUpReportsPayload.length,
       }
     } catch (err) {

@@ -657,7 +657,9 @@ describe('ipcHandles', () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        text: vi.fn().mockResolvedValue('ok'),
+        text: vi.fn().mockResolvedValue(
+          JSON.stringify({ followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'] })
+        ),
       })
 
       const findings = [
@@ -702,11 +704,12 @@ describe('ipcHandles', () => {
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
       const zip = await JSZip.loadAsync(zipBuffer)
       const reportsJson = JSON.parse(await zip.file('followup-reports.json').async('string'))
-      expect(reportsJson[0].followUpReport.followUpId).toBe('FU-MDPP001VIG-01-260321')
+      expect(reportsJson[0].followUpReport.followUpId).toBeUndefined()
 
       expect(result).toEqual(
         expect.objectContaining({
           uploadStatus: 200,
+          followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
           reportsCount: 1,
         })
       )
