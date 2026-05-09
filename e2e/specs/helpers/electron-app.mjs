@@ -49,7 +49,12 @@ export async function importInspection(window, inspectionCode = '0224', specialt
     }
 
     await workspaceSelect.selectOption(expectedWorkspaceKey)
-    return true
+    try {
+      await expect(window.locator('#cklTable')).toBeVisible({ timeout: 2000 })
+      return true
+    } catch {
+      return false
+    }
   }
 
   await ensureReadyForImport(window)
@@ -83,7 +88,12 @@ export async function importFollowUp(window, locationIcao = 'MDSD', specialtyCod
     }
 
     await workspaceSelect.selectOption(expectedWorkspaceKey)
-    return true
+    try {
+      await expect(window.locator('#followupTable')).toBeVisible({ timeout: 2000 })
+      return true
+    } catch {
+      return false
+    }
   }
 
   await ensureReadyForImport(window)
