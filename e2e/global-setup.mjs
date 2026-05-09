@@ -2,6 +2,8 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { readFile, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
+import { rename, rm } from 'node:fs/promises'
 
 const runtimeDir = join(process.cwd(), 'e2e', '.runtime')
 const appConfigPath = join(process.cwd(), 'app.config.json')
@@ -36,6 +38,31 @@ export default async function globalSetup() {
   const readyFile = join(runtimeDir, 'mock-server.ready')
   const pidFile = join(runtimeDir, 'mock-server.pid')
   const appConfigBackupFile = join(runtimeDir, 'app.config.backup.json')
+  const stateBackupDir = join(runtimeDir, 'state-backup')
+
+  if (!existsSync(stateBackupDir)) {
+    mkdirSync(stateBackupDir, { recursive: true })
+  }
+
+  const currentInspectionDir = join(homedir(), 'Documents', 'Current_inspection')
+  const workspaceDir = join(currentInspectionDir, 'MDSD_VIG')
+  const registryFile = join(currentInspectionDir, 'workspaces.json')
+  const backupWorkspaceDir = join(stateBackupDir, 'MDSD_VIG')
+  const backupRegistryFile = join(stateBackupDir, 'workspaces.json')
+
+  if (existsSync(backupWorkspaceDir)) {
+    await rm(backupWorkspaceDir, { recursive: true, force: true })
+  }
+  if (existsSync(backupRegistryFile)) {
+    await rm(backupRegistryFile, { force: true })
+  }
+
+  if (existsSync(workspaceDir)) {
+    await rename(workspaceDir, backupWorkspaceDir)
+  }
+  if (existsSync(registryFile)) {
+    await rename(registryFile, backupRegistryFile)
+  }
 
   const appConfigRaw = await readFile(appConfigPath, 'utf8')
   await writeFile(appConfigBackupFile, appConfigRaw, 'utf8')

@@ -25,10 +25,35 @@ import { generateFindingsReport } from '../utils/pdfGenerator.js'
 const ajv = new Ajv2020({ allErrors: true })
 addFormats(ajv)
 
+const evidenceItemSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['evidenceId'],
+  properties: {
+    evidenceId: { type: 'string' },
+    evidenceType: { type: 'string' },
+    source: { type: 'string' },
+    collectionDate: { type: 'string', format: 'date' },
+    hashValue: { type: 'string' },
+    immutable: { type: 'boolean' },
+    sealedDate: { type: 'string', format: 'date-time' },
+    evidenceRole: {
+      type: 'string',
+      enum: [
+        'Compliance Evidence',
+        'Finding Support',
+        'Progress Evidence',
+        'Closure Evidence',
+      ],
+    },
+  },
+}
+
 const checklistSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: 'Checklist',
   type: 'object',
+  additionalProperties: false,
   required: ['schemaVersion', 'checklist', 'items'],
   properties: {
     schemaVersion: {
@@ -36,6 +61,7 @@ const checklistSchema = {
     },
     checklist: {
       type: 'object',
+      additionalProperties: false,
       required: [
         'inspectionId',
         'inspectionCode',
@@ -45,14 +71,16 @@ const checklistSchema = {
         'providerId',
       ],
       properties: {
+        contentType: { type: 'string' },
         inspectionId: { type: 'string' },
         inspectionCode: {
           type: 'string',
           pattern: '^[A-Z0-9]{4}-\\d{3}$',
         },
+        scope: { type: 'string' },
         locationId: { type: 'string' },
+        locationCode: { type: 'string' },
         locationName: { type: 'string' },
-        icaoCode: { type: 'string' },
         completionDate: { type: 'string', format: 'date' },
         specialtyId: { type: 'string' },
         specialtyCode: { type: 'string' },
@@ -73,6 +101,7 @@ const checklistSchema = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           itemId: { type: 'string' },
           itemCode: {
@@ -101,20 +130,13 @@ const checklistSchema = {
             type: 'string',
             enum: ['Low', 'Medium', 'High', 'Critical'],
           },
-          evidence: {
+          hasOpenPriorFinding: {
+            type: 'boolean',
+            default: false,
+          },
+          evidenceItems: {
             type: 'array',
-            items: {
-              type: 'object',
-              required: ['evidenceId'],
-              properties: {
-                evidenceId: { type: 'string' },
-                evidenceType: { type: 'string' },
-                source: { type: 'string' },
-                hashValue: { type: 'string' },
-                immutable: { type: 'boolean' },
-                sealedDate: { type: 'string', format: 'date-time' },
-              },
-            },
+            items: evidenceItemSchema,
           },
         },
       },
@@ -126,6 +148,7 @@ const findingSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: 'Finding',
   type: 'object',
+  additionalProperties: false,
   required: ['schemaVersion', 'finding'],
   properties: {
     schemaVersion: {
@@ -133,34 +156,113 @@ const findingSchema = {
     },
     finding: {
       type: 'object',
+      additionalProperties: false,
       required: [
         'findingId',
         'providerId',
         'locationId',
         'locationName',
-        'itemCode',
+        'checklistItemCode',
         'description',
       ],
       properties: {
+        contentType: { type: 'string' },
         findingId: {
           type: 'string',
           pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
         },
         specialtyId: { type: 'string' },
+        specialtyCode: { type: 'string' },
+        specialtyName: { type: 'string' },
         providerId: { type: 'string' },
+        providerName: { type: 'string' },
         locationId: { type: 'string' },
+        locationCode: { type: 'string' },
         locationName: { type: 'string' },
         itemCode: { type: 'string' },
-        regulationBreached: { type: 'string' },
+        checklistItemCode: { type: 'string' },
+        requirementBreached: { type: 'string' },
+        icaoReference: { type: 'string' },
+        nationalRegulation: { type: 'string' },
         dateIssued: { type: 'string', format: 'date' },
         findingLevel: {
           type: 'string',
           enum: ['Non-Compliance', 'Observation', 'Recommendation'],
+          default: 'Non-Compliance',
         },
-        description: { type: 'string' },
+        description: { type: 'string', maxLength: 2000 },
+        findingStatus: {
+          type: 'string',
+          enum: [
+            'Open',
+            'CAP Submitted',
+            'CAP Accepted',
+            'In Progress',
+            'Pending Closure Review',
+            'Verifying Effective Closure',
+            'Closed',
+            'Overdue',
+          ],
+          default: 'Open',
+        },
+        submissionDeadline: { type: 'string', format: 'date' },
+        findingClosureDate: { type: 'string', format: 'date' },
+        lastStatusChange: { type: 'string', format: 'date' },
+        resolutionDeadline: { type: 'string', format: 'date' },
+        inspectionId: { type: 'string' },
         riskClassification: {
           type: 'string',
           enum: ['Low', 'Medium', 'High', 'Critical'],
+        },
+        correctiveAction: {
+          type: 'object',
+          properties: {
+            capId: {
+              type: 'string',
+              pattern: '^CA-([A-Z0-9]{4}[0-9]{3})([A-Z0-9]{3,6})-([0-9]{2})-([0-9]{2})$'
+            },
+            proposedAction: { type: 'string' },
+            responsibleEntity: { type: 'string' },
+            dueDate: { type: 'string', format: 'date' },
+            acceptanceStatus: {
+              type: 'string',
+              enum: ['Pending', 'Accepted', 'Rejected', 'Returned']
+            },
+          },
+        },
+      },
+    },
+  },
+}
+
+const sourceFindingSchema = {
+  $schema: 'https://json-schema.org/draft/2020-12/schema',
+  title: 'SourceFindingForFollowUp',
+  type: 'object',
+  additionalProperties: false,
+  required: ['schemaVersion', 'finding'],
+  properties: {
+    schemaVersion: { type: 'string' },
+    finding: {
+      type: 'object',
+      additionalProperties: true,
+      required: ['findingId', 'locationId'],
+      properties: {
+        findingId: { type: 'string' },
+        locationId: { type: 'string' },
+        locationName: { type: 'string' },
+        providerId: { type: 'string' },
+        providerName: { type: 'string' },
+        itemCode: { type: 'string' },
+        checklistItemCode: { type: 'string' },
+        itemId: { type: 'string' },
+        description: { type: 'string' },
+        dateIssued: { type: 'string' },
+        resolutionDeadline: { type: 'string' },
+        findingClosureDate: { type: 'string' },
+        correctiveAction: {
+          type: 'object',
+          additionalProperties: true,
         },
       },
     },
@@ -171,25 +273,24 @@ const followUpReportSchema = {
   $schema: 'https://json-schema.org/draft/2020-12/schema',
   title: 'FollowUpReport',
   type: 'object',
+  additionalProperties: false,
   required: ['schemaVersion', 'followUpReport'],
   properties: {
-    schemaVersion: {
-      type: 'string',
-    },
+    schemaVersion: { type: 'string' },
     followUpReport: {
       type: 'object',
+      additionalProperties: false,
       required: [
-        'followUpId',
         'findingId',
         'providerId',
         'locationId',
         'locationName',
         'followUpDate',
-        'findingClosed',
         'percentComplete',
-        'effectivenessConfirmed',
+        'followUpType',
       ],
       properties: {
+        contentType: { type: 'string' },
         followUpId: {
           type: 'string',
           pattern: '^FU-[A-Z0-9]{7}[A-Z0-9]{3,6}-\\d{2}-\\d{6}$',
@@ -199,32 +300,53 @@ const followUpReportSchema = {
           pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
         },
         specialtyId: { type: 'string' },
+        specialtyCode: { type: 'string' },
+        specialtyName: { type: 'string' },
         providerId: { type: 'string' },
+        providerName: { type: 'string' },
         locationId: { type: 'string' },
+        locationCode: { type: 'string' },
         locationName: { type: 'string' },
         followUpDate: { type: 'string', format: 'date-time' },
-        findingClosed: { type: 'boolean' },
         percentComplete: { type: 'integer', minimum: 0, maximum: 100 },
+        followUpType: {
+          type: 'string',
+          enum: [
+            'Progress Review',
+            'CAP Verification',
+            'Closure Verification',
+            'Ad-hoc Inquiry',
+          ],
+        },
         followUpClosureDate: { type: 'string', format: 'date' },
         closureVerificationMethod: { type: 'string' },
-        effectivenessConfirmed: { type: 'boolean' },
-        followUpComment: { type: 'string' },
-        evidence: {
+        effectivenessConfirmed: { type: ['boolean', 'null'] },
+        followUpComment: { type: 'string', maxLength: 2000 },
+        capId: { type: ['string', 'null'] },
+        inspectionId: { type: 'string' },
+        evidenceItems: {
           type: 'array',
-          items: {
-            type: 'object',
-            required: ['evidenceId'],
+          items: evidenceItemSchema,
+        },
+      },
+      allOf: [
+        {
+          if: {
+            properties: { followUpType: { const: 'Closure Verification' } },
+          },
+          then: {
+            required: ['effectivenessConfirmed'],
             properties: {
-              evidenceId: { type: 'string' },
-              evidenceType: { type: 'string' },
-              source: { type: 'string' },
-              hashValue: { type: 'string' },
-              immutable: { type: 'boolean' },
-              sealedDate: { type: 'string', format: 'date-time' },
+              effectivenessConfirmed: { type: 'boolean' },
+            },
+          },
+          else: {
+            properties: {
+              effectivenessConfirmed: { type: 'null' },
             },
           },
         },
-      },
+      ],
     },
   },
 }
@@ -264,8 +386,6 @@ const asDateOnly = (value) => {
   return parsed.toISOString().split('T')[0]
 }
 
-const toYYMMDD = (value) => asDateOnly(value).slice(2).replace(/-/g, '')
-
 const normalizeCompliance = (value) => {
   if (value === 'Compliant' || value === 'Non-Compliant' || value === 'Not Applicable') {
     return value
@@ -298,15 +418,6 @@ const normalizeInspectionSequence = (rawValue, fallback = '001') => {
   return seq.padStart(3, '0').slice(-3)
 }
 
-const compactFindingIdForFollowUp = (findingId = '') => {
-  const normalized = String(findingId).toUpperCase()
-  const matched = normalized.match(/^([A-Z0-9]{7})-([A-Z0-9]{3,6})-(\d{2})$/)
-  if (matched) {
-    return `${matched[1]}${matched[2]}-${matched[3]}`
-  }
-  return sanitizeUpperAlnum(normalized)
-}
-
 const inferInspectionCode = (checklistObj) => {
   const existing = safeString(checklistObj?.inspection)
   if (/^[A-Z0-9]{4}-\d{3}$/.test(existing)) {
@@ -319,7 +430,12 @@ const inferInspectionCode = (checklistObj) => {
   }
 
   const locationToken =
-    sanitizeUpperAlnum(checklistObj?.locationCode || checklistObj?.locationId || checklistObj?.location)
+    sanitizeUpperAlnum(
+      checklistObj?.locationCode ||
+        checklistObj?.icaoCode ||
+        checklistObj?.locationId ||
+        checklistObj?.location
+    )
       .slice(0, 4)
       .padEnd(4, 'X')
   const seq3 = normalizeInspectionSequence(
@@ -430,9 +546,10 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   )
 
   const inspectionCode = inferInspectionCode(checklistObj)
-  const icaoCode = safeString(checklistObj?.icaoCode, safeString(checklistObj?.locationCode))
+  const locationCode = safeString(checklistObj?.locationCode, safeString(checklistObj?.icaoCode))
 
   const checklistSection = {
+    contentType: 'InspectionChecklist',
     inspectionId: safeString(checklistObj?.inspectionId, safeString(checklistObj?.inspection)),
     inspectionCode,
     specialtyId,
@@ -442,9 +559,10 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   }
 
   const optionalChecklistFields = {
+    scope: safeString(checklistObj?.scope),
     locationId: safeString(checklistObj?.locationId),
+    locationCode,
     locationName: safeString(checklistObj?.locationName, safeString(checklistObj?.location)),
-    icaoCode,
     completionDate: safeString(checklistObj?.endDate),
     checklistId: inferChecklistId(inspectionCode, specialtyCode),
     providerName: safeString(checklistObj?.providerName),
@@ -502,11 +620,16 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
     const normalizedEvidence = evidenceList.map((entry) => normalizeEvidenceEntry(entry)).filter(Boolean)
     if (normalizedEvidence.length > 0) {
-      item.evidence = normalizedEvidence.map((ev, evidenceIndex) => {
+      item.evidenceItems = normalizedEvidence.map((ev, evidenceIndex) => {
         const mapped = {
           evidenceId: `EV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
           evidenceType: inferEvidenceType(ev.name),
           source: ev.name,
+          evidenceRole: item.complianceStatus === 'Non-Compliant' ? 'Finding Support' : 'Compliance Evidence',
+        }
+        const collectionDate = safeString(ev.collectionDate)
+        if (collectionDate) {
+          mapped.collectionDate = asDateOnly(collectionDate)
         }
         if (ev.hashValue) {
           mapped.hashValue = ev.hashValue
@@ -556,15 +679,23 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
     const finding = {
       schemaVersion: '1.0',
       finding: {
+        contentType: 'Finding',
         findingId: `${inspectionCompact}-${specialtyCode}-${String(findingNumber).padStart(2, '0')}`,
         providerId: checklistPayload?.checklist?.providerId || '',
+        providerName: checklistPayload?.checklist?.providerName || safeString(checklistObj?.providerName),
         locationId: checklistPayload?.checklist?.locationId || '',
+        locationCode: checklistPayload?.checklist?.locationCode || '',
         locationName:
           checklistPayload?.checklist?.locationName || safeString(checklistObj?.locationName),
-        itemCode: inferItemCode(row, specialtyCode, index),
+        specialtyId: checklistPayload?.checklist?.specialtyId || '',
+        specialtyCode,
+        specialtyName: checklistPayload?.checklist?.specialtyName || safeString(specialty),
+        inspectionId: checklistPayload?.checklist?.inspectionId || '',
+        checklistItemCode: inferItemCode(row, specialtyCode, index),
         description: safeString(
           response?.nonConformityDetails?.description || response?.comments || row?.question
         ),
+        findingStatus: 'Open',
       },
     }
 
@@ -573,10 +704,17 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       safeString(nationalRegulation) ||
       safeString(row?.reference?.nationalRegulation)
     if (requirementBreached) {
-      finding.finding.regulationBreached = requirementBreached
+      finding.finding.requirementBreached = requirementBreached
+      finding.finding.nationalRegulation = requirementBreached
+    }
+
+    const icaoReference = safeString(row?.reference?.normativa?.ICAOref || row?.reference?.icaoReference)
+    if (icaoReference) {
+      finding.finding.icaoReference = icaoReference
     }
 
     finding.finding.dateIssued = dateIssued
+    finding.finding.lastStatusChange = dateIssued
 
     const riskLevel = normalizeRiskLevel(
       response?.nonConformityDetails?.riskLevel || row?.riskLevel
@@ -612,29 +750,60 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       throw new Error(`Could not find source finding for follow-up response ${effectiveFindingId}`)
     }
 
+    const correctiveAction = finding?.correctiveAction
+
+    // Compose followUpType and CAP logic
+    const followUpType = response?.followUpType || 'Progress Review'
+    const capId = correctiveAction?.capId || null
+    // Only allow CAP Verification if capId exists
+    const allowedTypes = capId
+      ? ['Progress Review', 'CAP Verification', 'Closure Verification', 'Ad-hoc Inquiry']
+      : ['Progress Review', 'Closure Verification', 'Ad-hoc Inquiry']
+    const type = allowedTypes.includes(followUpType) ? followUpType : 'Progress Review'
+
+    // Effectiveness logic
+    let effectivenessConfirmed = null
+    if (type === 'Closure Verification') {
+      if (typeof response?.effectivenessConfirmed === 'boolean') {
+        effectivenessConfirmed = response.effectivenessConfirmed
+      } else {
+        throw new Error('effectivenessConfirmed must be set for Closure Verification follow-up')
+      }
+    }
+
     const report = {
       schemaVersion: '1.0',
       followUpReport: {
+        contentType: 'FollowUpReport',
         findingId: effectiveFindingId,
-        followUpId: '',
         providerId: safeString(finding.providerId),
+        providerName: safeString(finding.providerName),
         locationId: safeString(finding.locationId),
+        locationCode: safeString(finding.locationCode),
         locationName: safeString(finding.locationName),
+        inspectionId: safeString(finding.inspectionId),
         followUpDate: safeString(
           response?.followUpDate,
           safeString(followUpSessionObj?.summary?.lastUpdated, new Date().toISOString())
         ),
-        findingClosed: Boolean(response?.findingClosed),
         percentComplete: Math.max(0, Math.min(100, Number(response?.percentComplete || 0))),
-        effectivenessConfirmed: Boolean(response?.effectivenessConfirmed),
+        followUpType: type,
+        effectivenessConfirmed,
+        capId,
       },
     }
-
-    report.followUpReport.followUpId = `FU-${compactFindingIdForFollowUp(report.followUpReport.findingId)}-${toYYMMDD(report.followUpReport.followUpDate)}`
 
     const specialtyId = safeString(finding?.specialtyId)
     if (specialtyId) {
       report.followUpReport.specialtyId = specialtyId
+    }
+    const specialtyCode = safeString(finding?.specialtyCode)
+    if (specialtyCode) {
+      report.followUpReport.specialtyCode = specialtyCode
+    }
+    const specialtyName = safeString(finding?.specialtyName)
+    if (specialtyName) {
+      report.followUpReport.specialtyName = specialtyName
     }
 
     const closureVerificationMethod = safeString(response?.closureVerificationMethod)
@@ -647,29 +816,34 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
       report.followUpReport.followUpComment = comment
     }
 
-    if (report.followUpReport.findingClosed) {
+    if (type === 'Closure Verification' && response?.followUpClosureDate) {
       report.followUpReport.followUpClosureDate = asDateOnly(
         response?.followUpClosureDate || report.followUpReport.followUpDate
       )
     }
 
+    // Evidence mapping with evidenceRole
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
     const normalizedEvidence = evidenceList.map((entry) => normalizeEvidenceEntry(entry)).filter(Boolean)
     if (normalizedEvidence.length > 0) {
-      report.followUpReport.evidence = normalizedEvidence.map((ev, evidenceIndex) => {
+      report.followUpReport.evidenceItems = normalizedEvidence.map((ev, evidenceIndex) => {
         const mapped = {
           evidenceId: `FUEV-${String(index + 1).padStart(4, '0')}-${String(evidenceIndex + 1).padStart(2, '0')}`,
           evidenceType: inferEvidenceType(ev.name),
           source: ev.name,
         }
-        if (ev.hashValue) {
-          mapped.hashValue = ev.hashValue
+        const collectionDate = safeString(ev.collectionDate)
+        if (collectionDate) {
+          mapped.collectionDate = asDateOnly(collectionDate)
         }
-        if (ev.immutable) {
-          mapped.immutable = true
-        }
-        if (ev.sealedDate) {
-          mapped.sealedDate = ev.sealedDate
+        if (ev.hashValue) mapped.hashValue = ev.hashValue
+        if (ev.immutable) mapped.immutable = true
+        if (ev.sealedDate) mapped.sealedDate = ev.sealedDate
+        // Only allow Progress/Closure Evidence
+        if (type === 'Closure Verification') {
+          mapped.evidenceRole = 'Closure Evidence'
+        } else {
+          mapped.evidenceRole = 'Progress Evidence'
         }
         return mapped
       })
@@ -689,15 +863,20 @@ const normalizeFindingForFollowUpExport = (entry) => {
   }
   delete finding.riskLevel
 
-  if (!finding.regulationBreached && finding.requirementBreached) {
-    finding.regulationBreached = finding.requirementBreached
+  if (!finding.requirementBreached && finding.regulationBreached) {
+    finding.requirementBreached = finding.regulationBreached
   }
-  delete finding.requirementBreached
+  delete finding.regulationBreached
 
-  if (!finding.itemCode && finding.itemId) {
-    finding.itemCode = finding.itemId
+  if (!finding.checklistItemCode) {
+    finding.checklistItemCode = safeString(finding.itemCode, safeString(finding.itemId))
   }
   delete finding.itemId
+  delete finding.itemCode
+
+  if (!finding.checklistItemCode) {
+    finding.checklistItemCode = 'UNKNOWN'
+  }
 
   if (finding.comment && !finding.followUpComment) {
     finding.followUpComment = finding.comment
@@ -706,6 +885,35 @@ const normalizeFindingForFollowUpExport = (entry) => {
 
   delete finding.domain
   delete finding.capId
+
+  const normalizeDateField = (fieldName) => {
+    const value = safeString(finding[fieldName])
+    if (!value) {
+      delete finding[fieldName]
+      return
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      delete finding[fieldName]
+      return
+    }
+    finding[fieldName] = value
+  }
+
+  normalizeDateField('dateIssued')
+  normalizeDateField('submissionDeadline')
+  normalizeDateField('findingClosureDate')
+  normalizeDateField('lastStatusChange')
+  normalizeDateField('resolutionDeadline')
+
+  if (Array.isArray(finding.correctiveAction)) {
+    finding.correctiveAction = finding.correctiveAction.find((item) => item && typeof item == 'object') || null
+  }
+  if (finding.correctiveAction && typeof finding.correctiveAction != 'object') {
+    delete finding.correctiveAction
+  }
+  if (finding.correctiveAction === null) {
+    delete finding.correctiveAction
+  }
 
   const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
   if (finding.riskClassification && !validRiskLevels.includes(finding.riskClassification)) {
@@ -1123,7 +1331,7 @@ export function setupIpcHandles(ipcMain) {
         followUpSessionObj,
       })
 
-      const validateFinding = ajv.compile(findingSchema)
+      const validateFinding = ajv.compile(sourceFindingSchema)
       const validateFollowUpReport = ajv.compile(followUpReportSchema)
 
       normalizedFindingsObj.forEach((finding, index) => {
@@ -1183,10 +1391,24 @@ export function setupIpcHandles(ipcMain) {
         throw new Error(`Follow-up import API failed with status ${response.status}: ${responseText}`)
       }
 
+      let uploadBodyJson = null
+      try {
+        uploadBodyJson = JSON.parse(responseText)
+      } catch {
+        uploadBodyJson = null
+      }
+
+      const followUpFiles = Array.isArray(uploadBodyJson?.followUpFiles)
+        ? uploadBodyJson.followUpFiles
+        : Array.isArray(uploadBodyJson?.followUpFilenames)
+          ? uploadBodyJson.followUpFilenames
+          : []
+
       return {
         zipPath,
         uploadStatus: response.status,
         uploadBody: responseText,
+        followUpFiles,
         reportsCount: followUpReportsPayload.length,
       }
     } catch (err) {

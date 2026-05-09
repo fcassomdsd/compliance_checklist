@@ -8,6 +8,28 @@
     "locationName": "Aeropuerto Internacional de las Americas",
     "itemId": "VIG-0001",
     "description": "Surveillance alarm not acknowledged",
-    "findingStatus": "Open"
+    "dateIssued": "2026-01-01",
+    "resolutionDeadline": "2099-01-01",
+    "findingStatus": "Open",
+    "correctiveAction": {
+      "capId": "CA-ABCD001VIG-01-01",
+      "proposedAction": "Replace failing alarm module",
+      "responsibleEntity": "CNS Maintenance",
+      "dueDate": "2099-02-01",
+      "acceptanceStatus": "Pending"
+    }
+  },
+  {
+    "schemaVersion": "1.0",
+    "findingId": "MDSD-VIG-2026-0002",
+    "domain": "VIG",
+    "providerId": "provider-1",
+    "locationId": "MDSD",
+    "locationName": "Aeropuerto Internacional de las Americas",
+    "itemId": "VIG-0002",
+    "description": "Legacy overdue finding",
+    "dateIssued": "2019-01-01",
+    "resolutionDeadline": "2020-01-01",
+    "findingStatus": "Overdue"
   }
 ]

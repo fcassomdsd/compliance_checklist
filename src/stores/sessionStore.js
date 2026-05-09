@@ -17,22 +17,21 @@ export const useSessionStore = defineStore('session', () => {
   const summary = ref({ finalized: true, generalComments: '' })
   const context = ref({ specialty: '', locationId: null })
 
-  // Actions
-  const loadSession = async (specialty, locationId = null) => {
-    // initialize state
-    // reset summary so stale workspace data does not leak across switches
-    summary.value = { finalized: true, generalComments: '' }
+  const reset = (finalized = true) => {
+    summary.value = { finalized, generalComments: '' }
+    context.value = { specialty: '', locationId: null }
 
-    // clear out evidenceFiles
     evidence.reset()
-
-    // clear out audioFiles
     audio.reset()
 
-    // clear out session data
     for (const key of Object.keys(responses)) {
       delete responses[key]
     }
+  }
+
+  // Actions
+  const loadSession = async (specialty, locationId = null) => {
+    reset(true)
 
     try {
       if (typeof specialty != 'string' || specialty.length == 0) {
@@ -161,6 +160,7 @@ export const useSessionStore = defineStore('session', () => {
     responses,
     summary,
     context,
+    reset,
     loadSession,
     updateSession,
     updateGeneralComments, // <-- exported

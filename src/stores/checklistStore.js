@@ -321,6 +321,10 @@ export const useChecklistStore = defineStore('checklist', () => {
       isImporting.value = true
 
       const importedChecklist = await fs.fetchChecklistFromApi(inspection, specialtyCode)
+      const specialtyName =
+        importedChecklist.specialtyName ||
+        specialtyList.value.find((item) => item.code == specialtyCode)?.name ||
+        specialtyCode
       const { locationId, locationName } = resolveLocationFromChecklist(importedChecklist)
 
       const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)
@@ -332,11 +336,11 @@ export const useChecklistStore = defineStore('checklist', () => {
       if (importState.hasChecklist && importState.hasSession && importState.sessionFinalized === false) {
         throw new Error('Cannot import checklist while an active session is in progress')
       }
-      await fs.ensureSpecialtyEntry(specialtyCode, importedChecklist.specialtyName || specialtyCode)
+      await fs.ensureSpecialtyEntry(specialtyCode, specialtyName)
       await fs.saveChecklist(specialtyCode, importedChecklist, locationId)
       await fs.saveWorkspaceMetadata(specialtyCode, locationId, {
         specialtyCode,
-        specialtyName: importedChecklist.specialtyName || specialtyCode,
+        specialtyName,
         locationId,
         locationName,
         draftStatus: 'draft',
@@ -350,7 +354,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       })
       const workspaceEntry = await fs.upsertWorkspaceRegistryEntry({
         specialtyCode,
-        specialtyName: importedChecklist.specialtyName || specialtyCode,
+        specialtyName,
         locationId,
         locationName,
         draftStatus: 'draft',
@@ -467,6 +471,8 @@ export const useChecklistStore = defineStore('checklist', () => {
         locationList.value.find((location) => location.icaoCode == locationId)?.name ||
         importedFindings[0]?.locationName ||
         locationId
+      const specialtyName =
+        specialtyList.value.find((item) => item.code == specialtyCode)?.name || specialtyCode
 
       const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)
       if (touchedState.followUpTouched) {
@@ -476,7 +482,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       await fs.saveFindings(specialtyCode, importedFindings, locationId)
       await fs.saveWorkspaceMetadata(specialtyCode, locationId, {
         specialtyCode,
-        specialtyName: specialtyCode,
+        specialtyName,
         locationId,
         locationName,
         draftStatus: 'draft',
@@ -491,7 +497,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       const workspaceEntry = await fs.upsertWorkspaceRegistryEntry({
         specialtyCode,
-        specialtyName: specialtyCode,
+        specialtyName,
         locationId,
         locationName,
         draftStatus: 'draft',
@@ -557,7 +563,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
-      await sessionStore.loadSession(specialty.value, activeWorkspace.value.locationId)
+      sessionStore.reset(false)
       toast.success('Inspection session removed')
       return result
     } catch (error) {
@@ -588,7 +594,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
-      await followUpStore.loadFollowUpSession(specialty.value, activeWorkspace.value.locationId)
+      followUpStore.reset(false)
       toast.success('Follow-up session removed')
       return result
     } catch (error) {

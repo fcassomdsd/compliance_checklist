@@ -39,23 +39,81 @@ export async function launchApp() {
 }
 
 export async function importInspection(window, inspectionCode = '0224', specialtyCode = 'VIG') {
+  const expectedWorkspaceKey = `MDSD__${specialtyCode.toUpperCase()}`
+
+  const ensureWorkspaceLoaded = async () => {
+    const workspaceSelect = window.locator('#workspaceSelect')
+    const matchingOption = workspaceSelect.locator(`option[value="${expectedWorkspaceKey}"]`)
+    if ((await matchingOption.count()) == 0) {
+      return false
+    }
+
+    await workspaceSelect.selectOption(expectedWorkspaceKey)
+    try {
+      await expect(window.locator('#cklTable')).toBeVisible({ timeout: 2000 })
+      return true
+    } catch {
+      return false
+    }
+  }
+
   await ensureReadyForImport(window)
   await window.locator('#modeSelect').selectOption('inspection')
   await dismissBlockingModal(window)
+
+  if (await ensureWorkspaceLoaded()) {
+    return
+  }
+
   await window.locator('#openImportModalBtn').click()
   await window.locator('#importInspection').fill(inspectionCode)
   await window.locator('#importSpecialty').selectOption(specialtyCode)
   await window.locator('#importDataBtn').click()
+
+  if (await ensureWorkspaceLoaded()) {
+    return
+  }
+
+  await expect(window.locator('#cklTable')).toBeVisible()
 }
 
 export async function importFollowUp(window, locationIcao = 'MDSD', specialtyCode = 'VIG') {
+  const expectedWorkspaceKey = `${locationIcao.toUpperCase()}__${specialtyCode.toUpperCase()}`
+
+  const ensureWorkspaceLoaded = async () => {
+    const workspaceSelect = window.locator('#workspaceSelect')
+    const matchingOption = workspaceSelect.locator(`option[value="${expectedWorkspaceKey}"]`)
+    if ((await matchingOption.count()) == 0) {
+      return false
+    }
+
+    await workspaceSelect.selectOption(expectedWorkspaceKey)
+    try {
+      await expect(window.locator('#followupTable')).toBeVisible({ timeout: 2000 })
+      return true
+    } catch {
+      return false
+    }
+  }
+
   await ensureReadyForImport(window)
   await window.locator('#modeSelect').selectOption('followUp')
   await dismissBlockingModal(window)
+
+  if (await ensureWorkspaceLoaded()) {
+    return
+  }
+
   await window.locator('#openImportModalBtn').click()
   await window.locator('#importLocation').selectOption(locationIcao)
   await window.locator('#importSpecialty').selectOption(specialtyCode)
   await window.locator('#importDataBtn').click()
+
+  if (await ensureWorkspaceLoaded()) {
+    return
+  }
+
+  await expect(window.locator('#followupTable')).toBeVisible()
 }
 
 export async function finalizeInspection(window) {

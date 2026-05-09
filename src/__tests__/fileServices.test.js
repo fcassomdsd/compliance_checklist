@@ -112,12 +112,34 @@ describe('fileServices', () => {
 
   it('readEvidence returns a list of files', async () => {
     const mockDirList = [{ name: 'file1' }]
+    mockElectronAPI.checkPath.mockResolvedValue(true)
     mockElectronAPI.listPath.mockResolvedValue(mockDirList)
 
     const result = await fs.readEvidence('VIG')
 
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
     expect(mockElectronAPI.listPath).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
     expect(result).toEqual(mockDirList)
+  })
+
+  it('readEvidence returns empty list when evidence directory is missing', async () => {
+    mockElectronAPI.checkPath.mockResolvedValue(false)
+
+    const result = await fs.readEvidence('VIG', 'MDPP')
+
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_VIG', 'Evidence')
+    expect(mockElectronAPI.listPath).not.toHaveBeenCalled()
+    expect(result).toEqual([])
+  })
+
+  it('readAudio returns empty list when audio directory is missing', async () => {
+    mockElectronAPI.checkPath.mockResolvedValue(false)
+
+    const result = await fs.readAudio('VIG', 'MDPP')
+
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_VIG', 'Audio')
+    expect(mockElectronAPI.listPath).not.toHaveBeenCalled()
+    expect(result).toEqual([])
   })
 
   describe('saveEvidence', () => {
@@ -352,10 +374,30 @@ describe('fileServices', () => {
   })
 
   describe('exportFollowUpPayload', () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          status: 200,
+          json: vi.fn().mockResolvedValue({ success: true }),
+        })
+      )
+    })
+
     it('calls electron exportFollowUpPayload with stringified data', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
       const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
-      const expectedResult = { zipPath: '/tmp/followup.zip', uploadStatus: 200 }
+      const expectedResult = {
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({
+          status: 'imported',
+          followUpReportsImported: 2,
+          followUpEvidenceImported: 5,
+          followUpFilenames: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+        }),
+      }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue(expectedResult)
 
       const result = await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
@@ -366,7 +408,124 @@ describe('fileServices', () => {
         specialty: 'VIG',
         locationId: 'loc-1',
       })
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          specialtyName: 'Sistemas de Vigilancia',
+          followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+        }),
+      })
       expect(result).toEqual(expectedResult)
+    })
+
+    it('waits followUpImportDelay before calling importFollowUps', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.getAppConfig.mockResolvedValue({
+        ...mockAppConfig,
+        api: {
+          ...mockAppConfig.api,
+          followUpImportDelay: 200,
+        },
+      })
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({
+          followUpFilenames: ['FU-MDPP001VIG-01-01'],
+        }),
+      })
+
+      const pending = fs.exportFollowUpPayload(findings, followUpSession, 'VIG')
+
+      await vi.advanceTimersByTimeAsync(199)
+      expect(fetch).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      await pending
+
+      expect(fetch).toHaveBeenCalledTimes(1)
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', expect.any(Object))
+    })
+
+    it('falls back to result.followUpFiles when uploadBody does not include names', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: 'ok',
+        followUpFiles: ['FU-MDPP001VIG-01-01'],
+      })
+
+      await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
+
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          specialtyName: 'Sistemas de Vigilancia',
+          followUpFiles: ['FU-MDPP001VIG-01-01'],
+        }),
+      })
+    })
+
+    it('throws when first upload API does not return follow-up files', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: 'ok',
+      })
+
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload: No follow-up files were returned by follow-up import API'
+      )
+    })
+
+    it('throws when specialtyName cannot be resolved', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'UNK' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({ followUpFilenames: ['FU-UNK-01'] }),
+      })
+      mockElectronAPI.getAppConfig.mockResolvedValue({
+        ...mockAppConfig,
+        fallback: { specialties: [] },
+      })
+
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'UNK', 'loc-1')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload: specialtyName could not be resolved for follow-up import payload'
+      )
+    })
+
+    it('throws when importFollowUps API fails', async () => {
+      const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
+      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
+        zipPath: '/tmp/followup.zip',
+        uploadStatus: 200,
+        uploadBody: JSON.stringify({ followUpFilenames: ['FU-MDPP001VIG-01-01'] }),
+      })
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 500,
+        })
+      )
+
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')).rejects.toThrow(
+        'exportFollowUpPayload: could not export and upload follow-up payload: importFollowUps API failed with status 500'
+      )
     })
 
     it('throws for missing parameters', async () => {
@@ -458,9 +617,9 @@ describe('fileServices', () => {
   })
 
   describe('follow-up session persistence', () => {
-    it('loads follow-up session when file exists', async () => {
+    it('loads follow-up session with required followUpType', async () => {
       const fs = createFileService()
-      const payload = { summary: { specialty: 'VIG', finalized: false }, responses: { F1: { findingId: 'F1' } } }
+      const payload = { summary: { specialty: 'VIG', finalized: false }, responses: { F1: { findingId: 'F1', followUpType: 'Progress Verification' } } }
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(payload))
 
@@ -515,6 +674,7 @@ describe('fileServices', () => {
 
     it('readEvidence throws error', async () => {
       const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockRejectedValue(new Error('fail'))
       await expect(fs.readEvidence('VIG')).rejects.toThrow(
         'readEvidence: could not read evidence for VIG : fail'
@@ -543,7 +703,6 @@ describe('fileServices', () => {
       await fs.loadChecklist('VIG')
 
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'FollowUpEvidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalled()
     })
 
@@ -624,6 +783,7 @@ describe('fileServices', () => {
     it('readAudio returns list of audio files', async () => {
       const fs = createFileService()
       const mockAudioList = ['audio1.webm', 'audio2.webm']
+      window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockResolvedValue(mockAudioList)
 
       const result = await fs.readAudio('VIG')
@@ -634,6 +794,7 @@ describe('fileServices', () => {
 
     it('readAudio throws error', async () => {
       const fs = createFileService()
+      window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockRejectedValue(new Error('list failed'))
 
       await expect(fs.readAudio('VIG')).rejects.toThrow(
@@ -968,7 +1129,6 @@ describe('fileServices', () => {
       await fs.saveChecklist('VIG', mockChecklist)
 
       expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'FollowUpEvidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         JSON.stringify(mockChecklist, null, 2),
         null,
@@ -1298,6 +1458,7 @@ describe('fileServices', () => {
         if (key == 'LOC-001_VIG/workspace.json') return true
         if (key == 'workspaces.json') return true
         if (key == 'LOC-001_VIG/session.json') return true
+        if (key == 'LOC-001_VIG/checklist.json') return true
         if (key == 'LOC-001_VIG/Evidence') return true
         if (key == 'LOC-001_VIG/Audio') return true
         if (key == 'LOC-001_VIG/followup.session.json') return true
@@ -1334,10 +1495,17 @@ describe('fileServices', () => {
 
       expect(result).toEqual({ removed: true, workspaceDeleted: false })
       expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'session.json')
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'checklist.json')
       expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Evidence')
       expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Audio')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         expect.stringContaining('"checklistUploaded": false'),
+        null,
+        'LOC-001_VIG',
+        'workspace.json'
+      )
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
+        expect.stringContaining('"checklistPresent": false'),
         null,
         'LOC-001_VIG',
         'workspace.json'

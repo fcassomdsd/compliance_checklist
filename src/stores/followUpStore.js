@@ -13,8 +13,8 @@ export const useFollowUpStore = defineStore('followUp', () => {
   const summary = ref({ finalized: true, generalComments: '' })
   const context = ref({ specialty: '', locationId: null })
 
-  const reset = () => {
-    summary.value = { finalized: true, generalComments: '' }
+  const reset = (finalized = true) => {
+    summary.value = { finalized, generalComments: '' }
     evidence.reset()
     for (const key of Object.keys(responses)) {
       delete responses[key]
@@ -40,6 +40,14 @@ export const useFollowUpStore = defineStore('followUp', () => {
   }
 
   const normalizeResponse = (findingId, rawEntry) => {
+    const allowedFollowUpTypes = [
+      'Progress Verification',
+      'Progress Review',
+      'CAP Verification',
+      'Closure Verification',
+      'Ad-hoc Inquiry',
+    ]
+
     const nextEntry = {
       findingId:
         typeof rawEntry?.findingId == 'string' && rawEntry.findingId.length > 0
@@ -48,8 +56,13 @@ export const useFollowUpStore = defineStore('followUp', () => {
       percentComplete: Number.isFinite(Number(rawEntry?.percentComplete))
         ? Math.max(0, Math.min(100, Number(rawEntry.percentComplete)))
         : 0,
-      effectivenessConfirmed: Boolean(rawEntry?.effectivenessConfirmed),
-      findingClosed: Boolean(rawEntry?.findingClosed),
+      followUpType: allowedFollowUpTypes.includes(rawEntry?.followUpType)
+        ? rawEntry.followUpType
+        : 'Progress Verification',
+      effectivenessConfirmed:
+        rawEntry?.followUpType === 'Closure Verification'
+          ? (typeof rawEntry?.effectivenessConfirmed === 'boolean' ? rawEntry.effectivenessConfirmed : null)
+          : null,
     }
 
     if (typeof rawEntry?.comments == 'string') {
@@ -106,7 +119,7 @@ export const useFollowUpStore = defineStore('followUp', () => {
   }
 
   const loadFollowUpSession = async (specialty, locationId = null) => {
-    reset()
+    reset(true)
 
     try {
       if (typeof specialty != 'string' || specialty.length == 0) {

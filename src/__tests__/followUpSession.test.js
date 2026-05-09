@@ -22,12 +22,12 @@ describe('followUpSession.js', () => {
         responses: {
           'FIND-001': {
             findingId: 'FIND-001',
+            followUpType: 'Progress Verification',
             percentComplete: 80,
-            effectivenessConfirmed: false,
-            findingClosed: false,
+            effectivenessConfirmed: null,
             comments: 'In progress',
             evidence: [
-              { name: 'file1.pdf', hashValue: 'abc123', immutable: true, sealedDate: '2024-01-01' },
+              { name: 'file1.pdf', hashValue: 'abc123', immutable: true, sealedDate: '2024-01-01', evidenceRole: 'Progress Evidence' },
             ],
           },
         },
@@ -52,7 +52,7 @@ describe('followUpSession.js', () => {
       const session = {
         summary: { specialty: 'VIG' },
         responses: {
-          'FIND-001': { percentComplete: 50 },
+          'FIND-001': { followUpType: 'Progress Verification', percentComplete: 50 },
         },
       }
       expect(() => parseFollowUpSession(JSON.stringify(session))).toThrow(
@@ -60,19 +60,33 @@ describe('followUpSession.js', () => {
       )
     })
 
-    it('throws when evidence item is missing name', () => {
+    it('accepts evidence item when evidenceRole is omitted', () => {
       const session = {
         summary: { specialty: 'VIG' },
         responses: {
           'FIND-001': {
             findingId: 'FIND-001',
-            evidence: [{ hashValue: 'abc' }],
+            followUpType: 'Progress Verification',
+            evidence: [{ name: 'file.pdf', hashValue: 'abc' }],
           },
         },
       }
-      expect(() => parseFollowUpSession(JSON.stringify(session))).toThrow(
-        'Follow-up session validation failed'
-      )
+      expect(() => parseFollowUpSession(JSON.stringify(session))).not.toThrow()
+    })
+
+    it('accepts legacy response entries without followUpType', () => {
+      const session = {
+        summary: { specialty: 'VIG' },
+        responses: {
+          'FIND-001': {
+            findingId: 'FIND-001',
+            percentComplete: 25,
+            comments: 'Legacy entry',
+          },
+        },
+      }
+
+      expect(() => parseFollowUpSession(JSON.stringify(session))).not.toThrow()
     })
 
     it('throws on invalid JSON', () => {
@@ -93,8 +107,8 @@ describe('followUpSession.js', () => {
       const session = JSON.stringify({
         summary: { specialty: 'VIG' },
         responses: {
-          'F1': { findingId: 'F1', evidence: [{ name: 'file1.pdf' }, { name: 'file2.pdf' }] },
-          'F2': { findingId: 'F2', evidence: [{ name: 'file1.pdf' }] },
+          'F1': { findingId: 'F1', followUpType: 'Progress Verification', evidence: [{ name: 'file1.pdf', evidenceRole: 'Progress Evidence' }, { name: 'file2.pdf', evidenceRole: 'Progress Evidence' }] },
+          'F2': { findingId: 'F2', followUpType: 'Progress Verification', evidence: [{ name: 'file1.pdf', evidenceRole: 'Progress Evidence' }] },
         },
       })
       const links = getFollowUpEvidenceLinks(session)
