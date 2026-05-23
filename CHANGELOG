@@ -1,3 +1,30 @@
+## 2026-05-23 (Release 1.0.0a candidate)
+
+- Scope: prepare merge from `develop` to `main`.
+- Delta snapshot: 68 commits ahead of `main` (50 non-merge commits).
+
+### Added
+
+- Follow-up workflow expansion with CAP handling, typed verification workflow, evidence roles, and delayed callback payload support.
+- Workspace-based follow-up flow, canonical import flow improvements, and upload progress state handling.
+- Checklist/schema enhancements: support item-code keyed sessions, multi-evidence payloads, provider metadata, structured checklist references, and nullable ICAO reference.
+- IPC/export improvements: completion date export, follow-up files in export response, named import payload handling, and contract-aligned payload schema updates.
+- End-to-end Playwright Electron smoke/follow-up/upload suite and associated CI additions.
+
+### Changed
+
+- Alignment of Alfresco/export contracts, including standardized IDs and payload nomenclature.
+- README documentation expanded with project structure, scripts, configuration, and end-to-end testing guidance.
+- License updated to Apache-2.0.
+
+### Fixed
+
+- Follow-up export compatibility for flat findings and fallback finding IDs.
+- Session removal and state-reset behaviors, including missing evidence directory handling.
+- Workspace/session path handling for media, report generation, and checklist visibility across specialty switches.
+- Open-file IPC robustness with improved error handling, timeout control, and logging.
+- Schema and validation fixes for checklist ID patterns, risk-level normalization, and follow-up risk/domain sanitization.
+
 ## 2026-04-14
 
 - Model update: renamed finding property `vso:openedDate` to `vso:dateIssued` in the Alfresco model for naming uniformity.
