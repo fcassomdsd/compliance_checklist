@@ -19,6 +19,41 @@ Maximize efficiency and ensure data integrity for your operational safety inspec
 
 ---
 
+## 🏗 Architecture
+
+The checklist app is an offline-first Electron application that interacts with backend services before and after field work:
+
+```
+┌─────────────────────┐      ┌──────────────────┐      ┌────────────────┐
+│ compliance_checklist│      │    Node-RED      │      │   AtroCRM /    │
+│    (Electron app)   │──────│   (port 1880)    │──────│   AtroCore      │
+│                     │      │  middleware       │      │                 │
+│  • Import checklist │      │  • /checklist     │      │  • Inspection   │
+│  • Fill responses   │      │  • /findings/open │      │  • Specialties  │
+│  • Collect evidence │      │  • /specialties   │      │  • Locations    │
+│  • Generate PDF     │      │  • /location      │      │  • Protocol Qs  │
+│  • Export ZIP       │      │  • /importCanonical│    │  • Inspectors   │
+└─────────┬───────────┘      │  • /inspectionPlan│      └────────────────┘
+          │                  │  • /inspectionRpt │
+          │ upload           └────────┬─────────┘
+          ▼                           │ Alfresco
+┌─────────────────────┐              │ imports
+│  compliance_import  │              ▼
+│    (port 8000)      │      ┌────────────────┐
+│                     │      │    Alfresco    │
+│  • /inspection-imp  │      │   (port 8080)  │
+│  • /followup-import │      │   Document     │
+└─────────────────────┘      │   Store        │
+                             └────────────────┘
+```
+
+- **Node-RED** decouples the app from AtroCRM and Alfresco — all data queries go through it
+- **compliance_import** receives finalized ZIP payloads and uploads to Alfresco
+- The app stores workspaces locally under `~/Documents/Current_inspection/` for full offline capability
+- API health is polled every 30 seconds; the app degrades gracefully to fallback data when offline
+
+---
+
 ## 🧭 Project Structure
 
 The project follows a modular approach for clear separation of concerns:
@@ -123,11 +158,14 @@ Runtime settings are read from **`app.config.json`** in the project root. This f
     "version": "1.0.0"
   },
   "api": {
-    "importHost": "http://localhost:1880",   // URL of the checklist import service
-    "uploadHost": "http://localhost:8000",   // URL of the upload/findings service
-    "importCanonicalDelay": 3000,            // Polling delay (ms) when waiting for canonical data
-    "importCanonicalRetries": 3,             // Max retries for canonical data polling
-    "serviceStatusTimeoutMs": 2500           // Timeout (ms) for service health-check requests
+    "_comment_host": "Node-RED middleware (port 1880) — checklist, findings, specialties, locations, import triggers",
+    "host": "http://localhost:1880",
+    "importHost": "http://localhost:1880",
+    "_comment_uploadHost": "compliance_import service (port 8000) — inspection and follow-up ZIP uploads",
+    "uploadHost": "http://localhost:8000",
+    "importCanonicalDelay": 3000,
+    "importCanonicalRetries": 3,
+    "serviceStatusTimeoutMs": 2500
   },
   "fallback": {
     "specialties": [ ... ],  // Used when the import service is offline
@@ -135,6 +173,10 @@ Runtime settings are read from **`app.config.json`** in the project root. This f
   }
 }
 ```
+
+### API Key for Uploads
+
+The upload service (`uploadHost`) may require an API key. On first upload, the app prompts for the key and stores it locally in `~/Documents/Current_inspection/api-key.json`. The key is sent as an `X-API-Key` header on all upload requests. If the upload service does not require a key, simply leave the prompt empty and click Cancel.
 
 When running E2E tests, `global-setup.mjs` temporarily rewrites `app.config.json` to point to isolated local test ports and restores it on teardown.
 
