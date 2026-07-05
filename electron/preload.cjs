@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   checkServiceHealth: (params) => ipcRenderer.invoke('check-service-health', params),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   getAppConfig: () => ipcRenderer.invoke('get-app-config'),
-   hashEvidenceFiles: (filePaths, filePath, ...pathLegs) => ipcRenderer.invoke('hash-evidence-files', filePaths, filePath, pathLegs),
+  hashEvidenceFiles: (filePaths, filePath, ...pathLegs) => ipcRenderer.invoke('hash-evidence-files', filePaths, filePath, pathLegs),
+  readApiKey: () => ipcRenderer.invoke('read-api-key'),
+  saveApiKey: (key) => ipcRenderer.invoke('save-api-key', key),
 })
 

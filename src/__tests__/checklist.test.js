@@ -7,7 +7,7 @@ describe('checklist.js', () => {
     const validJson = JSON.stringify({
       specialtyName: 'VIG',
       specialtyCode: 'VIG',
-      location: 'Location 1',
+      locationName: 'Location 1',
       inspection: '0224',
       startDate: '2024-01-01',
       questions: [
@@ -82,7 +82,7 @@ describe('checklist.js', () => {
       inspectionId: 'abc123',
       locationName: 'Aeropuerto Internacional Gregorio Luperon',
       locationId: 'a01k5qc0yxte2xts3r9btk77ft6',
-      icaoCode: 'MDPP',
+      locationCode: 'MDPP',
       startDate: '2026-03-25',
       endDate: '2026-03-26',
       providerId: 'prov789',
@@ -109,7 +109,7 @@ describe('checklist.js', () => {
     expect(result.specialtyCode).toBe('VIG')
     expect(result.specialtyId).toBe('a01k0f67dskef2a475yzd8a5dxd')
     expect(result.locationName).toBe('Aeropuerto Internacional Gregorio Luperon')
-    expect(result.icaoCode).toBe('MDPP')
+    expect(result.locationCode).toBe('MDPP')
   })
 
   it('parses a checklist question with priorFindingId', async () => {

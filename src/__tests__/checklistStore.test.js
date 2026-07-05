@@ -107,6 +107,8 @@ describe('Checklist Store', () => {
     // Setup window.electronAPI mock
     window.electronAPI = {
       openFile: vi.fn(),
+      readApiKey: vi.fn().mockResolvedValue(null),
+      saveApiKey: vi.fn().mockResolvedValue(true),
     }
   })
 
@@ -317,6 +319,7 @@ describe('Checklist Store', () => {
 
   describe('export', () => {
     beforeEach(() => {
+      window.electronAPI.readApiKey = vi.fn().mockResolvedValue('test-api-key')
       store.specialty.value = 'VIG'
       store.checklist.value = {
         specialtyName: 'Sistemas de Vigilancia',
@@ -565,7 +568,7 @@ describe('Checklist Store', () => {
       expect(store.isImporting.value).toBe(false)
     })
 
-    it('imports checklist using locationName and icaoCode from new header format', async () => {
+    it('imports checklist using locationName and locationCode from new header format', async () => {
       const mockImportedChecklist = {
         specialtyName: 'Sistemas de Vigilancia',
         specialtyCode: 'VIG',
@@ -574,7 +577,7 @@ describe('Checklist Store', () => {
         inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
         locationName: 'Aeropuerto Internacional Gregorio Luperon',
         locationId: 'a01k5qc0yxte2xts3r9btk77ft6',
-        icaoCode: 'MDPP',
+        locationCode: 'MDPP',
         startDate: '2026-03-25',
         endDate: '2026-03-26',
         providerId: 'a01kkq6arvbeef8ssmsd2aqnvyb',
@@ -603,9 +606,9 @@ describe('Checklist Store', () => {
       expect(store.isImporting.value).toBe(false)
     })
 
-    it('uses icaoCode as workspace key even when locationId is a UUID', async () => {
-      // Both locationId (opaque UUID) and icaoCode (human ICAO code) are present.
-      // The workspace folder / key must be derived from icaoCode, not the UUID.
+    it('uses locationCode as workspace key even when locationId is a UUID', async () => {
+      // Both locationId (opaque UUID) and locationCode (human ICAO code) are present.
+      // The workspace folder / key must be derived from locationCode, not the UUID.
       const mockImportedChecklist = {
         specialtyName: 'Sistemas de Vigilancia',
         specialtyCode: 'VIG',
@@ -613,7 +616,7 @@ describe('Checklist Store', () => {
         inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
         locationName: 'Aeropuerto Internacional Gregorio Luperon',
         locationId: 'a01k5qc0yxte2xts3r9btk77ft6', // opaque UUID — must NOT become the location key
-        icaoCode: 'MDPP',                            // must be preferred over locationId
+        locationCode: 'MDPP',                        // must be preferred over locationId
         startDate: '2026-03-25',
         endDate: '2026-03-26',
         providerId: 'a01kkq6arvbeef8ssmsd2aqnvyb',
@@ -964,6 +967,10 @@ describe('Checklist Store', () => {
   })
 
   describe('export upload edge cases', () => {
+    beforeEach(() => {
+      window.electronAPI.readApiKey = vi.fn().mockResolvedValue('test-api-key')
+    })
+
     it('rejects upload when upload service is offline', async () => {
       store.uploadServiceOnline.value = false
 

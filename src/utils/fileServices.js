@@ -123,29 +123,12 @@ export const createFileService = () => {
   }
 
   function getSizeAndSuffix(sizeString) {
-    const suffix = [
-      { finder: 'B', power: 0, base: 1 },
-      { finder: 'KB', power: 1, base: 1000, label: 'kB' },
-      { finder: 'MB', power: 2, base: 1000 },
-      { finder: 'GB', power: 3, base: 1000 },
-      { finder: 'KIB', power: 1, base: 1024, label: 'KiB' },
-      { finder: 'MIB', power: 2, base: 1024, label: 'MiB' },
-      { finder: 'GIB', power: 3, base: 1024, label: 'GiB' },
-    ]
-
-    // separate the size and the suffix
-    const ss = sizeString.match(/^([0-9]+([.][0-9]+){0,1})|([kmg]i{0,1}){0,1}b$/gi)
-    if (!ss) {
+    const match = String(sizeString || '').trim().match(/^(\d+(?:\.\d+)?)\s*(MB)$/i)
+    if (!match) {
       throw new Error('Invalid file size format: ' + sizeString)
     }
-
-    // get information about the suffix
-    const suffixInfo = suffix.find((x) => x.finder == ss[1].toUpperCase())
-
-    const totalSize = Number.parseFloat(ss[0]) * Math.pow(suffixInfo.base, suffixInfo.power)
-    const sizeLabel = 'label' in suffixInfo ? suffixInfo.label : suffixInfo.finder
-
-    return { size: totalSize, label: ss[0] + sizeLabel }
+    const totalSize = Number.parseFloat(match[1]) * 1000 * 1000
+    return { size: totalSize, label: match[1] + 'MB' }
   }
 
   const defaultPathExists = async () => {
@@ -1010,6 +993,7 @@ export const createFileService = () => {
       }
 
       const resolvedLocationId = locationId || checklist?.locationId || checklist?.location || null
+      const apiKey = await window.electronAPI.readApiKey()
       const payload = {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
@@ -1017,6 +1001,9 @@ export const createFileService = () => {
       }
       if (resolvedLocationId) {
         payload.locationId = resolvedLocationId
+      }
+      if (apiKey) {
+        payload.apiKey = apiKey
       }
 
       const result = await window.electronAPI.exportInspectionPayload(payload)
@@ -1066,13 +1053,18 @@ export const createFileService = () => {
       }
 
       const appConfig = await window.electronAPI.getAppConfig()
+      const apiKey = await window.electronAPI.readApiKey()
 
-      const result = await window.electronAPI.exportFollowUpPayload({
+      const payloadData = {
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
         specialty,
         locationId,
-      })
+      }
+      if (apiKey) {
+        payloadData.apiKey = apiKey
+      }
+      const result = await window.electronAPI.exportFollowUpPayload(payloadData)
 
       const uploadBody =
         typeof result?.uploadBody == 'string'
