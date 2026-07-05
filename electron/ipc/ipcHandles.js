@@ -1238,6 +1238,28 @@ export function setupIpcHandles(ipcMain) {
     return true
   })
 
+  ipcMain.handle('read-alfresco-cred', async () => {
+    try {
+      const appDir = app.getPath('documents')
+      const credPath = path.join(appDir, 'Current_inspection', 'alfresco-cred.json')
+      await fs.access(credPath)
+      const raw = await fs.readFile(credPath, 'utf-8')
+      const data = JSON.parse(raw)
+      return { username: data?.username || null, password: data?.password || null }
+    } catch {
+      return { username: null, password: null }
+    }
+  })
+
+  ipcMain.handle('save-alfresco-cred', async (event, username, password) => {
+    const appDir = app.getPath('documents')
+    const dirPath = path.join(appDir, 'Current_inspection')
+    await ensureDir(dirPath)
+    const credPath = path.join(dirPath, 'alfresco-cred.json')
+    await saveFile(credPath, JSON.stringify({ username: String(username || '').trim(), password: String(password || '') }, null, 2))
+    return true
+  })
+
   ipcMain.handle('export-inspection-payload', async (event, payload) => {
     try {
       const { checklistString, sessionString, specialty, locationId, filePath, uploadUrl } = payload || {}

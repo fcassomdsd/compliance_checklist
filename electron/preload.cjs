@@ -22,5 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   hashEvidenceFiles: (filePaths, filePath, ...pathLegs) => ipcRenderer.invoke('hash-evidence-files', filePaths, filePath, pathLegs),
   readApiKey: () => ipcRenderer.invoke('read-api-key'),
   saveApiKey: (key) => ipcRenderer.invoke('save-api-key', key),
+  readAlfrescoCred: () => ipcRenderer.invoke('read-alfresco-cred'),
+  saveAlfrescoCred: (username, password) => ipcRenderer.invoke('save-alfresco-cred', username, password),
 })
 
