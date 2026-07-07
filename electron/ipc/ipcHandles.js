@@ -432,7 +432,7 @@ const inferInspectionCode = (checklistObj) => {
   const locationToken =
     sanitizeUpperAlnum(
       checklistObj?.locationCode ||
-        checklistObj?.icaoCode ||
+        checklistObj?.locationIcao ||
         checklistObj?.locationId ||
         checklistObj?.location
     )
@@ -546,7 +546,10 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   )
 
   const inspectionCode = inferInspectionCode(checklistObj)
-  const locationCode = safeString(checklistObj?.locationCode, safeString(checklistObj?.icaoCode))
+  const locationCode = safeString(
+    checklistObj?.locationCode,
+    safeString(checklistObj?.locationIcao, safeString(checklistObj?.icaoCode))
+  )
 
   const checklistSection = {
     contentType: 'InspectionChecklist',
@@ -1213,6 +1216,50 @@ export function setupIpcHandles(ipcMain) {
     }
   })
 
+  ipcMain.handle('read-api-key', async () => {
+    try {
+      const appDir = app.getPath('documents')
+      const keyPath = path.join(appDir, 'Current_inspection', 'api-key.json')
+      await fs.access(keyPath)
+      const raw = await fs.readFile(keyPath, 'utf-8')
+      const data = JSON.parse(raw)
+      return typeof data?.key === 'string' ? data.key : null
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle('save-api-key', async (event, key) => {
+    const appDir = app.getPath('documents')
+    const dirPath = path.join(appDir, 'Current_inspection')
+    await ensureDir(dirPath)
+    const keyPath = path.join(dirPath, 'api-key.json')
+    await saveFile(keyPath, JSON.stringify({ key: String(key || '').trim() }, null, 2))
+    return true
+  })
+
+  ipcMain.handle('read-alfresco-cred', async () => {
+    try {
+      const appDir = app.getPath('documents')
+      const credPath = path.join(appDir, 'Current_inspection', 'alfresco-cred.json')
+      await fs.access(credPath)
+      const raw = await fs.readFile(credPath, 'utf-8')
+      const data = JSON.parse(raw)
+      return { username: data?.username || null, password: data?.password || null }
+    } catch {
+      return { username: null, password: null }
+    }
+  })
+
+  ipcMain.handle('save-alfresco-cred', async (event, username, password) => {
+    const appDir = app.getPath('documents')
+    const dirPath = path.join(appDir, 'Current_inspection')
+    await ensureDir(dirPath)
+    const credPath = path.join(dirPath, 'alfresco-cred.json')
+    await saveFile(credPath, JSON.stringify({ username: String(username || '').trim(), password: String(password || '') }, null, 2))
+    return true
+  })
+
   ipcMain.handle('export-inspection-payload', async (event, payload) => {
     try {
       const { checklistString, sessionString, specialty, locationId, filePath, uploadUrl } = payload || {}
@@ -1280,9 +1327,14 @@ export function setupIpcHandles(ipcMain) {
       }
       const form = new FormData()
       form.append('file', new Blob([zipBuffer], { type: 'application/zip' }), zipName)
+      const headers = {}
+      if (payload?.apiKey) {
+        headers['X-API-Key'] = payload.apiKey
+      }
       const response = await fetch(targetUrl, {
         method: 'POST',
         body: form,
+        headers,
       })
 
       const responseText = await response.text()
@@ -1381,9 +1433,14 @@ export function setupIpcHandles(ipcMain) {
       }
       const form = new FormData()
       form.append('file', new Blob([zipBuffer], { type: 'application/zip' }), zipName)
+      const headers = {}
+      if (payload?.apiKey) {
+        headers['X-API-Key'] = payload.apiKey
+      }
       const response = await fetch(targetUrl, {
         method: 'POST',
         body: form,
+        headers,
       })
 
       const responseText = await response.text()

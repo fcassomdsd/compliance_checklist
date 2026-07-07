@@ -113,6 +113,25 @@
       @cancel="store.showModal = false"
       @confirm="store.confirmModal"
     />
+    <div v-if="store.apiKeyPromptVisible" class="modal-overlay">
+      <div class="modal-container">
+        <h2>Upload API Key Required</h2>
+        <p class="modal-explanation">
+          The upload service requires an API key. Enter the key provided by your system administrator.
+        </p>
+        <input
+          v-model="store.apiKeyInput"
+          type="password"
+          class="api-key-input"
+          placeholder="Enter API key"
+          @keyup.enter="store.submitApiKey"
+        />
+        <div class="modal-actions">
+          <button @click="store.cancelApiKeyPrompt" class="btn-cancel">Cancel</button>
+          <button @click="store.submitApiKey" class="btn-confirm">Save and Upload</button>
+        </div>
+      </div>
+    </div>
     <div v-if="showImportModal" class="modal-overlay">
       <div class="modal-container import-modal">
         <h2>{{ store.uiMode == 'inspection' ? 'Import Inspection Data' : 'Import Follow-up Data' }}</h2>
@@ -586,5 +605,13 @@
     .import-controls input {
       width: 100%;
     }
+  }
+  .api-key-input {
+    width: 100%;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    margin: 0.75rem 0;
   }
 </style>

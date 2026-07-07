@@ -261,7 +261,7 @@ describe('pdfGenerator', () => {
     it('should accept new-format checklist with locationName instead of location', async () => {
       const { generateFindingsReport } = await import('../utils/pdfGenerator')
 
-      // New header format: locationName replaces location, icaoCode is present
+      // New header format: locationName replaces location, locationCode is present
       const mockChecklistData = {
         specialtyName: 'Sistemas de Vigilancia',
         specialtyCode: 'VIG',
@@ -269,7 +269,7 @@ describe('pdfGenerator', () => {
         inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
         locationName: 'Aeropuerto Internacional Gregorio Luperon',
         locationId: 'a01k5qc0yxte2xts3r9btk77ft6',
-        icaoCode: 'MDPP',
+        locationCode: 'MDPP',
         startDate: '2026-03-25',
         endDate: '2026-03-26',
         providerId: 'a01kkq6arvbeef8ssmsd2aqnvyb',

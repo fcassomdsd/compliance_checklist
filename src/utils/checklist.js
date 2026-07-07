@@ -25,10 +25,16 @@ const checklistSchema = {
     location: {
       type: 'string',
     },
-    locationId: {
+    locationCode: {
       type: 'string',
     },
     icaoCode: {
+      type: 'string',
+    },
+    locationIcao: {
+      type: 'string',
+    },
+    locationId: {
       type: 'string',
     },
     specialtyId: {
