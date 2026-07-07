@@ -112,6 +112,29 @@ describe('checklist.js', () => {
     expect(result.locationCode).toBe('MDPP')
   })
 
+  it('parses a checklist with location alias fields', async () => {
+    const validJson = JSON.stringify({
+      specialtyName: 'VIG',
+      specialtyCode: 'VIG',
+      location: 'Aeropuerto Internacional de las Americas',
+      locationIcao: 'MDSD',
+      questions: [
+        {
+          id: '1',
+          code: 'VIG-0001',
+          topic: 'Topic 1',
+          reference: { normativa: {}, guidance: 'GM only text' },
+          question: 'Question 1',
+          verification: 'Verification 1',
+        },
+      ],
+    })
+
+    const result = parseChecklist(validJson)
+    expect(result.location).toBe('Aeropuerto Internacional de las Americas')
+    expect(result.locationIcao).toBe('MDSD')
+  })
+
   it('parses a checklist question with priorFindingId', async () => {
     const validJson = JSON.stringify({
       specialtyName: 'VIG',
