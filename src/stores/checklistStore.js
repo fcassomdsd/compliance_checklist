@@ -608,6 +608,10 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
+      checklist.value = null
+      checklistLoaded.value = false
+      findings.value = []
+      findingsLoaded.value = false
       sessionStore.reset(false)
       toast.success('Inspection session removed')
       return result
@@ -639,6 +643,10 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
+      checklist.value = null
+      checklistLoaded.value = false
+      findings.value = []
+      findingsLoaded.value = false
       followUpStore.reset(false)
       toast.success('Follow-up session removed')
       return result

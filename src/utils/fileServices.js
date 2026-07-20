@@ -1362,6 +1362,16 @@ export const createFileService = () => {
         FINDINGS_REPORT_PREFIX,
       ])
 
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.findings)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.findings)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.followUpSession)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpEvidenceDir)) {
+        await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
+      }
+
       const hasInspectionSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)
       const hasFollowUpSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)
 
