@@ -46,6 +46,18 @@ async function initializeAppConfig() {
         "app": {
           "name": "Compliance Checklist",
           "version": "1.0.0"
+        },
+        "api": {
+          "host": "http://localhost:1880",
+          "importHost": "http://localhost:1880",
+          "uploadHost": "http://localhost:8000",
+          "importCanonicalDelay": 3000,
+          "importCanonicalRetries": 3,
+          "serviceStatusTimeoutMs": 2500
+        },
+        "fallback": {
+          "specialties": [],
+          "locations": []
         }
       };
       await fs.writeFile(configPath, JSON.stringify(defaultConfig, null, 2), 'utf-8');

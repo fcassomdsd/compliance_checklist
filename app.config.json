@@ -4,8 +4,10 @@
     "version": "1.0.0"
   },
   "api": {
+    "_comment_host": "Node-RED middleware — provides /checklist, /findings/open, /specialties, /location, /importCanonical",
     "host": "http://localhost:1880",
     "importHost": "http://localhost:1880",
+    "_comment_uploadHost": "compliance_import ZIP upload service — provides /inspection-import, /followup-import",
     "uploadHost": "http://localhost:8000",
     "importCanonicalDelay": 3000,
     "importCanonicalRetries": 3,

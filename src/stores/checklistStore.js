@@ -31,6 +31,8 @@ export const useChecklistStore = defineStore('checklist', () => {
   const findingsLoaded = ref(false)
   const uiMode = ref('inspection')
   const followUpFocusFindingId = ref('')
+  const apiKeyPromptVisible = ref(false)
+  const apiKeyInput = ref('')
 
   // modal window data
   const modalFinalizeTitle = 'Finalize Checklist'
@@ -54,14 +56,15 @@ export const useChecklistStore = defineStore('checklist', () => {
   const resolveLocationFromChecklist = (checklistObj) => {
     const checklistLocationId = checklistObj?.locationId
     const checklistLocationName = checklistObj?.locationName || checklistObj?.location
-    const checklistLocationIcao = checklistObj?.icaoCode || checklistObj?.locationIcao
+    const checklistLocationCode =
+      checklistObj?.locationCode || checklistObj?.icaoCode || checklistObj?.locationIcao
 
     const resolved =
       locationList.value.find(
         (location) =>
           location.id == checklistLocationId ||
           location.icaoCode == checklistLocationId ||
-          location.icaoCode == checklistLocationIcao ||
+          location.icaoCode == checklistLocationCode ||
           location.name == checklistLocationName
       ) || null
 
@@ -72,10 +75,10 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
     }
 
-    if (typeof checklistLocationIcao == 'string' && checklistLocationIcao.trim().length > 0) {
+    if (typeof checklistLocationCode == 'string' && checklistLocationCode.trim().length > 0) {
       return {
-        locationId: checklistLocationIcao.trim().toUpperCase(),
-        locationName: checklistLocationName || checklistLocationIcao.trim().toUpperCase(),
+        locationId: checklistLocationCode.trim().toUpperCase(),
+        locationName: checklistLocationName || checklistLocationCode.trim().toUpperCase(),
       }
     }
 
@@ -260,10 +263,52 @@ export const useChecklistStore = defineStore('checklist', () => {
     }
   }
 
+  const ensureApiKey = async () => {
+    let key = await window.electronAPI.readApiKey()
+    if (key) return key
+
+    apiKeyInput.value = ''
+    apiKeyPromptVisible.value = true
+
+    return new Promise((resolve) => {
+      const resolver = (savedKey) => {
+        apiKeyPromptVisible.value = false
+        resolve(savedKey || null)
+      }
+      _apiKeyResolver = resolver
+    })
+  }
+
+  const submitApiKey = async () => {
+    const key = apiKeyInput.value.trim()
+    if (key) {
+      await window.electronAPI.saveApiKey(key)
+    }
+    if (_apiKeyResolver) {
+      _apiKeyResolver(key || null)
+      _apiKeyResolver = null
+    }
+  }
+
+  const cancelApiKeyPrompt = () => {
+    if (_apiKeyResolver) {
+      _apiKeyResolver(null)
+      _apiKeyResolver = null
+    }
+    apiKeyPromptVisible.value = false
+  }
+
+  let _apiKeyResolver = null
+
   const exportUploadPayload = async () => {
     try {
       if (!uploadServiceOnline.value) {
         throw new Error('Upload service offline (localhost:8000)')
+      }
+
+      const apiKey = await ensureApiKey()
+      if (!apiKey) {
+        return
       }
 
       isUploading.value = true
@@ -563,6 +608,10 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
+      checklist.value = null
+      checklistLoaded.value = false
+      findings.value = []
+      findingsLoaded.value = false
       sessionStore.reset(false)
       toast.success('Inspection session removed')
       return result
@@ -594,6 +643,10 @@ export const useChecklistStore = defineStore('checklist', () => {
         return result
       }
 
+      checklist.value = null
+      checklistLoaded.value = false
+      findings.value = []
+      findingsLoaded.value = false
       followUpStore.reset(false)
       toast.success('Follow-up session removed')
       return result
@@ -627,6 +680,8 @@ export const useChecklistStore = defineStore('checklist', () => {
     importServiceOnline,
     uploadServiceOnline,
     followUpFocusFindingId,
+    apiKeyPromptVisible,
+    apiKeyInput,
     loadChecklist,
     loadFindings,
     loadSpecialties,
@@ -645,5 +700,8 @@ export const useChecklistStore = defineStore('checklist', () => {
     importFindings,
     selectWorkspace,
     goToFollowUpFinding,
+    ensureApiKey,
+    submitApiKey,
+    cancelApiKeyPrompt,
   }
 })

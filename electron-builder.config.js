@@ -19,6 +19,29 @@ module.exports = {
       filter: ['**/*'],
     },
   ],
+  // Code Signing — uncomment and configure for production builds.
+  // Without signing, the .exe will trigger Windows SmartScreen warnings
+  // and macOS Gatekeeper will refuse to open the app.
+  //
+  // Windows: requires a code signing certificate (.pfx or hardware token).
+  //   win: {
+  //     target: [{ target: 'portable', arch: ['x64'] }],
+  //     icon: 'public/images/complianceApp.ico',
+  //     certificateFile: 'path/to/cert.pfx',
+  //     certificatePassword: process.env.CSC_KEY_PASSWORD,
+  //   },
+  //
+  // macOS: requires an Apple Developer ID certificate.
+  //   mac: {
+  //     target: [{ target: 'dmg', arch: ['universal'] }],
+  //     icon: 'public/images/complianceApp.icns',
+  //     hardenedRuntime: true,
+  //     gatekeeperAssess: false,
+  //     entitlements: 'build/entitlements.mac.plist',
+  //     entitlementsInherit: 'build/entitlements.mac.plist',
+  //   },
+  //   afterSign: 'scripts/notarize.js',
+  //
   win: {
     target: [
       {
