@@ -324,6 +324,61 @@ describe('ChecklistRow.vue', () => {
         'VIG-0001'
       )
     })
+
+    it('renders severity selector defaulting to C when no prior severity exists', async () => {
+      await wrapper.setProps({
+        session: {
+          compliance: 'Non-Compliant',
+          nonConformityDetails: {},
+        },
+      })
+
+      wrapper.vm.openNonConformityModal()
+      await wrapper.vm.$nextTick?.()
+
+      const severitySelect = wrapper.find('select[name="findingSeverity-VIG-0001"]')
+      expect(severitySelect.exists()).toBe(true)
+      expect(severitySelect.element.value).toBe('C')
+    })
+
+    it('renders severity selector with existing value when severity was previously assigned', async () => {
+      await wrapper.setProps({
+        session: {
+          compliance: 'Non-Compliant',
+          nonConformityDetails: { findingSeverity: 'A' },
+        },
+      })
+
+      wrapper.vm.openNonConformityModal()
+      await wrapper.vm.$nextTick?.()
+
+      const severitySelect = wrapper.find('select[name="findingSeverity-VIG-0001"]')
+      expect(severitySelect.exists()).toBe(true)
+      expect(severitySelect.element.value).toBe('A')
+    })
+
+    it('updates severity from non-conformity modal selector', async () => {
+      await wrapper.setProps({
+        session: {
+          compliance: 'Non-Compliant',
+          nonConformityDetails: {},
+        },
+      })
+
+      wrapper.vm.openNonConformityModal()
+      await wrapper.vm.$nextTick?.()
+
+      const severitySelect = wrapper.find('select[name="findingSeverity-VIG-0001"]')
+      await severitySelect.setValue('B')
+
+      expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
+        'VIG-0001',
+        'checklist-1',
+        'nonConformityDetails',
+        expect.objectContaining({ findingSeverity: 'B' }),
+        'VIG-0001'
+      )
+    })
   })
 
   describe('Comments', () => {
