@@ -39,6 +39,7 @@ const mockElectronAPI = {
   getAppConfig: vi.fn().mockResolvedValue(mockAppConfig),
   readApiKey: vi.fn().mockResolvedValue(null),
   saveApiKey: vi.fn().mockResolvedValue(true),
+  writeAppConfig: vi.fn().mockResolvedValue(true),
 }
 window.electronAPI = mockElectronAPI
 vi.mock('../utils/checklist.js')

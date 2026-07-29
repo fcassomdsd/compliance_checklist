@@ -293,6 +293,25 @@ export const createFileService = () => {
       }
 
       const data = await response.json()
+
+      // Cache severity config if present and different from stored
+      if (Array.isArray(data.severityConfig) && data.severityConfig.length > 0) {
+        const stored = config?.severity?.levels || []
+        const changed = data.severityConfig.length !== stored.length ||
+          data.severityConfig.some((level, idx) =>
+            level.id !== stored[idx]?.id || level.daysToSolution !== stored[idx]?.daysToSolution
+          )
+        if (changed) {
+          await window.electronAPI.writeAppConfig({
+            severity: { levels: data.severityConfig, updatedAt: new Date().toISOString() }
+          })
+        }
+      }
+
+      // Strip severityConfig before validation — it's an API metadata field,
+      // not part of the checklist schema
+      delete data.severityConfig
+
       return parseChecklist(JSON.stringify(data))
     } catch (error) {
       throw new Error(`fetchChecklistFromApi: could not fetch checklist: ${error.message}`)
@@ -1361,6 +1380,16 @@ export const createFileService = () => {
         INSPECTION_PAYLOAD_PREFIX,
         FINDINGS_REPORT_PREFIX,
       ])
+
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.findings)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.findings)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)) {
+        await window.electronAPI.deleteFile(DEFAULT_ROOT, ...paths.followUpSession)
+      }
+      if (await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpEvidenceDir)) {
+        await window.electronAPI.deletePath(DEFAULT_ROOT, ...paths.followUpEvidenceDir)
+      }
 
       const hasInspectionSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.session)
       const hasFollowUpSession = await window.electronAPI.checkPath(DEFAULT_ROOT, ...paths.followUpSession)

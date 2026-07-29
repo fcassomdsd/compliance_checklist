@@ -470,6 +470,82 @@ describe('ipcHandles', () => {
       )
     })
 
+    it('includes findingSeverity defaulting to C in export payload', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const checklist = {
+        inspection: '0224',
+        providerId: 'provider-1',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
+      }
+      const session = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          1: {
+            id: 'q1',
+            compliance: 'Non-Compliant',
+            nonConformityDetails: { description: 'Issue found' },
+          },
+        },
+      }
+
+      await handles['export-inspection-payload']({}, {
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+      })
+
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const findings = JSON.parse(await zip.file('findings.json').async('string'))
+      expect(findings[0].finding.findingSeverity).toBe('C')
+    })
+
+    it('preserves existing findingSeverity A in export payload', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockResolvedValue('ok'),
+      })
+
+      const checklist = {
+        inspection: '0224',
+        providerId: 'provider-1',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
+      }
+      const session = {
+        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        responses: {
+          1: {
+            id: 'q1',
+            compliance: 'Non-Compliant',
+            nonConformityDetails: { description: 'Issue found', findingSeverity: 'A' },
+          },
+        },
+      }
+
+      await handles['export-inspection-payload']({}, {
+        checklistString: JSON.stringify(checklist),
+        sessionString: JSON.stringify(session),
+        specialty: 'VIG',
+      })
+
+      const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
+      const zip = await JSZip.loadAsync(zipBuffer)
+      const findings = JSON.parse(await zip.file('findings.json').async('string'))
+      expect(findings[0].finding.findingSeverity).toBe('A')
+    })
+
     it('throws when import API returns non-OK', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
