@@ -211,6 +211,20 @@
             <option v-for="level in riskLevels" :key="level" :value="level">{{ level }}</option>
           </select>
         </label>
+        <label class="risk-row" :for="`findingSeverity-${domQuestionCode}`">
+          <span class="risk-label">Severity</span>
+          <select
+            :id="`findingSeverity-${domQuestionCode}`"
+            :name="`findingSeverity-${domQuestionCode}`"
+            :value="assignedSeverity"
+            :disabled="isReadOnly"
+            @change="severityChange($event)"
+          >
+            <option v-for="level in severityLevels" :key="level.id" :value="level.id">
+              {{ level.name }} — {{ level.daysToSolution }} days
+            </option>
+          </select>
+        </label>
       </div>
       <textarea
         :name="`nonConformity-${domQuestionCode}`"
@@ -302,6 +316,19 @@
   const validFindingLevels = ['Non-Compliance', 'Observation', 'Recommendation']
   const findingLevels = ref(validFindingLevels)
 
+  const severityLevels = ref([
+    { id: 'A', name: 'A', daysToSolution: 7 },
+    { id: 'B', name: 'B', daysToSolution: 30 },
+    { id: 'C', name: 'C', daysToSolution: 90 },
+  ])
+
+  const normalizeSeverity = (value) => {
+    if (typeof value == 'string') {
+      return severityLevels.value.find((level) => level.id === value) ? value : 'C'
+    }
+    return 'C'
+  }
+
   const normalizeFindingLevel = (value) =>
     typeof value == 'string' && validFindingLevels.includes(value) ? value : 'Non-Compliance'
 
@@ -318,6 +345,11 @@
   const assignedFindingLevel = computed(() => {
     const detailsLevel = props.session?.nonConformityDetails?.findingLevel
     return normalizeFindingLevel(detailsLevel)
+  })
+
+  const assignedSeverity = computed(() => {
+    const detailsSeverity = props.session?.nonConformityDetails?.findingSeverity
+    return normalizeSeverity(detailsSeverity)
   })
 
   const nonConformityDescription = computed(
@@ -391,6 +423,8 @@
       updateNonConformityDetail('riskLevel', defaultRisk)
       const defaultFindingLevel = assignedFindingLevel.value
       updateNonConformityDetail('findingLevel', defaultFindingLevel)
+      const defaultSeverity = assignedSeverity.value
+      updateNonConformityDetail('findingSeverity', defaultSeverity)
     } else {
       closeNonConformityModal()
     }
@@ -412,6 +446,11 @@
   const findingLevelChange = (event) => {
     const nextFindingLevel = normalizeFindingLevel(event.target.value)
     updateNonConformityDetail('findingLevel', nextFindingLevel)
+  }
+
+  const severityChange = (event) => {
+    const nextSeverity = normalizeSeverity(event.target.value)
+    updateNonConformityDetail('findingSeverity', nextSeverity)
   }
 
   const toggleAudioRecordingComments = async () => {

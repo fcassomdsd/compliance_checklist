@@ -190,6 +190,11 @@ const findingSchema = {
           enum: ['Non-Compliance', 'Observation', 'Recommendation'],
           default: 'Non-Compliance',
         },
+        findingSeverity: {
+          type: 'string',
+          enum: ['A', 'B', 'C'],
+          default: 'C',
+        },
         description: { type: 'string', maxLength: 2000 },
         findingStatus: {
           type: 'string',
@@ -730,6 +735,10 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       response?.nonConformityDetails?.findingLevel || response?.findingLevel
     )
 
+    finding.finding.findingSeverity = safeString(
+      response?.nonConformityDetails?.findingSeverity
+    ) || 'C'
+
     findings.push(finding)
   })
 
@@ -1145,6 +1154,20 @@ export function setupIpcHandles(ipcMain) {
     } catch (err) {
       logger.error(`get-app-config: Could not read app config: ${err.message}`)
       return {}
+    }
+  })
+
+  ipcMain.handle('write-app-config', async (event, config) => {
+    try {
+      const appDir = dirname(fileURLToPath(import.meta.url))
+      const configPath = path.join(appDir, '..', '..', 'app.config.json')
+      const existing = await readAppConfig().catch(() => ({}))
+      const merged = { ...existing, ...config }
+      await saveFile(configPath, JSON.stringify(merged, null, 2))
+      return true
+    } catch (err) {
+      logger.error(`write-app-config: Could not write app config: ${err.message}`)
+      return false
     }
   })
 

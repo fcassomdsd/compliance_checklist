@@ -168,5 +168,25 @@
         "icaoCode": "MDPC"
       }
     ]
+  },
+  "severity": {
+    "levels": [
+      {
+        "id": "A",
+        "name": "A",
+        "daysToSolution": 7
+      },
+      {
+        "id": "B",
+        "name": "B",
+        "daysToSolution": 30
+      },
+      {
+        "id": "C",
+        "name": "C",
+        "daysToSolution": 90
+      }
+    ],
+    "updatedAt": "2026-07-29T01:23:41.965Z"
   }
 }
