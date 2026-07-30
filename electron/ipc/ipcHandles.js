@@ -326,6 +326,10 @@ const followUpReportSchema = {
         followUpClosureDate: { type: 'string', format: 'date' },
         closureVerificationMethod: { type: 'string' },
         effectivenessConfirmed: { type: ['boolean', 'null'] },
+        currentResidualRisk: {
+          type: 'string',
+          enum: ['Low', 'Medium', 'High', 'Critical'],
+        },
         followUpComment: { type: 'string', maxLength: 2000 },
         capId: { type: ['string', 'null'] },
         inspectionId: { type: 'string' },
@@ -745,6 +749,15 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
   return findings
 }
 
+const resolveResidualRisk = (response, finding) => {
+  const validLevels = ['Low', 'Medium', 'High', 'Critical']
+  const fromResponse = safeString(response?.currentResidualRisk)
+  if (fromResponse && validLevels.includes(fromResponse)) return fromResponse
+  const fromFinding = safeString(finding?.riskClassification)
+  if (fromFinding && validLevels.includes(fromFinding)) return fromFinding
+  return 'Low'
+}
+
 const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
   const findings = Array.isArray(findingsObj) ? findingsObj : []
   const responses = followUpSessionObj?.responses || {}
@@ -802,6 +815,7 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
         followUpType: type,
         effectivenessConfirmed,
         capId,
+        currentResidualRisk: resolveResidualRisk(response, finding),
       },
     }
 
