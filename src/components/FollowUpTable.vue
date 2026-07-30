@@ -2,10 +2,12 @@
   <table id="followupTable" class="followupTable">
     <colgroup>
       <col style="width: 14%" />
-      <col style="width: 28%" />
-      <col style="width: 12%" />
+      <col style="width: 22%" />
+      <col style="width: 10%" />
+      <col style="width: 14%" />
+      <col style="width: 14%" />
+      <col style="width: 10%" />
       <col style="width: 16%" />
-      <col style="width: 30%" />
     </colgroup>
     <thead>
       <tr>
@@ -14,6 +16,7 @@
         <th>Percent Complete</th>
         <th>Follow-Up Type</th>
         <th>Effectiveness Confirmed</th>
+        <th>Residual Risk</th>
         <th>Follow-Up Comment</th>
         <th>Evidence</th>
       </tr>
@@ -73,6 +76,18 @@
           <template v-else>
             <span style="color: #888">N/A</span>
           </template>
+        </td>
+        <td>
+          <select
+            :disabled="isRowReadOnly(entry)"
+            :value="getField(entry, 'currentResidualRisk')"
+            @change="onFieldChange(entry, 'currentResidualRisk', $event.target.value)"
+          >
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
         </td>
         <td>
           <textarea
@@ -298,6 +313,9 @@
     }
     if (field == 'effectivenessConfirmed') {
       return null
+    }
+    if (field == 'currentResidualRisk') {
+      return entry?.riskClassification || 'Low'
     }
     return ''
   }
