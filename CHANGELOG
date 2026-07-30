@@ -1,3 +1,25 @@
+## 2026-08-01 (Release 1.0.1)
+
+### Added
+- API key support for secured upload service (prompt on first upload, stored locally)
+- IPC handlers for API key persistence (read/save to api-key.json)
+- X-API-Key header on all upload fetch calls
+- Alfresco credential storage IPC handlers for future credential forwarding
+- Finding severity selector (A/B/C) in non-conformity modal with days-to-solution labels
+- Severity config caching from Node-RED API in app.config.json
+- write-app-config IPC handler for persisting configuration
+- Residual risk dropdown (Low/Medium/High/Critical) in follow-up table
+- Readme architecture diagram showing data flow across all services
+
+### Fixed
+- Checklist removal now deletes findings.json, follow-up artifacts before directory check
+- UI state cleared immediately after checklist removal (no stale data)
+- Checklist removal now works for standalone inspections even with leftover follow-up artifacts
+
+### Changed
+- Severity defaults to C for new findings, restored from session for existing ones
+- Residual risk defaults to finding's riskClassification
+
 ## 2026-05-23 (Release 1.0.0a candidate)
 
 - Scope: prepare merge from `develop` to `main`.
