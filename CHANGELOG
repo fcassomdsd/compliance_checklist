@@ -1,3 +1,23 @@
+## 2026-08-02 (Release 1.1.0-alpha)
+
+### Added
+- **Provider selection in import modal**: Single dropdown showing Inspection/Provider combinations (e.g., "MDPP-001 / Aeropuertos Dominicanos"). Fetched from new `/inspectionProvider` Node-RED endpoint. Replaces separate text input + provider dropdown.
+- **IDs-based API calls**: Checklist import and canonical import now pass `inspectionId`, `inspectedProviderId`, and `siteVisitId` (was `code` + `provider`). Removes ambiguity of shared inspection codes across providers.
+- **Interviewee field in session summary**: New textarea below general comments for capturing interviewee names per specialty. Persisted in `session.json`.
+- **Regulation title/item separation**: `nationalRegulation` and `regulationItem` now stored separately in canonical JSON (was concatenated). Both added to checklist and finding schemas.
+- **`fetchInspectionProviders()`**: New function calling `GET /inspectionProvider?status=Uploaded` on Node-RED.
+- **`fetchChecklistFromApi` provider param**: Optional third parameter `ids` object (`{ inspectedProviderId, siteVisitId }`) passed as URL params.
+- **`notifyImportCanonical` provider param**: Same `ids` object added for canonical import calls.
+
+### Changed
+- **Import flow**: Site Visit text input replaced with dropdown of pre-Uploaded inspections. Providers auto-populate on selection.
+- **API endpoint aliases**: `/checklist` and `/importCanonical` now accept `inspectionId`, `siteVisitId`, `inspectedProviderId` params.
+- **Workspace key unchanged**: Location + Speciality key still works since a specialty at a location maps to one provider.
+
+### Fixed
+- Fixed `specialtyCode` variable scoping bug in `onImportData` regression.
+- Fixed `fetchFindingsFromApi` error message typo ("find" → "fetch").
+
 ## 2026-08-01 (Release 1.0.1)
 
 ### Added

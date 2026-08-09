@@ -94,6 +94,12 @@
         placeholder="Add general comments about this checklist..."
         @input="onGeneralCommentsInput($event)"
       ></textarea>
+      <textarea
+        id="interviewee"
+        :value="sessionStore.summary.interviewee"
+        placeholder="Add interviewee name(s) for this checklist..."
+        @input="onIntervieweeInput($event)"
+      ></textarea>
       <div>
         <button
           id="clearGeneralComments"
@@ -140,13 +146,17 @@
         </p>
 
         <div class="modal-form-row" v-if="store.uiMode == 'inspection'">
-          <label for="importInspection">Inspection code</label>
-          <input
-            id="importInspection"
-            v-model="importInspection"
-            type="text"
-            placeholder="Inspection code"
-          />
+          <label for="importInspection">Inspection / Provider</label>
+          <select id="importInspection" v-model="selectedInspectionProvider">
+            <option value="">Select inspection</option>
+            <option
+              v-for="ip in inspectionProviderList"
+              :key="ip.inspectionId"
+              :value="JSON.stringify(ip)"
+            >
+              {{ ip.code }} / {{ ip.serviceProviderName || ip.inspectedProviderId }}
+            </option>
+          </select>
         </div>
 
         <div class="modal-form-row" v-else>
@@ -180,7 +190,7 @@
         <div class="import-summary">
           <p><strong>Mode:</strong> {{ store.uiMode == 'inspection' ? 'Inspection' : 'Follow-up' }}</p>
           <p v-if="store.uiMode == 'inspection'">
-            <strong>Inspection:</strong> {{ importInspection.trim() || 'Not selected' }}
+            <strong>Inspection:</strong> {{ selectedInspectionProviderDisplay }}
           </p>
           <p v-else><strong>Location:</strong> {{ selectedLocationLabel }}</p>
           <p><strong>Specialty:</strong> {{ selectedSpecialtyLabel }}</p>
@@ -215,7 +225,10 @@
   import { useSessionStore } from './stores/sessionStore'
   import { useFollowUpStore } from './stores/followUpStore'
   import { useToast } from 'vue-toastification'
+  import { createFileService } from './utils/fileServices'
   import logo from './assets/images/compliance-logo.png'
+
+  const fs = createFileService()
 
   // Access the Pinia store
   const store = useChecklistStore()
@@ -226,17 +239,31 @@
   // Local UI state for toggling general comments
   const showGenComments = ref(false)
   const showImportModal = ref(false)
-  const importInspection = ref('')
   const importSpecialtyCode = ref('')
   const importLocationId = ref('')
+  const importProviderId = ref('')
+  const selectedInspectionProvider = ref('')
+  const inspectionProviderList = ref([])
   let serviceStatusInterval = null
 
   const onGeneralCommentsInput = (event) => {
     sessionStore.updateGeneralComments(event.target.value)
   }
 
+  const onIntervieweeInput = (event) => {
+    sessionStore.updateInterviewee(event.target.value)
+  }
+
   const clearGeneralComments = () => {
     sessionStore.updateGeneralComments('')
+  }
+
+  const loadInspectionProviderList = async () => {
+    try {
+      inspectionProviderList.value = await fs.fetchInspectionProviders()
+    } catch {
+      inspectionProviderList.value = []
+    }
   }
 
   const onWorkspaceChange = async () => {
@@ -252,15 +279,37 @@
       return false
     }
 
-    const inspection = importInspection.value.trim()
     const specialtyCode = importSpecialtyCode.value.trim()
 
     if (store.uiMode == 'inspection') {
-      if (!inspection || !specialtyCode) {
+      const selected = selectedInspectionProvider.value
+      if (!selected) {
+        toast.error('Please select an inspection and provider')
+        return false
+      }
+
+      let parsed = null
+      try {
+        parsed = JSON.parse(selected)
+      } catch {
+        toast.error('Invalid selection')
+        return false
+      }
+
+      const inspectionId = parsed.inspectionId
+      const inspectedProviderId = parsed.inspectedProviderId
+      const siteVisitId = parsed.siteVisitId
+
+      if (!inspectionId) {
+        toast.error('Selected inspection has no inspectionId — it may need to be recreated')
+        return false
+      }
+
+      if (!specialtyCode) {
         toast.error('Inspection and specialty are required to import')
         return false
       }
-      await store.importChecklist(inspection, specialtyCode)
+      await store.importChecklist(inspectionId, specialtyCode, { inspectedProviderId, siteVisitId })
     } else {
       const locationId = importLocationId.value.trim()
       if (!locationId || !specialtyCode) {
@@ -293,7 +342,7 @@
   }
 
   const onModeChange = async () => {
-    importInspection.value = ''
+    selectedInspectionProvider.value = ''
     if (store.uiMode == 'followUp' && store.activeWorkspace?.locationId) {
       await followUpStore.loadFollowUpSession(store.specialty, store.activeWorkspace.locationId)
     }
@@ -312,6 +361,17 @@
       return 'Importing...'
     }
     return store.uiMode == 'inspection' ? 'Import Inspection' : 'Import Follow-up'
+  })
+
+  const selectedInspectionProviderDisplay = computed(() => {
+    const val = selectedInspectionProvider.value
+    if (!val) return 'Not selected'
+    try {
+      const p = JSON.parse(val)
+      return `${p.code} / ${p.serviceProviderName || p.inspectedProviderId}`
+    } catch {
+      return 'Not selected'
+    }
   })
 
   const selectedSpecialtyLabel = computed(() => {
@@ -337,7 +397,7 @@
       return false
     }
     if (store.uiMode == 'inspection') {
-      return !importInspection.value.trim() || !importSpecialtyCode.value.trim() || store.isImporting
+      return !selectedInspectionProvider.value || !importSpecialtyCode.value.trim() || store.isImporting
     }
     return !importLocationId.value.trim() || !importSpecialtyCode.value.trim() || store.isImportingFindings
   })
@@ -354,7 +414,8 @@
   const localInspectionTouched = computed(() => {
     const responsesCount = Object.keys(sessionStore.responses || {}).length
     const generalComments = String(sessionStore.summary?.generalComments || '').trim()
-    return responsesCount > 0 || generalComments.length > 0
+    const interviewee = String(sessionStore.summary?.interviewee || '').trim()
+    return responsesCount > 0 || generalComments.length > 0 || interviewee.length > 0
   })
 
   const localFollowUpTouched = computed(() => Object.keys(followUpStore.responses || {}).length > 0)
@@ -386,6 +447,15 @@
 
   const removeSessionLabel = computed(() =>
     store.uiMode == 'inspection' ? 'Remove Inspection Session' : 'Remove Follow-up Session'
+  )
+
+  watch(
+    () => showImportModal.value,
+    async (open) => {
+      if (open && store.uiMode == 'inspection') {
+        await loadInspectionProviderList()
+      }
+    }
   )
 
   watch(
@@ -583,6 +653,17 @@
     resize: vertical;
     font-size: 1rem;
   }
+
+  #interviewee {
+    width: 100%;
+    min-height: 60px;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    resize: vertical;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
   @media (max-width: 768px) {
     .header {
       flex-direction: column;
@@ -613,5 +694,31 @@
     border-radius: 6px;
     font-size: 1rem;
     margin: 0.75rem 0;
+  }
+
+  .inline-input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .inline-input-row input {
+    flex: 1;
+  }
+
+  .btn-small {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--secondary-color);
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-small:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

@@ -73,7 +73,7 @@ describe('Session Store', () => {
 
   it('initializes state correctly', () => {
     expect(sessionStore.responses).toEqual({})
-    expect(sessionStore.summary).toEqual({ value: { finalized: true, generalComments: '' } })
+    expect(sessionStore.summary).toEqual({ value: { finalized: true, generalComments: '', interviewee: '' } })
   })
 
   describe('loadSession', () => {
@@ -102,6 +102,7 @@ describe('Session Store', () => {
       expect(sessionStore.summary.value).toEqual({
         finalized: false,
         generalComments: '',
+        interviewee: '',
         specialty: 'VIG',
       })
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
@@ -121,6 +122,7 @@ describe('Session Store', () => {
         finalized: false,
         specialty: 'VIG',
         generalComments: '',
+        interviewee: '',
       })
       expect(sessionStore.responses).toEqual({})
 

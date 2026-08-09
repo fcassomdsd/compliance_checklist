@@ -20,6 +20,9 @@ const sessionSchema = {
         generalComments: {
           type: 'string',
         },
+        interviewee: {
+          type: 'string',
+        },
         locationId: {
           type: 'string',
         },

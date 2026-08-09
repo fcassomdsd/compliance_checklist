@@ -22,6 +22,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   const accionModal = ref('')
   const generatedReportPath = ref('')
   const isImporting = ref(false)
+  const importIds = ref({})
   const isUploading = ref(false)
   const isImportingFindings = ref(false)
   const workspaceList = ref([])
@@ -342,7 +343,14 @@ export const useChecklistStore = defineStore('checklist', () => {
           specialty.value,
           activeWorkspace.value?.locationId || null
         )
-        await fs.notifyImportCanonical(checklist.value.inspection, checklist.value.specialtyName)
+        await fs.notifyImportCanonical(
+          checklist.value.inspectionId || checklist.value.inspection,
+          checklist.value.specialtyName,
+          {
+            inspectedProviderId: importIds.value.inspectedProviderId,
+            siteVisitId: importIds.value.siteVisitId,
+          }
+        )
         await loadWorkspaces()
         toast.success('Payload exported and uploaded successfully')
       }
@@ -353,11 +361,12 @@ export const useChecklistStore = defineStore('checklist', () => {
     }
   }
 
-  const importChecklist = async (inspection, specialtyCode) => {
+  const importChecklist = async (inspectionId, specialtyCode, ids = {}) => {
     try {
-      if (!inspection || !specialtyCode) {
+      if (!inspectionId || !specialtyCode) {
         throw new Error('Inspection and specialty are required')
       }
+      importIds.value = ids
 
       if (!importServiceOnline.value) {
         throw new Error('Import service offline (localhost:1880)')
@@ -365,7 +374,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       isImporting.value = true
 
-      const importedChecklist = await fs.fetchChecklistFromApi(inspection, specialtyCode)
+      const importedChecklist = await fs.fetchChecklistFromApi(inspectionId, specialtyCode, ids)
       const specialtyName =
         importedChecklist.specialtyName ||
         specialtyList.value.find((item) => item.code == specialtyCode)?.name ||

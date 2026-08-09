@@ -1057,20 +1057,20 @@ describe('fileServices', () => {
 
       parseChecklist.mockReturnValue(mockChecklist)
 
-      const result = await fs.fetchChecklistFromApi('0224', 'VIG')
+      const result = await fs.fetchChecklistFromApi('INS1', 'VIG', {})
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspection=0224&specialty=VIG')
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspectionId=INS1&specialty=VIG')
       expect(result).toEqual(mockChecklist)
     })
 
     it('fetchChecklistFromApi throws error for missing parameters', async () => {
       const fs = createFileService()
 
-      await expect(fs.fetchChecklistFromApi('', 'VIG')).rejects.toThrow(
+      await expect(fs.fetchChecklistFromApi('', 'VIG', {})).rejects.toThrow(
         'fetchChecklistFromApi: could not fetch checklist: Missing required parameters'
       )
 
-      await expect(fs.fetchChecklistFromApi('0224', '')).rejects.toThrow(
+      await expect(fs.fetchChecklistFromApi('INS1', '', {})).rejects.toThrow(
         'fetchChecklistFromApi: could not fetch checklist: Missing required parameters'
       )
     })
@@ -1082,8 +1082,36 @@ describe('fileServices', () => {
         status: 404
       }))
 
-      await expect(fs.fetchChecklistFromApi('0224', 'VIG')).rejects.toThrow(
+      await expect(fs.fetchChecklistFromApi('INS1', 'VIG', {})).rejects.toThrow(
         'fetchChecklistFromApi: could not fetch checklist: Import failed with status 404'
+      )
+    })
+
+    it('fetchChecklistFromApi includes provider in URL when provided', async () => {
+      const fs = createFileService()
+      const mockChecklist = { inspection: '0224', questions: [] }
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true, json: vi.fn().mockResolvedValue(mockChecklist),
+      }))
+      parseChecklist.mockReturnValue(mockChecklist)
+
+      await fs.fetchChecklistFromApi('INS1', 'VIG', { inspectedProviderId: 'SP1', siteVisitId: 'SV1' })
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:1880/checklist?inspectionId=INS1&specialty=VIG&siteVisitId=SV1&inspectedProviderId=SP1',
+      )
+    })
+
+    it('fetchInspectionProviders calls the correct endpoint', async () => {
+      const fs = createFileService()
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true, json: vi.fn().mockResolvedValue([]),
+      }))
+
+      await fs.fetchInspectionProviders()
+
+      expect(fetch).toHaveBeenCalledWith(
+        'http://localhost:1880/inspectionProvider?status=Uploaded',
       )
     })
 

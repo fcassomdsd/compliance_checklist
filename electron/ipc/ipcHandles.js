@@ -95,6 +95,7 @@ const checklistSchema = {
           type: 'array',
           items: { type: 'string' },
         },
+        interviewee: { type: 'string' },
       },
     },
     items: {
@@ -116,6 +117,7 @@ const checklistSchema = {
             properties: {
               icaoReference: { type: 'string' },
               nationalRegulation: { type: 'string' },
+              regulationItem: { type: 'string' },
             },
           },
           complianceStatus: {
@@ -184,6 +186,7 @@ const findingSchema = {
         requirementBreached: { type: 'string' },
         icaoReference: { type: 'string' },
         nationalRegulation: { type: 'string' },
+        regulationItem: { type: 'string' },
         dateIssued: { type: 'string', format: 'date' },
         findingLevel: {
           type: 'string',
@@ -581,6 +584,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     inspectors: Array.isArray(checklistObj?.inspectors)
       ? checklistObj.inspectors.filter((name) => typeof name === 'string' && name.trim())
       : [],
+    interviewee: safeString(sessionObj?.summary?.interviewee),
   }
 
   for (const [field, value] of Object.entries(optionalChecklistFields)) {
@@ -613,19 +617,26 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     }
 
     const rowReference = row?.reference || {}
-    const nationalRegulation = (rowReference?.normativa?.reglamento ? safeString(rowReference?.normativa?.reglamento + ' ' + rowReference?.normativa?.articulo, '') :  '')
+    const reglamento = safeString(rowReference?.normativa?.reglamento, '')
+    const articulo = safeString(rowReference?.normativa?.articulo, '')
+    const nationalRegulation = reglamento || safeString(rowReference?.nationalRegulation, '')
+    const regulationItem = articulo || safeString(rowReference?.regulationItem, '')
     const referenceObj = {
       icaoReference: safeString(rowReference?.normativa?.ICAOref || rowReference?.icaoReference),
-      nationalRegulation: nationalRegulation || safeString(rowReference?.nationalRegulation)
+      nationalRegulation: nationalRegulation,
+      regulationItem: regulationItem,
     }
 
-    if (referenceObj.icaoReference || referenceObj.nationalRegulation) {
+    if (referenceObj.icaoReference || referenceObj.nationalRegulation || referenceObj.regulationItem) {
       item.reference = {}
       if (referenceObj.icaoReference) {
         item.reference.icaoReference = referenceObj.icaoReference
       }
       if (referenceObj.nationalRegulation) {
         item.reference.nationalRegulation = referenceObj.nationalRegulation
+      }
+      if (referenceObj.regulationItem) {
+        item.reference.regulationItem = referenceObj.regulationItem
       }
     }
 
@@ -711,13 +722,17 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       },
     }
 
-    const nationalRegulation = (row?.reference?.normativa?.reglamento ? safeString(row?.reference?.normativa?.reglamento + ' ' + row?.reference?.normativa?.articulo, '') :  '')
-    const requirementBreached =
-      safeString(nationalRegulation) ||
-      safeString(row?.reference?.nationalRegulation)
+    const reglamento = safeString(row?.reference?.normativa?.reglamento, '')
+    const articulo = safeString(row?.reference?.normativa?.articulo, '')
+    const nationalRegulation = reglamento || safeString(row?.reference?.nationalRegulation, '')
+    const regulationItem = articulo || safeString(row?.reference?.regulationItem, '')
+    const requirementBreached = nationalRegulation || ''
     if (requirementBreached) {
       finding.finding.requirementBreached = requirementBreached
-      finding.finding.nationalRegulation = requirementBreached
+      finding.finding.nationalRegulation = nationalRegulation
+      if (regulationItem) {
+        finding.finding.regulationItem = regulationItem
+      }
     }
 
     const icaoReference = safeString(row?.reference?.normativa?.ICAOref || row?.reference?.icaoReference)
