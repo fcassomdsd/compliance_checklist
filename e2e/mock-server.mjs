@@ -43,13 +43,20 @@ async function createImportServer() {
     }
 
     if (url.pathname === '/checklist') {
-      const inspection = url.searchParams.get('inspection')
+      const inspectionId = url.searchParams.get('inspectionId') || url.searchParams.get('inspection')
       const specialty = url.searchParams.get('specialty')
-      if (inspection === '0224' && specialty === 'VIG') {
+      if ((inspectionId === 'INS1' || inspectionId === '0224') && specialty === 'VIG') {
         sendJson(res, 200, checklist)
       } else {
         sendJson(res, 404, { error: 'fixture not found' })
       }
+      return
+    }
+
+    if (url.pathname === '/inspectionProvider') {
+      sendJson(res, 200, [
+        { inspectionId: 'INS1', inspectedProviderId: 'IP1', siteVisitId: 'SV1', code: '0224', status: 'Planned', serviceProviderId: 'SP1', serviceProviderName: 'Provider A' },
+      ])
       return
     }
 
