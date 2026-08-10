@@ -241,7 +241,6 @@
   const showImportModal = ref(false)
   const importSpecialtyCode = ref('')
   const importLocationId = ref('')
-  const importProviderId = ref('')
   const selectedInspectionProvider = ref('')
   const inspectionProviderList = ref([])
   let serviceStatusInterval = null
