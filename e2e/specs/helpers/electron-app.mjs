@@ -66,7 +66,10 @@ export async function importInspection(window, inspectionCode = '0224', specialt
   }
 
   await window.locator('#openImportModalBtn').click()
-  await window.locator('#importInspection').fill(inspectionCode)
+  // Wait for inspection provider options to load, then select the first one
+  const importSelect = window.locator('#importInspection')
+  await expect(importSelect.locator('option[value]').last()).toBeAttached({ timeout: 5000 })
+  await importSelect.selectOption({ index: 1 })  // first non-empty option
   await window.locator('#importSpecialty').selectOption(specialtyCode)
   await window.locator('#importDataBtn').click()
 
