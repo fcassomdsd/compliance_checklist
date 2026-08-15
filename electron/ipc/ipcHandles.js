@@ -118,6 +118,17 @@ const checklistSchema = {
               icaoReference: { type: 'string' },
               nationalRegulation: { type: 'string' },
               regulationItem: { type: 'string' },
+              usoapPqReference: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    code: { type: 'string' },
+                    criticalElement: { type: 'string' },
+                    areaCode: { type: 'string' },
+                  },
+                },
+              },
             },
           },
           complianceStatus: {
@@ -187,6 +198,17 @@ const findingSchema = {
         icaoReference: { type: 'string' },
         nationalRegulation: { type: 'string' },
         regulationItem: { type: 'string' },
+        usoapPqReference: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              criticalElement: { type: 'string' },
+              areaCode: { type: 'string' },
+            },
+          },
+        },
         dateIssued: { type: 'string', format: 'date' },
         findingLevel: {
           type: 'string',
@@ -621,6 +643,9 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     const articulo = safeString(rowReference?.normativa?.articulo, '')
     const nationalRegulation = reglamento || safeString(rowReference?.nationalRegulation, '')
     const regulationItem = articulo || safeString(rowReference?.regulationItem, '')
+    const usoapPqReference = Array.isArray(rowReference?.normativa?.usoapPqReference)
+      ? rowReference.normativa.usoapPqReference
+      : rowReference?.usoapPqReference
     const referenceObj = {
       icaoReference: safeString(rowReference?.normativa?.ICAOref || rowReference?.icaoReference),
       nationalRegulation: nationalRegulation,
@@ -638,6 +663,10 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
       if (referenceObj.regulationItem) {
         item.reference.regulationItem = referenceObj.regulationItem
       }
+    }
+    if (Array.isArray(usoapPqReference) && usoapPqReference.length > 0) {
+      item.reference = item.reference || {}
+      item.reference.usoapPqReference = usoapPqReference
     }
 
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
@@ -738,6 +767,13 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
     const icaoReference = safeString(row?.reference?.normativa?.ICAOref || row?.reference?.icaoReference)
     if (icaoReference) {
       finding.finding.icaoReference = icaoReference
+    }
+
+    const usoapPqReference = Array.isArray(row?.reference?.normativa?.usoapPqReference)
+      ? row.reference.normativa.usoapPqReference
+      : row?.reference?.usoapPqReference
+    if (Array.isArray(usoapPqReference) && usoapPqReference.length > 0) {
+      finding.finding.usoapPqReference = usoapPqReference
     }
 
     finding.finding.dateIssued = dateIssued
