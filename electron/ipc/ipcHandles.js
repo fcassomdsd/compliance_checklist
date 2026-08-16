@@ -95,6 +95,7 @@ const checklistSchema = {
           type: 'array',
           items: { type: 'string' },
         },
+        interviewee: { type: 'string' },
       },
     },
     items: {
@@ -116,6 +117,18 @@ const checklistSchema = {
             properties: {
               icaoReference: { type: 'string' },
               nationalRegulation: { type: 'string' },
+              regulationItem: { type: 'string' },
+              usoapPqReference: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    code: { type: 'string' },
+                    criticalElement: { type: 'string' },
+                    areaCode: { type: 'string' },
+                  },
+                },
+              },
             },
           },
           complianceStatus: {
@@ -184,11 +197,28 @@ const findingSchema = {
         requirementBreached: { type: 'string' },
         icaoReference: { type: 'string' },
         nationalRegulation: { type: 'string' },
+        regulationItem: { type: 'string' },
+        usoapPqReference: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              code: { type: 'string' },
+              criticalElement: { type: 'string' },
+              areaCode: { type: 'string' },
+            },
+          },
+        },
         dateIssued: { type: 'string', format: 'date' },
         findingLevel: {
           type: 'string',
           enum: ['Non-Compliance', 'Observation', 'Recommendation'],
           default: 'Non-Compliance',
+        },
+        findingSeverity: {
+          type: 'string',
+          enum: ['A', 'B', 'C'],
+          default: 'C',
         },
         description: { type: 'string', maxLength: 2000 },
         findingStatus: {
@@ -321,6 +351,10 @@ const followUpReportSchema = {
         followUpClosureDate: { type: 'string', format: 'date' },
         closureVerificationMethod: { type: 'string' },
         effectivenessConfirmed: { type: ['boolean', 'null'] },
+        currentResidualRisk: {
+          type: 'string',
+          enum: ['Low', 'Medium', 'High', 'Critical'],
+        },
         followUpComment: { type: 'string', maxLength: 2000 },
         capId: { type: ['string', 'null'] },
         inspectionId: { type: 'string' },
@@ -572,6 +606,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     inspectors: Array.isArray(checklistObj?.inspectors)
       ? checklistObj.inspectors.filter((name) => typeof name === 'string' && name.trim())
       : [],
+    interviewee: safeString(sessionObj?.summary?.interviewee),
   }
 
   for (const [field, value] of Object.entries(optionalChecklistFields)) {
@@ -604,13 +639,20 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     }
 
     const rowReference = row?.reference || {}
-    const nationalRegulation = (rowReference?.normativa?.reglamento ? safeString(rowReference?.normativa?.reglamento + ' ' + rowReference?.normativa?.articulo, '') :  '')
+    const reglamento = safeString(rowReference?.normativa?.reglamento, '')
+    const articulo = safeString(rowReference?.normativa?.articulo, '')
+    const nationalRegulation = reglamento || safeString(rowReference?.nationalRegulation, '')
+    const regulationItem = articulo || safeString(rowReference?.regulationItem, '')
+    const usoapPqReference = Array.isArray(rowReference?.normativa?.usoapPqReference)
+      ? rowReference.normativa.usoapPqReference
+      : rowReference?.usoapPqReference
     const referenceObj = {
       icaoReference: safeString(rowReference?.normativa?.ICAOref || rowReference?.icaoReference),
-      nationalRegulation: nationalRegulation || safeString(rowReference?.nationalRegulation)
+      nationalRegulation: nationalRegulation,
+      regulationItem: regulationItem,
     }
 
-    if (referenceObj.icaoReference || referenceObj.nationalRegulation) {
+    if (referenceObj.icaoReference || referenceObj.nationalRegulation || referenceObj.regulationItem) {
       item.reference = {}
       if (referenceObj.icaoReference) {
         item.reference.icaoReference = referenceObj.icaoReference
@@ -618,6 +660,13 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
       if (referenceObj.nationalRegulation) {
         item.reference.nationalRegulation = referenceObj.nationalRegulation
       }
+      if (referenceObj.regulationItem) {
+        item.reference.regulationItem = referenceObj.regulationItem
+      }
+    }
+    if (Array.isArray(usoapPqReference) && usoapPqReference.length > 0) {
+      item.reference = item.reference || {}
+      item.reference.usoapPqReference = usoapPqReference
     }
 
     const evidenceList = Array.isArray(response?.evidence) ? response.evidence : []
@@ -702,18 +751,29 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       },
     }
 
-    const nationalRegulation = (row?.reference?.normativa?.reglamento ? safeString(row?.reference?.normativa?.reglamento + ' ' + row?.reference?.normativa?.articulo, '') :  '')
-    const requirementBreached =
-      safeString(nationalRegulation) ||
-      safeString(row?.reference?.nationalRegulation)
+    const reglamento = safeString(row?.reference?.normativa?.reglamento, '')
+    const articulo = safeString(row?.reference?.normativa?.articulo, '')
+    const nationalRegulation = reglamento || safeString(row?.reference?.nationalRegulation, '')
+    const regulationItem = articulo || safeString(row?.reference?.regulationItem, '')
+    const requirementBreached = nationalRegulation || ''
     if (requirementBreached) {
       finding.finding.requirementBreached = requirementBreached
-      finding.finding.nationalRegulation = requirementBreached
+      finding.finding.nationalRegulation = nationalRegulation
+      if (regulationItem) {
+        finding.finding.regulationItem = regulationItem
+      }
     }
 
     const icaoReference = safeString(row?.reference?.normativa?.ICAOref || row?.reference?.icaoReference)
     if (icaoReference) {
       finding.finding.icaoReference = icaoReference
+    }
+
+    const usoapPqReference = Array.isArray(row?.reference?.normativa?.usoapPqReference)
+      ? row.reference.normativa.usoapPqReference
+      : row?.reference?.usoapPqReference
+    if (Array.isArray(usoapPqReference) && usoapPqReference.length > 0) {
+      finding.finding.usoapPqReference = usoapPqReference
     }
 
     finding.finding.dateIssued = dateIssued
@@ -730,10 +790,23 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       response?.nonConformityDetails?.findingLevel || response?.findingLevel
     )
 
+    finding.finding.findingSeverity = safeString(
+      response?.nonConformityDetails?.findingSeverity
+    ) || 'C'
+
     findings.push(finding)
   })
 
   return findings
+}
+
+const resolveResidualRisk = (response, finding) => {
+  const validLevels = ['Low', 'Medium', 'High', 'Critical']
+  const fromResponse = safeString(response?.currentResidualRisk)
+  if (fromResponse && validLevels.includes(fromResponse)) return fromResponse
+  const fromFinding = safeString(finding?.riskClassification)
+  if (fromFinding && validLevels.includes(fromFinding)) return fromFinding
+  return 'Low'
 }
 
 const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
@@ -793,6 +866,7 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
         followUpType: type,
         effectivenessConfirmed,
         capId,
+        currentResidualRisk: resolveResidualRisk(response, finding),
       },
     }
 
@@ -1145,6 +1219,20 @@ export function setupIpcHandles(ipcMain) {
     } catch (err) {
       logger.error(`get-app-config: Could not read app config: ${err.message}`)
       return {}
+    }
+  })
+
+  ipcMain.handle('write-app-config', async (event, config) => {
+    try {
+      const appDir = dirname(fileURLToPath(import.meta.url))
+      const configPath = path.join(appDir, '..', '..', 'app.config.json')
+      const existing = await readAppConfig().catch(() => ({}))
+      const merged = { ...existing, ...config }
+      await saveFile(configPath, JSON.stringify(merged, null, 2))
+      return true
+    } catch (err) {
+      logger.error(`write-app-config: Could not write app config: ${err.message}`)
+      return false
     }
   })
 

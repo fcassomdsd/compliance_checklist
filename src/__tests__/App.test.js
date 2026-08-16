@@ -23,6 +23,13 @@ vi.mock('vue-toastification', () => ({
   useToast: vi.fn(),
 }))
 vi.mock('../assets/images/compliance-logo.png', () => ({ default: 'mock-logo-url' }))
+vi.mock('../utils/fileServices.js', () => ({
+  createFileService: vi.fn(() => ({
+    fetchInspectionProviders: vi.fn().mockResolvedValue([
+      { inspectionId: 'INS1', inspectedProviderId: 'IP1', siteVisitId: 'SV1', code: '0224', status: 'Planned', serviceProviderId: 'SP1', serviceProviderName: 'Provider A' },
+    ]),
+  })),
+}))
 
 describe('App.vue', () => {
   let wrapper
@@ -123,11 +130,13 @@ describe('App.vue', () => {
 
   it('calls inspection import with inspection + specialty', async () => {
     await wrapper.find('#openImportModalBtn').trigger('click')
-    await wrapper.find('#importInspection').setValue('0224')
+    await wrapper.vm.$nextTick()
+    wrapper.vm.selectedInspectionProvider = JSON.stringify(wrapper.vm.inspectionProviderList[0])
+    await wrapper.vm.$nextTick()
     await wrapper.find('#importSpecialty').setValue('VIG')
     await wrapper.find('#importDataBtn').trigger('click')
 
-    expect(mockStore.importChecklist).toHaveBeenCalledWith('0224', 'VIG')
+    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
     expect(mockStore.importFindings).not.toHaveBeenCalled()
   })
 
@@ -167,14 +176,16 @@ describe('App.vue', () => {
 
   it('shows a compact import summary in modal', async () => {
     await wrapper.find('#openImportModalBtn').trigger('click')
+    await wrapper.vm.$nextTick()
 
     expect(wrapper.text()).toContain('Mode:')
     expect(wrapper.text()).toContain('Inspection:')
     expect(wrapper.text()).toContain('Specialty: Not selected')
 
-    await wrapper.find('#importInspection').setValue('0224')
+    wrapper.vm.selectedInspectionProvider = JSON.stringify(wrapper.vm.inspectionProviderList[0])
+    await wrapper.vm.$nextTick()
     await wrapper.find('#importSpecialty').setValue('VIG')
-    expect(wrapper.text()).toContain('Inspection: 0224')
+    expect(wrapper.text()).toContain('0224 / Provider A')
     expect(wrapper.text()).toContain('Specialty: VIG - Sistemas de Vigilancia')
 
     mockStore.uiMode = 'followUp'
@@ -187,6 +198,70 @@ describe('App.vue', () => {
 
     expect(wrapper.text()).toContain('Location: MDSD - Las Americas')
     expect(wrapper.text()).toContain('Specialty: COM - Comunicaciones')
+  })
+
+  it('populates inspectionProviderList and renders dropdown options', async () => {
+    await wrapper.find('#openImportModalBtn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.inspectionProviderList).toHaveLength(1)
+    expect(wrapper.vm.inspectionProviderList[0].code).toBe('0224')
+    expect(wrapper.vm.inspectionProviderList[0].serviceProviderName).toBe('Provider A')
+
+    const select = wrapper.find('#importInspection')
+    const options = select.findAll('option')
+    expect(options).toHaveLength(2) // default + 1 option
+    expect(options[1].text()).toBe('0224 / Provider A')
+  })
+
+  it('passes providerId from selected option to importChecklist', async () => {
+    await wrapper.find('#openImportModalBtn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // Select an option with a serviceProviderId
+    wrapper.vm.selectedInspectionProvider = JSON.stringify(
+      wrapper.vm.inspectionProviderList[0],
+    )
+    await wrapper.vm.$nextTick()
+    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importDataBtn').trigger('click')
+
+    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+  })
+
+  it('passes inspectedProviderId fallback when serviceProviderId is missing', async () => {
+    await wrapper.find('#openImportModalBtn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.selectedInspectionProvider = JSON.stringify({
+      inspectionId: 'INS2',
+      inspectedProviderId: 'IP2',
+      code: '0225',
+      status: 'Assigned',
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importDataBtn').trigger('click')
+
+    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS2', 'VIG', { inspectedProviderId: 'IP2', siteVisitId: undefined })
+  })
+
+  it('shows an error toast when selected inspection has no inspectionId', async () => {
+    await wrapper.find('#openImportModalBtn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.selectedInspectionProvider = JSON.stringify({
+      inspectedProviderId: 'IP3',
+      siteVisitId: 'SV3',
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importDataBtn').trigger('click')
+
+    expect(mockToast.error).toHaveBeenCalledWith(
+      'Selected inspection has no inspectionId — it may need to be recreated',
+    )
+    expect(mockStore.importChecklist).not.toHaveBeenCalled()
   })
 
   it('shows upload follow-up label in follow-up mode', async () => {

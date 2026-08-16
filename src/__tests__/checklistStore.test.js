@@ -554,10 +554,10 @@ describe('Checklist Store', () => {
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
       mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'TEST LOCATION')
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
       expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalled()
       expect(mockFs.ensureSpecialtyEntry).toHaveBeenCalledWith('VIG', 'Imported Specialty')
       expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'TEST LOCATION')
@@ -597,7 +597,7 @@ describe('Checklist Store', () => {
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
       mockFs.setSavePath.mockResolvedValue('/path/MDPP/VIG/Evidence')
 
-      await store.importChecklist('MDPP-2026-01', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'MDPP')
       expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'MDPP')
@@ -636,7 +636,7 @@ describe('Checklist Store', () => {
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
       mockFs.setSavePath.mockResolvedValue('/path/MDPP/VIG/Evidence')
 
-      await store.importChecklist('MDPP-2026-01', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       // All location-keyed calls must use 'MDPP', not the UUID
       expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'MDPP')
@@ -673,9 +673,9 @@ describe('Checklist Store', () => {
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
       mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
       expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
       expect(store.isImporting.value).toBe(false)
     })
@@ -692,11 +692,45 @@ describe('Checklist Store', () => {
         sessionFinalized: false
       })
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('0224', 'VIG')
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
       expect(mockToast.error).toHaveBeenCalledWith('Cannot import checklist while an active session is in progress')
       expect(store.isImporting.value).toBe(false)
+    })
+
+    it('passes provider to fetchChecklistFromApi when provided', async () => {
+      const mockImportedChecklist = {
+        specialtyName: 'Vigilancia',
+        inspection: '0224',
+        location: 'Test Location',
+        startDate: '2024-01-01',
+        questions: [],
+      }
+      mockFs.getChecklistImportState.mockResolvedValue({ hasChecklist: false, hasSession: false, sessionFinalized: null })
+      mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+
+      await store.importChecklist('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+    })
+
+    it('passes null provider when not provided', async () => {
+      const mockImportedChecklist = {
+        specialtyName: 'Vigilancia',
+        inspection: '0224',
+        location: 'Test Location',
+        startDate: '2024-01-01',
+        questions: [],
+      }
+      mockFs.getChecklistImportState.mockResolvedValue({ hasChecklist: false, hasSession: false, sessionFinalized: null })
+      mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
+      mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
+
+      await store.importChecklist('INS1', 'VIG', {})
+
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
     })
 
     it('handles missing inspection parameter', async () => {
@@ -723,7 +757,7 @@ describe('Checklist Store', () => {
       })
       mockFs.fetchChecklistFromApi.mockRejectedValue(new Error('API is down'))
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(mockToast.error).toHaveBeenCalledWith('API is down')
       expect(store.isImporting.value).toBe(false)
@@ -740,7 +774,7 @@ describe('Checklist Store', () => {
         followUpTouched: false,
       })
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(mockFs.getChecklistImportState).not.toHaveBeenCalled()
       expect(mockToast.error).toHaveBeenCalledWith(
@@ -772,7 +806,7 @@ describe('Checklist Store', () => {
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
       mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(store.isImporting.value).toBe(false)
     })
@@ -1059,7 +1093,7 @@ describe('Checklist Store', () => {
     it('handles import checklist when import service is offline', async () => {
       store.importServiceOnline.value = false
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(mockToast.error).toHaveBeenCalledWith('Import service offline (localhost:1880)')
       expect(store.isImporting.value).toBe(false)
@@ -1072,7 +1106,7 @@ describe('Checklist Store', () => {
         questions: [],
       })
 
-      await store.importChecklist('0224', 'VIG')
+      await store.importChecklist('INS1', 'VIG', {})
 
       expect(mockToast.error).toHaveBeenCalledWith(
         'Imported inspection did not include a resolvable location identifier'

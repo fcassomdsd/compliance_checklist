@@ -14,11 +14,11 @@ export const useSessionStore = defineStore('session', () => {
   // State
   const responses = reactive({})
   // session summary: no longer holds location (moved to checklist.json)
-  const summary = ref({ finalized: true, generalComments: '' })
+  const summary = ref({ finalized: true, generalComments: '', interviewee: '' })
   const context = ref({ specialty: '', locationId: null })
 
   const reset = (finalized = true) => {
-    summary.value = { finalized, generalComments: '' }
+    summary.value = { finalized, generalComments: '', interviewee: '' }
     context.value = { specialty: '', locationId: null }
 
     evidence.reset()
@@ -67,6 +67,9 @@ export const useSessionStore = defineStore('session', () => {
       }
       if (!('generalComments' in summary.value)) {
         summary.value.generalComments = ''
+      }
+      if (!('interviewee' in summary.value)) {
+        summary.value.interviewee = ''
       }
       context.value = { specialty, locationId }
 
@@ -125,6 +128,14 @@ export const useSessionStore = defineStore('session', () => {
     })
   }
 
+  const updateInterviewee = (value) => {
+    summary.value.interviewee = value || ''
+    fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
+    fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId).catch((error) => {
+      toast.error('Could not update workspace touched state: ' + error.message)
+    })
+  }
+
   function displayToast(msg) {
     toast.error(msg)
   }
@@ -163,7 +174,8 @@ export const useSessionStore = defineStore('session', () => {
     reset,
     loadSession,
     updateSession,
-    updateGeneralComments, // <-- exported
+    updateGeneralComments,
+    updateInterviewee,
     finalize,
   }
 })

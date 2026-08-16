@@ -274,18 +274,24 @@ export const createFileService = () => {
     }
   }
 
-  const fetchChecklistFromApi = async (inspection, specialty) => {
+  const fetchChecklistFromApi = async (inspectionId, specialty, ids = {}) => {
     try {
-      if (!inspection || !specialty) {
-        throw new Error('Missing required parameters: inspection, specialty')
+      if (!inspectionId || !specialty) {
+        throw new Error('Missing required parameters: inspectionId, specialty')
       }
 
       const config = await window.electronAPI.getAppConfig()
       const host = config?.api?.importHost || config?.api?.host || 'http://localhost:1880'
 
       const url = new URL(`${host}/checklist`)
-      url.searchParams.set('inspection', inspection)
+      url.searchParams.set('inspectionId', inspectionId)
       url.searchParams.set('specialty', specialty)
+      if (ids.siteVisitId) {
+        url.searchParams.set('siteVisitId', ids.siteVisitId)
+      }
+      if (ids.inspectedProviderId) {
+        url.searchParams.set('inspectedProviderId', ids.inspectedProviderId)
+      }
 
       const response = await fetch(url.toString())
       if (!response.ok) {
@@ -293,13 +299,32 @@ export const createFileService = () => {
       }
 
       const data = await response.json()
+
+      // Cache severity config if present and different from stored
+      if (Array.isArray(data.severityConfig) && data.severityConfig.length > 0) {
+        const stored = config?.severity?.levels || []
+        const changed = data.severityConfig.length !== stored.length ||
+          data.severityConfig.some((level, idx) =>
+            level.id !== stored[idx]?.id || level.daysToSolution !== stored[idx]?.daysToSolution
+          )
+        if (changed) {
+          await window.electronAPI.writeAppConfig({
+            severity: { levels: data.severityConfig, updatedAt: new Date().toISOString() }
+          })
+        }
+      }
+
+      // Strip severityConfig before validation — it's an API metadata field,
+      // not part of the checklist schema
+      delete data.severityConfig
+
       return parseChecklist(JSON.stringify(data))
     } catch (error) {
       throw new Error(`fetchChecklistFromApi: could not fetch checklist: ${error.message}`)
     }
   }
 
-  const fetchFindingsFromApi = async (specialty, locationId, inspection = null) => {
+  const fetchFindingsFromApi = async (specialty, locationId, inspection = null, provider = null) => {
     try {
       if (!specialty || !locationId) {
         throw new Error('Missing required parameters: specialty, locationId')
@@ -314,6 +339,9 @@ export const createFileService = () => {
       if (inspection) {
         url.searchParams.set('inspection', inspection)
       }
+      if (provider) {
+        url.searchParams.set('provider', provider)
+      }
 
       const response = await fetch(url.toString())
       if (!response.ok) {
@@ -324,6 +352,24 @@ export const createFileService = () => {
       return parseFindings(JSON.stringify(data))
     } catch (error) {
       throw new Error(`fetchFindingsFromApi: could not fetch findings: ${error.message}`)
+    }
+  }
+
+  const fetchInspectionProviders = async () => {
+    try {
+      const config = await window.electronAPI.getAppConfig()
+      const host = config?.api?.importHost || config?.api?.host || 'http://localhost:1880'
+
+      const url = new URL(`${host}/inspectionProvider`)
+      url.searchParams.set('status', 'Uploaded')
+      const response = await fetch(url.toString())
+      if (!response.ok) {
+        throw new Error(`Inspection providers fetch failed with status ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      throw new Error(`fetchInspectionProviders: ${error.message}`)
     }
   }
 
@@ -1181,9 +1227,9 @@ export const createFileService = () => {
     }
   }
 
-  const notifyImportCanonical = async (inspection, specialtyName) => {
-    if (!inspection || !specialtyName) {
-      throw new Error('notifyImportCanonical: Missing required parameters: inspection, specialtyName')
+  const notifyImportCanonical = async (inspectionId, specialtyName, ids = {}) => {
+    if (!inspectionId || !specialtyName) {
+      throw new Error('notifyImportCanonical: Missing required parameters: inspectionId, specialtyName')
     }
 
     const config = await window.electronAPI.getAppConfig()
@@ -1192,8 +1238,14 @@ export const createFileService = () => {
     const maxRetries = config?.api?.importCanonicalRetries ?? 3
 
     const url = new URL(`${host}/importCanonical`)
-    url.searchParams.set('inspection', inspection)
+    url.searchParams.set('inspectionId', inspectionId)
     url.searchParams.set('specialty', specialtyName)
+    if (ids.inspectedProviderId) {
+      url.searchParams.set('inspectedProviderId', ids.inspectedProviderId)
+    }
+    if (ids.siteVisitId) {
+      url.searchParams.set('siteVisitId', ids.siteVisitId)
+    }
 
     // Wait for the previous Alfresco write to commit before triggering the import
     await new Promise((resolve) => setTimeout(resolve, delay))
@@ -1494,6 +1546,7 @@ export const createFileService = () => {
     loadChecklist,
     getChecklistImportState,
     fetchChecklistFromApi,
+    fetchInspectionProviders,
     fetchFindingsFromApi,
     loadFindings,
     saveFindings,

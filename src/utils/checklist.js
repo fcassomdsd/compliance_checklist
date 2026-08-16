@@ -70,6 +70,18 @@ const checklistSchema = {
                   articulo: { type: 'string' },
                   texto: { type: 'string' },
                   ICAOref: { type: ['string', 'null'] },
+                  usoapPqReference: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        code: { type: 'string' },
+                        criticalElement: { type: 'string' },
+                        areaCode: { type: 'string' },
+                      },
+                      additionalProperties: false,
+                    },
+                  },
                 },
                 additionalProperties: false,
               },
