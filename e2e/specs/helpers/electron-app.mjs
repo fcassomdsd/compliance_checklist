@@ -38,7 +38,7 @@ export async function launchApp() {
   return { electronApp, window }
 }
 
-export async function importInspection(window, inspectionCode = '0224', specialtyCode = 'VIG') {
+export async function importInspection(window, inspectionCode = '0224', specialtyCode = 'SUR') {
   const expectedWorkspaceKey = `MDSD__${specialtyCode.toUpperCase()}`
 
   const ensureWorkspaceLoaded = async () => {
@@ -80,7 +80,7 @@ export async function importInspection(window, inspectionCode = '0224', specialt
   await expect(window.locator('#cklTable')).toBeVisible()
 }
 
-export async function importFollowUp(window, locationIcao = 'MDSD', specialtyCode = 'VIG') {
+export async function importFollowUp(window, locationIcao = 'MDSD', specialtyCode = 'SUR') {
   const expectedWorkspaceKey = `${locationIcao.toUpperCase()}__${specialtyCode.toUpperCase()}`
 
   const ensureWorkspaceLoaded = async () => {

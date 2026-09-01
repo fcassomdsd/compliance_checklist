@@ -46,11 +46,11 @@ describe('App.vue', () => {
     mockStore = {
       specialty: 'NONE',
       specialtyList: [
-        { code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { code: 'SUR', name: 'Vigilancia (radar)' },
         { code: 'COM', name: 'Comunicaciones' },
       ],
       locationList: [{ id: 'loc-1', icaoCode: 'MDSD', name: 'Las Americas' }],
-      workspaceList: [{ workspaceKey: 'MDSD__VIG', displayName: 'MDSD - VIG (Draft)' }],
+      workspaceList: [{ workspaceKey: 'MDSD__SUR', displayName: 'MDSD - SUR (Draft)' }],
       activeWorkspaceKey: '',
       activeWorkspace: null,
       uiMode: 'inspection',
@@ -133,10 +133,10 @@ describe('App.vue', () => {
     await wrapper.vm.$nextTick()
     wrapper.vm.selectedInspectionProvider = JSON.stringify(wrapper.vm.inspectionProviderList[0])
     await wrapper.vm.$nextTick()
-    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importSpecialty').setValue('SUR')
     await wrapper.find('#importDataBtn').trigger('click')
 
-    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS1', 'SUR', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
     expect(mockStore.importFindings).not.toHaveBeenCalled()
   })
 
@@ -184,9 +184,9 @@ describe('App.vue', () => {
 
     wrapper.vm.selectedInspectionProvider = JSON.stringify(wrapper.vm.inspectionProviderList[0])
     await wrapper.vm.$nextTick()
-    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importSpecialty').setValue('SUR')
     expect(wrapper.text()).toContain('0224 / Provider A')
-    expect(wrapper.text()).toContain('Specialty: VIG - Sistemas de Vigilancia')
+    expect(wrapper.text()).toContain('Specialty: SUR - Vigilancia (radar)')
 
     mockStore.uiMode = 'followUp'
     wrapper.unmount()
@@ -223,10 +223,10 @@ describe('App.vue', () => {
       wrapper.vm.inspectionProviderList[0],
     )
     await wrapper.vm.$nextTick()
-    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importSpecialty').setValue('SUR')
     await wrapper.find('#importDataBtn').trigger('click')
 
-    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS1', 'SUR', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
   })
 
   it('passes inspectedProviderId fallback when serviceProviderId is missing', async () => {
@@ -240,10 +240,10 @@ describe('App.vue', () => {
       status: 'Assigned',
     })
     await wrapper.vm.$nextTick()
-    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importSpecialty').setValue('SUR')
     await wrapper.find('#importDataBtn').trigger('click')
 
-    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS2', 'VIG', { inspectedProviderId: 'IP2', siteVisitId: undefined })
+    expect(mockStore.importChecklist).toHaveBeenCalledWith('INS2', 'SUR', { inspectedProviderId: 'IP2', siteVisitId: undefined })
   })
 
   it('shows an error toast when selected inspection has no inspectionId', async () => {
@@ -255,7 +255,7 @@ describe('App.vue', () => {
       siteVisitId: 'SV3',
     })
     await wrapper.vm.$nextTick()
-    await wrapper.find('#importSpecialty').setValue('VIG')
+    await wrapper.find('#importSpecialty').setValue('SUR')
     await wrapper.find('#importDataBtn').trigger('click')
 
     expect(mockToast.error).toHaveBeenCalledWith(
@@ -274,7 +274,7 @@ describe('App.vue', () => {
   })
 
   it('disables remove button when inspection session is touched and not uploaded', async () => {
-    mockStore.specialty = 'VIG'
+    mockStore.specialty = 'SUR'
     mockStore.activeWorkspace = {
       locationId: 'MDSD',
       checklistTouched: true,
@@ -291,7 +291,7 @@ describe('App.vue', () => {
 
   it('enables and routes remove button for uploaded follow-up session', async () => {
     mockStore.uiMode = 'followUp'
-    mockStore.specialty = 'VIG'
+    mockStore.specialty = 'SUR'
     mockStore.activeWorkspace = {
       locationId: 'MDSD',
       checklistTouched: false,

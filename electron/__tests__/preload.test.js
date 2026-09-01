@@ -123,7 +123,7 @@ describe('preload.js', () => {
 
     it('exportFollowUpPayload should invoke export-follow-up-payload', async () => {
       mockIpcRenderer.invoke.mockResolvedValue({ uploadStatus: 200 })
-      const params = { findingsString: '[]', followUpSessionString: '{}', specialty: 'VIG' }
+      const params = { findingsString: '[]', followUpSessionString: '{}', specialty: 'SUR' }
 
       await api.exportFollowUpPayload(params)
 

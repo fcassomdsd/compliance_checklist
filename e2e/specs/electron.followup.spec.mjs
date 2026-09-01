@@ -4,10 +4,10 @@ import { importFollowUp, launchApp } from './helpers/electron-app.mjs'
 test('imports follow-up findings and renders follow-up table', async () => {
   const { electronApp, window } = await launchApp()
 
-  await importFollowUp(window, 'MDSD', 'VIG')
+  await importFollowUp(window, 'MDSD', 'SUR')
 
   await expect(window.locator('#followupTable')).toBeVisible()
-  await expect(window.locator('text=MDSD-VIG-2026-0001')).toBeVisible()
+  await expect(window.locator('text=MDSD-SUR-2026-0001')).toBeVisible()
 
   const rowWithCap = window.locator('#followupTable tbody tr').filter({ has: window.locator('.cap-badge') }).first()
   if ((await rowWithCap.count()) > 0) {
@@ -25,7 +25,7 @@ test('imports follow-up findings and renders follow-up table', async () => {
     expect(capDotColor).not.toBe('rgb(156, 163, 175)')
   }
 
-  const overdueRow = window.locator('#followupTable tbody tr').filter({ hasText: 'MDSD-VIG-2026-0002' }).first()
+  const overdueRow = window.locator('#followupTable tbody tr').filter({ hasText: 'MDSD-SUR-2026-0002' }).first()
   if ((await overdueRow.count()) > 0) {
     const overdueDot = overdueRow.locator('.finding-id-cell .status-dot').first()
     let isOverdue = false

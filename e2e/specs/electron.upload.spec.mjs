@@ -17,7 +17,7 @@ test.describe('inspection upload', () => {
 
     const { electronApp, window } = await launchApp()
 
-    await importInspection(window, '0224', 'VIG')
+    await importInspection(window, '0224', 'SUR')
     await finalizeInspection(window)
 
     await expect(window.locator('#exportUploadBtn')).toBeEnabled()
@@ -37,7 +37,7 @@ test.describe('inspection upload', () => {
 
     const { electronApp, window } = await launchApp()
 
-    await importInspection(window, '0224', 'VIG')
+    await importInspection(window, '0224', 'SUR')
     await finalizeInspection(window)
 
     await expect(window.locator('#exportUploadBtn')).toBeEnabled()

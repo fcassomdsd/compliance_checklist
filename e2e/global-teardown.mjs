@@ -39,9 +39,9 @@ export default async function globalTeardown() {
   }
 
   const currentInspectionDir = join(homedir(), 'Documents', 'Current_inspection')
-  const workspaceDir = join(currentInspectionDir, 'MDSD_VIG')
+  const workspaceDir = join(currentInspectionDir, 'MDSD_SUR')
   const registryFile = join(currentInspectionDir, 'workspaces.json')
-  const backupWorkspaceDir = join(stateBackupDir, 'MDSD_VIG')
+  const backupWorkspaceDir = join(stateBackupDir, 'MDSD_SUR')
   const backupRegistryFile = join(stateBackupDir, 'workspaces.json')
 
   if (existsSync(backupWorkspaceDir) || existsSync(backupRegistryFile)) {

@@ -16,7 +16,7 @@ const mockAppConfig = {
   },
   fallback: {
     specialties: [
-      { code: 'VIG', name: 'Sistemas de Vigilancia' },
+      { code: 'SUR', name: 'Vigilancia (radar)' },
       { code: 'COM', name: 'Comunicaciones de Radio' },
     ],
   },
@@ -97,19 +97,19 @@ describe('fileServices', () => {
   })
 
   it('loadChecklist returns parsed data for an existing file', async () => {
-    mockElectronAPI.readFile.mockResolvedValue('{"specialty": "VIG"}')
-    parseChecklist.mockResolvedValue({ specialty: 'VIG' })
+    mockElectronAPI.readFile.mockResolvedValue('{"specialty": "SUR"}')
+    parseChecklist.mockResolvedValue({ specialty: 'SUR' })
 
-    const result = await fs.loadChecklist('VIG')
+    const result = await fs.loadChecklist('SUR')
 
     expect(mockElectronAPI.readFile).toHaveBeenCalled()
-    expect(parseChecklist).toHaveBeenCalledWith('{"specialty": "VIG"}')
-    expect(result).toEqual({ specialty: 'VIG' })
+    expect(parseChecklist).toHaveBeenCalledWith('{"specialty": "SUR"}')
+    expect(result).toEqual({ specialty: 'SUR' })
   })
 
   it('loadSession returns null if session file does not exist', async () => {
     mockElectronAPI.checkPath.mockResolvedValue(false)
-    const result = await fs.loadSession('VIG')
+    const result = await fs.loadSession('SUR')
     expect(result).toBe(null)
   })
 
@@ -118,19 +118,19 @@ describe('fileServices', () => {
     mockElectronAPI.checkPath.mockResolvedValue(true)
     mockElectronAPI.listPath.mockResolvedValue(mockDirList)
 
-    const result = await fs.readEvidence('VIG')
+    const result = await fs.readEvidence('SUR')
 
-    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
-    expect(mockElectronAPI.listPath).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'SUR', 'Evidence')
+    expect(mockElectronAPI.listPath).toHaveBeenCalledWith(null, 'SUR', 'Evidence')
     expect(result).toEqual(mockDirList)
   })
 
   it('readEvidence returns empty list when evidence directory is missing', async () => {
     mockElectronAPI.checkPath.mockResolvedValue(false)
 
-    const result = await fs.readEvidence('VIG', 'MDPP')
+    const result = await fs.readEvidence('SUR', 'MDPP')
 
-    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_VIG', 'Evidence')
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_SUR', 'Evidence')
     expect(mockElectronAPI.listPath).not.toHaveBeenCalled()
     expect(result).toEqual([])
   })
@@ -138,9 +138,9 @@ describe('fileServices', () => {
   it('readAudio returns empty list when audio directory is missing', async () => {
     mockElectronAPI.checkPath.mockResolvedValue(false)
 
-    const result = await fs.readAudio('VIG', 'MDPP')
+    const result = await fs.readAudio('SUR', 'MDPP')
 
-    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_VIG', 'Audio')
+    expect(mockElectronAPI.checkPath).toHaveBeenCalledWith(null, 'MDPP_SUR', 'Audio')
     expect(mockElectronAPI.listPath).not.toHaveBeenCalled()
     expect(result).toEqual([])
   })
@@ -149,26 +149,26 @@ describe('fileServices', () => {
     it('calls saveFile with correct arguments', async () => {
       mockElectronAPI.saveFile.mockResolvedValue(true)
       // eslint-disable-next-line no-undef, no-unused-vars
-      const result = await fs.saveEvidence('VIG', 'file1.txt', Buffer.from('This is a buffer'))
+      const result = await fs.saveEvidence('SUR', 'file1.txt', Buffer.from('This is a buffer'))
 
       expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(
         // eslint-disable-next-line no-undef
         Buffer.from('This is a buffer'),
         null,
-        'VIG',
+        'SUR',
         'Evidence',
         'file1.txt'
       )
     })
 
     it('throws error for empty or undefined buffer', async () => {
-      const errorMessage = 'saveEvidence: could not save evidence for VIG/file1.txt :'
+      const errorMessage = 'saveEvidence: could not save evidence for SUR/file1.txt :'
       // eslint-disable-next-line no-undef
-      await expect(fs.saveEvidence('VIG', 'file1.txt', Buffer.from(''))).rejects.toThrowError(
+      await expect(fs.saveEvidence('SUR', 'file1.txt', Buffer.from(''))).rejects.toThrowError(
         errorMessage + ' File is empty'
       )
 
-      await expect(fs.saveEvidence('VIG', 'file1.txt', undefined)).rejects.toThrowError(
+      await expect(fs.saveEvidence('SUR', 'file1.txt', undefined)).rejects.toThrowError(
         errorMessage + ' Buffer is undefined'
       )
     })
@@ -176,27 +176,27 @@ describe('fileServices', () => {
     it('throws error for files over the size limit (10MB)', async () => {
       mockElectronAPI.saveFile.mockResolvedValue(true)
       const errorMessage =
-        'saveEvidence: could not save evidence for VIG/file1.txt : File size exceeds 10MB limit'
+        'saveEvidence: could not save evidence for SUR/file1.txt : File size exceeds 10MB limit'
 
       await expect(
-        fs.saveEvidence('VIG', 'file1.txt', new ArrayBuffer(10 * 1000 * 1000 + 1))
+        fs.saveEvidence('SUR', 'file1.txt', new ArrayBuffer(10 * 1000 * 1000 + 1))
       ).rejects.toThrowError(errorMessage)
 
-      await fs.saveEvidence('VIG', 'file1.txt', new ArrayBuffer(10 * 1000 * 1000 - 1))
+      await fs.saveEvidence('SUR', 'file1.txt', new ArrayBuffer(10 * 1000 * 1000 - 1))
     })
 
     it('stores follow-up evidence in FollowUpEvidence directory', async () => {
       // eslint-disable-next-line no-undef
       const buffer = Buffer.from('follow-up buffer')
       mockElectronAPI.getStats.mockResolvedValue(null)
-      mockElectronAPI.saveFile.mockResolvedValue('/mocked/VIG/loc-001__VIG/FollowUpEvidence/file1.txt')
+      mockElectronAPI.saveFile.mockResolvedValue('/mocked/SUR/loc-001__SUR/FollowUpEvidence/file1.txt')
 
-      await fs.saveEvidence('VIG', 'file1.txt', buffer, 'loc-001', 'followUp')
+      await fs.saveEvidence('SUR', 'file1.txt', buffer, 'loc-001', 'followUp')
 
       expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(
         buffer,
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'FollowUpEvidence',
         'file1.txt'
       )
@@ -207,24 +207,24 @@ describe('fileServices', () => {
     it('calls saveFile with correct arguments', async () => {
       mockElectronAPI.saveFile.mockResolvedValue(true)
 
-      await fs.saveExportFile('This is a checklist', 'VIG')
+      await fs.saveExportFile('This is a checklist', 'SUR')
 
       expect(mockElectronAPI.saveFile).toHaveBeenCalledWith(
         'This is a checklist',
         null,
-        'VIG',
+        'SUR',
         'compliance_export.csv'
       )
     })
 
     it('handles empty checklists', async () => {
-      await expect(fs.saveExportFile('', 'VIG')).rejects.toThrow(
+      await expect(fs.saveExportFile('', 'SUR')).rejects.toThrow(
         'saveExportFile: could not save file: Empty checklist detected'
       )
-      await expect(fs.saveExportFile(null, 'VIG')).rejects.toThrow(
+      await expect(fs.saveExportFile(null, 'SUR')).rejects.toThrow(
         'saveExportFile: could not save file: Empty checklist detected'
       )
-      await expect(fs.saveExportFile(undefined, 'VIG')).rejects.toThrow(
+      await expect(fs.saveExportFile(undefined, 'SUR')).rejects.toThrow(
         'saveExportFile: could not save file: Empty checklist detected'
       )
     })
@@ -233,7 +233,7 @@ describe('fileServices', () => {
       mockElectronAPI.saveFile.mockImplementationOnce(() => {
         throw new Error('Save failed')
       })
-      await expect(fs.saveExportFile('This is a', 'VIG')).rejects.toThrow(
+      await expect(fs.saveExportFile('This is a', 'SUR')).rejects.toThrow(
         'saveExportFile: could not save file: Save failed'
       )
     })
@@ -251,14 +251,14 @@ describe('fileServices', () => {
       const checklist = { questions: [] }
       const session = { responses: {} }
 
-      await fs.saveFindingsReport(checklist, session, 'VIG')
+      await fs.saveFindingsReport(checklist, session, 'SUR')
 
       expect(mockElectronAPI.getFullPath).toHaveBeenCalled()
       expect(mockElectronAPI.generatePDF).toHaveBeenCalledWith(
         expect.objectContaining({
           checklistString: JSON.stringify(checklist),
           sessionString: JSON.stringify(session),
-          specialty: 'VIG',
+          specialty: 'SUR',
         })
       )
     })
@@ -271,25 +271,25 @@ describe('fileServices', () => {
       const checklist = { questions: [] }
       const session = { responses: {} }
 
-      await fs.saveFindingsReport(checklist, session, 'VIG')
+      await fs.saveFindingsReport(checklist, session, 'SUR')
 
       const callArgs = mockElectronAPI.generatePDF.mock.calls[0][0]
       expect(callArgs.outputPath).toContain('reporte_hallazgos')
     })
 
     it('uses workspace folder when locationId is provided', async () => {
-      const expectedPath = '/path/to/MDPP_VIG/reporte_hallazgos_2024-01-15.pdf'
+      const expectedPath = '/path/to/MDPP_SUR/reporte_hallazgos_2024-01-15.pdf'
       mockElectronAPI.getFullPath.mockResolvedValue(expectedPath)
       mockElectronAPI.generatePDF.mockResolvedValue(expectedPath)
 
       const checklist = { questions: [] }
       const session = { responses: {} }
 
-      await fs.saveFindingsReport(checklist, session, 'VIG', 'MDPP')
+      await fs.saveFindingsReport(checklist, session, 'SUR', 'MDPP')
 
       expect(mockElectronAPI.getFullPath).toHaveBeenCalledWith(
         null,
-        'MDPP_VIG',
+        'MDPP_SUR',
         expect.stringContaining('reporte_hallazgos_')
       )
     })
@@ -297,7 +297,7 @@ describe('fileServices', () => {
     it('handles missing checklist', async () => {
       mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
 
-      await expect(fs.saveFindingsReport(null, { responses: {} }, 'VIG')).rejects.toThrow(
+      await expect(fs.saveFindingsReport(null, { responses: {} }, 'SUR')).rejects.toThrow(
         'saveFindingsReport: could not generate PDF'
       )
     })
@@ -305,7 +305,7 @@ describe('fileServices', () => {
     it('handles missing session', async () => {
       mockElectronAPI.getFullPath.mockResolvedValue('/path/to/report.pdf')
 
-      await expect(fs.saveFindingsReport({ questions: [] }, null, 'VIG')).rejects.toThrow(
+      await expect(fs.saveFindingsReport({ questions: [] }, null, 'SUR')).rejects.toThrow(
         'saveFindingsReport: could not generate PDF'
       )
     })
@@ -325,7 +325,7 @@ describe('fileServices', () => {
       const checklist = { questions: [] }
       const session = { responses: {} }
 
-      await expect(fs.saveFindingsReport(checklist, session, 'VIG')).rejects.toThrow(
+      await expect(fs.saveFindingsReport(checklist, session, 'SUR')).rejects.toThrow(
         'saveFindingsReport: could not generate PDF'
       )
     })
@@ -334,41 +334,41 @@ describe('fileServices', () => {
   describe('exportInspectionPayload', () => {
     it('calls electron exportInspectionPayload with stringified data', async () => {
       const checklist = { questions: [] }
-      const session = { summary: { specialty: 'VIG' }, responses: {} }
+      const session = { summary: { specialty: 'SUR' }, responses: {} }
       const expectedResult = { zipPath: '/tmp/payload.zip', uploadStatus: 200 }
       mockElectronAPI.exportInspectionPayload.mockResolvedValue(expectedResult)
 
-      const result = await fs.exportInspectionPayload(checklist, session, 'VIG')
+      const result = await fs.exportInspectionPayload(checklist, session, 'SUR')
 
       expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
       expect(result).toEqual(expectedResult)
     })
 
     it('prefers explicit workspace locationId when provided', async () => {
       const checklist = { locationId: 'A01K5QC0YXTE2XTS3R9BTK77FT6', questions: [] }
-      const session = { summary: { specialty: 'VIG' }, responses: {} }
+      const session = { summary: { specialty: 'SUR' }, responses: {} }
       mockElectronAPI.exportInspectionPayload.mockResolvedValue({ zipPath: '/tmp/payload.zip', uploadStatus: 200 })
 
-      await fs.exportInspectionPayload(checklist, session, 'VIG', 'MDPP')
+      await fs.exportInspectionPayload(checklist, session, 'SUR', 'MDPP')
 
       expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
         locationId: 'MDPP',
       })
     })
 
     it('throws for missing parameters', async () => {
-      await expect(fs.exportInspectionPayload(null, { responses: {} }, 'VIG')).rejects.toThrow(
+      await expect(fs.exportInspectionPayload(null, { responses: {} }, 'SUR')).rejects.toThrow(
         'exportInspectionPayload: could not export and upload payload'
       )
       await expect(
-        fs.exportInspectionPayload({ questions: [] }, null, 'VIG')
+        fs.exportInspectionPayload({ questions: [] }, null, 'SUR')
       ).rejects.toThrow('exportInspectionPayload: could not export and upload payload')
       await expect(
         fs.exportInspectionPayload({ questions: [] }, { responses: {} }, '')
@@ -390,7 +390,7 @@ describe('fileServices', () => {
 
     it('calls electron exportFollowUpPayload with stringified data', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
-      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      const followUpSession = { summary: { specialty: 'SUR' }, responses: { 'F-1': {} } }
       const expectedResult = {
         zipPath: '/tmp/followup.zip',
         uploadStatus: 200,
@@ -398,17 +398,17 @@ describe('fileServices', () => {
           status: 'imported',
           followUpReportsImported: 2,
           followUpEvidenceImported: 5,
-          followUpFilenames: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+          followUpFilenames: ['FU-MDPP001SUR-01-01', 'FU-MDPP001SUR-02-01'],
         }),
       }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue(expectedResult)
 
-      const result = await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
+      const result = await fs.exportFollowUpPayload(findings, followUpSession, 'SUR', 'loc-1')
 
       expect(mockElectronAPI.exportFollowUpPayload).toHaveBeenCalledWith({
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
-        specialty: 'VIG',
+        specialty: 'SUR',
         locationId: 'loc-1',
       })
       expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', {
@@ -417,8 +417,8 @@ describe('fileServices', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          specialtyName: 'Sistemas de Vigilancia',
-          followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+          specialtyName: 'Vigilancia (radar)',
+          followUpFiles: ['FU-MDPP001SUR-01-01', 'FU-MDPP001SUR-02-01'],
         }),
       })
       expect(result).toEqual(expectedResult)
@@ -426,7 +426,7 @@ describe('fileServices', () => {
 
     it('waits followUpImportDelay before calling importFollowUps', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
-      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      const followUpSession = { summary: { specialty: 'SUR' }, responses: { 'F-1': {} } }
       mockElectronAPI.getAppConfig.mockResolvedValue({
         ...mockAppConfig,
         api: {
@@ -438,11 +438,11 @@ describe('fileServices', () => {
         zipPath: '/tmp/followup.zip',
         uploadStatus: 200,
         uploadBody: JSON.stringify({
-          followUpFilenames: ['FU-MDPP001VIG-01-01'],
+          followUpFilenames: ['FU-MDPP001SUR-01-01'],
         }),
       })
 
-      const pending = fs.exportFollowUpPayload(findings, followUpSession, 'VIG')
+      const pending = fs.exportFollowUpPayload(findings, followUpSession, 'SUR')
 
       await vi.advanceTimersByTimeAsync(199)
       expect(fetch).not.toHaveBeenCalled()
@@ -456,15 +456,15 @@ describe('fileServices', () => {
 
     it('falls back to result.followUpFiles when uploadBody does not include names', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
-      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      const followUpSession = { summary: { specialty: 'SUR' }, responses: { 'F-1': {} } }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
         zipPath: '/tmp/followup.zip',
         uploadStatus: 200,
         uploadBody: 'ok',
-        followUpFiles: ['FU-MDPP001VIG-01-01'],
+        followUpFiles: ['FU-MDPP001SUR-01-01'],
       })
 
-      await fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')
+      await fs.exportFollowUpPayload(findings, followUpSession, 'SUR', 'loc-1')
 
       expect(fetch).toHaveBeenCalledWith('http://localhost:1880/importFollowUps', {
         method: 'POST',
@@ -472,22 +472,22 @@ describe('fileServices', () => {
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          specialtyName: 'Sistemas de Vigilancia',
-          followUpFiles: ['FU-MDPP001VIG-01-01'],
+          specialtyName: 'Vigilancia (radar)',
+          followUpFiles: ['FU-MDPP001SUR-01-01'],
         }),
       })
     })
 
     it('throws when first upload API does not return follow-up files', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
-      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      const followUpSession = { summary: { specialty: 'SUR' }, responses: { 'F-1': {} } }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
         zipPath: '/tmp/followup.zip',
         uploadStatus: 200,
         uploadBody: 'ok',
       })
 
-      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')).rejects.toThrow(
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'SUR', 'loc-1')).rejects.toThrow(
         'exportFollowUpPayload: could not export and upload follow-up payload: No follow-up files were returned by follow-up import API'
       )
     })
@@ -512,11 +512,11 @@ describe('fileServices', () => {
 
     it('throws when importFollowUps API fails', async () => {
       const findings = [{ findingId: 'F-1', locationId: 'loc-1' }]
-      const followUpSession = { summary: { specialty: 'VIG' }, responses: { 'F-1': {} } }
+      const followUpSession = { summary: { specialty: 'SUR' }, responses: { 'F-1': {} } }
       mockElectronAPI.exportFollowUpPayload.mockResolvedValue({
         zipPath: '/tmp/followup.zip',
         uploadStatus: 200,
-        uploadBody: JSON.stringify({ followUpFilenames: ['FU-MDPP001VIG-01-01'] }),
+        uploadBody: JSON.stringify({ followUpFilenames: ['FU-MDPP001SUR-01-01'] }),
       })
       vi.stubGlobal(
         'fetch',
@@ -526,16 +526,16 @@ describe('fileServices', () => {
         })
       )
 
-      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'VIG', 'loc-1')).rejects.toThrow(
+      await expect(fs.exportFollowUpPayload(findings, followUpSession, 'SUR', 'loc-1')).rejects.toThrow(
         'exportFollowUpPayload: could not export and upload follow-up payload: importFollowUps API failed with status 500'
       )
     })
 
     it('throws for missing parameters', async () => {
-      await expect(fs.exportFollowUpPayload(null, { responses: {} }, 'VIG')).rejects.toThrow(
+      await expect(fs.exportFollowUpPayload(null, { responses: {} }, 'SUR')).rejects.toThrow(
         'exportFollowUpPayload: could not export and upload follow-up payload'
       )
-      await expect(fs.exportFollowUpPayload([], null, 'VIG')).rejects.toThrow(
+      await expect(fs.exportFollowUpPayload([], null, 'SUR')).rejects.toThrow(
         'exportFollowUpPayload: could not export and upload follow-up payload'
       )
       await expect(fs.exportFollowUpPayload([], { responses: {} }, '')).rejects.toThrow(
@@ -550,7 +550,7 @@ describe('fileServices', () => {
       vi.clearAllTimers()
 
       const mockSessionSummary = {
-        specialty: 'VIG',
+        specialty: 'SUR',
         finalized: false,
         lastUpdated: new Date().toISOString(),
         generalComments: '',
@@ -581,7 +581,7 @@ describe('fileServices', () => {
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         mockSessionString,
         null,
-        'VIG',
+        'SUR',
         'session.json'
       )
     })
@@ -589,7 +589,7 @@ describe('fileServices', () => {
     it('handles errors', async () => {
       vi.clearAllTimers()
       const mockSessionSummary = {
-        specialty: 'VIG',
+        specialty: 'SUR',
         finalized: false,
         lastUpdated: new Date().toISOString(),
         generalComments: '',
@@ -622,16 +622,16 @@ describe('fileServices', () => {
   describe('follow-up session persistence', () => {
     it('loads follow-up session with required followUpType', async () => {
       const fs = createFileService()
-      const payload = { summary: { specialty: 'VIG', finalized: false }, responses: { F1: { findingId: 'F1', followUpType: 'Progress Verification' } } }
+      const payload = { summary: { specialty: 'SUR', finalized: false }, responses: { F1: { findingId: 'F1', followUpType: 'Progress Verification' } } }
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(payload))
 
-      const result = await fs.loadFollowUpSession('VIG', 'loc-001')
+      const result = await fs.loadFollowUpSession('SUR', 'loc-001')
 
       expect(result).toEqual(payload)
       expect(window.electronAPI.checkPath).toHaveBeenCalledWith(
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'followup.session.json'
       )
     })
@@ -640,7 +640,7 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockResolvedValue(false)
 
-      const result = await fs.loadFollowUpSession('VIG', 'loc-001')
+      const result = await fs.loadFollowUpSession('SUR', 'loc-001')
 
       expect(result).toBeNull()
     })
@@ -655,23 +655,23 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.getPath.mockReturnValue('/mocked/path')
       window.electronAPI.checkPath.mockResolvedValue(false)
-      const result = await fs.setSavePath('VIG')
+      const result = await fs.setSavePath('SUR')
       expect(result).toBeNull()
     })
 
     it('createDefaultPath throws error', async () => {
       const fs = createFileService()
       window.electronAPI.createDir.mockRejectedValue(new Error('fail'))
-      await expect(fs.createDefaultPath('VIG')).rejects.toThrow(
-        'createDefaultPath: could not create path VIG : fail'
+      await expect(fs.createDefaultPath('SUR')).rejects.toThrow(
+        'createDefaultPath: could not create path SUR : fail'
       )
     })
 
     it('deleteEvidence throws error', async () => {
       const fs = createFileService()
       window.electronAPI.deleteFile.mockRejectedValue(new Error('fail'))
-      await expect(fs.deleteEvidence('VIG', 'file.txt')).rejects.toThrow(
-        'deleteEvidence: could not delete evidence VIG/file.txt : fail'
+      await expect(fs.deleteEvidence('SUR', 'file.txt')).rejects.toThrow(
+        'deleteEvidence: could not delete evidence SUR/file.txt : fail'
       )
     })
 
@@ -679,8 +679,8 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockRejectedValue(new Error('fail'))
-      await expect(fs.readEvidence('VIG')).rejects.toThrow(
-        'readEvidence: could not read evidence for VIG : fail'
+      await expect(fs.readEvidence('SUR')).rejects.toThrow(
+        'readEvidence: could not read evidence for SUR : fail'
       )
     })
 
@@ -692,7 +692,7 @@ describe('fileServices', () => {
       window.electronAPI.getStats.mockResolvedValue({ size: fileSize })
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path')
 
-      const result = await fs.saveEvidence('VIG', 'file1.txt', buffer)
+      const result = await fs.saveEvidence('SUR', 'file1.txt', buffer)
 
       expect(result).toBeNull()
       expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
@@ -703,9 +703,9 @@ describe('fileServices', () => {
       window.electronAPI.checkPath.mockResolvedValueOnce(false)
       window.electronAPI.readFile.mockResolvedValue('{"specialtyName":"Test"}')
 
-      await fs.loadChecklist('VIG')
+      await fs.loadChecklist('SUR')
 
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'SUR', 'Evidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalled()
     })
 
@@ -713,28 +713,28 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockRejectedValue(new Error('path check failed'))
 
-      await expect(fs.loadChecklist('VIG')).rejects.toThrow(
-        'loadChecklist: could not load checklist for VIG : path check failed'
+      await expect(fs.loadChecklist('SUR')).rejects.toThrow(
+        'loadChecklist: could not load checklist for SUR : path check failed'
       )
     })
 
     it('loadSession returns parsed session when file exists', async () => {
       const fs = createFileService()
-      const mockSession = { summary: { specialty: 'VIG' }, responses: {} }
+      const mockSession = { summary: { specialty: 'SUR' }, responses: {} }
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(mockSession))
 
-      await fs.loadSession('VIG')
+      await fs.loadSession('SUR')
 
-      expect(window.electronAPI.checkPath).toHaveBeenCalledWith(null, 'VIG', 'session.json')
+      expect(window.electronAPI.checkPath).toHaveBeenCalledWith(null, 'SUR', 'session.json')
     })
 
     it('loadSession throws error on failure', async () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockRejectedValue(new Error('check failed'))
 
-      await expect(fs.loadSession('VIG')).rejects.toThrow(
-        'loadSession: could not load session for VIG : check failed'
+      await expect(fs.loadSession('SUR')).rejects.toThrow(
+        'loadSession: could not load session for SUR : check failed'
       )
     })
 
@@ -744,13 +744,13 @@ describe('fileServices', () => {
       const buffer = Buffer.from('audio data')
       window.electronAPI.saveFile.mockResolvedValue('/mocked/audio.webm')
 
-      const result = await fs.saveAudio('VIG', 'audio.webm', buffer)
+      const result = await fs.saveAudio('SUR', 'audio.webm', buffer)
 
       expect(result).toBe('/mocked/audio.webm')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         buffer,
         null,
-        'VIG',
+        'SUR',
         'Audio',
         'audio.webm'
       )
@@ -761,16 +761,16 @@ describe('fileServices', () => {
       // eslint-disable-next-line no-undef
       const buffer = Buffer.from('')
 
-      await expect(fs.saveAudio('VIG', 'audio.webm', buffer)).rejects.toThrow(
-        'saveAudio: could not save audio for VIG/audio.webm : Audio file is empty'
+      await expect(fs.saveAudio('SUR', 'audio.webm', buffer)).rejects.toThrow(
+        'saveAudio: could not save audio for SUR/audio.webm : Audio file is empty'
       )
     })
 
     it('saveAudio throws error for undefined buffer', async () => {
       const fs = createFileService()
 
-      await expect(fs.saveAudio('VIG', 'audio.webm', undefined)).rejects.toThrow(
-        'saveAudio: could not save audio for VIG/audio.webm : Buffer is undefined'
+      await expect(fs.saveAudio('SUR', 'audio.webm', undefined)).rejects.toThrow(
+        'saveAudio: could not save audio for SUR/audio.webm : Buffer is undefined'
       )
     })
 
@@ -778,8 +778,8 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.deleteFile.mockRejectedValue(new Error('delete failed'))
 
-      await expect(fs.deleteAudio('VIG', 'audio.webm')).rejects.toThrow(
-        'deleteAudio: could not delete audio VIG/audio.webm : delete failed'
+      await expect(fs.deleteAudio('SUR', 'audio.webm')).rejects.toThrow(
+        'deleteAudio: could not delete audio SUR/audio.webm : delete failed'
       )
     })
 
@@ -789,10 +789,10 @@ describe('fileServices', () => {
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockResolvedValue(mockAudioList)
 
-      const result = await fs.readAudio('VIG')
+      const result = await fs.readAudio('SUR')
 
       expect(result).toEqual(mockAudioList)
-      expect(window.electronAPI.listPath).toHaveBeenCalledWith(null, 'VIG', 'Audio')
+      expect(window.electronAPI.listPath).toHaveBeenCalledWith(null, 'SUR', 'Audio')
     })
 
     it('readAudio throws error', async () => {
@@ -800,8 +800,8 @@ describe('fileServices', () => {
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.listPath.mockRejectedValue(new Error('list failed'))
 
-      await expect(fs.readAudio('VIG')).rejects.toThrow(
-        'readAudio: could not read audio for VIG : list failed'
+      await expect(fs.readAudio('SUR')).rejects.toThrow(
+        'readAudio: could not read audio for SUR : list failed'
       )
     })
 
@@ -821,7 +821,7 @@ describe('fileServices', () => {
     it('saveExportFile throws error for empty content', async () => {
       const fs = createFileService()
 
-      await expect(fs.saveExportFile('', 'VIG')).rejects.toThrow(
+      await expect(fs.saveExportFile('', 'SUR')).rejects.toThrow(
         'saveExportFile: could not save file: Empty checklist detected'
       )
     })
@@ -831,15 +831,15 @@ describe('fileServices', () => {
       const csvContent = 'ref,question,comment\nREF001,Question 1,OK'
       window.electronAPI.saveFile.mockResolvedValue(undefined)
 
-      await fs.saveExportFile(csvContent, 'VIG')
+      await fs.saveExportFile(csvContent, 'SUR')
 
-      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(csvContent, null, 'VIG', 'compliance_export.csv')
+      expect(window.electronAPI.saveFile).toHaveBeenCalledWith(csvContent, null, 'SUR', 'compliance_export.csv')
     })
 
     it('loadSpecialties returns list of specialties', async () => {
       const fs = createFileService()
       const apiSpecialties = [
-        { code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { code: 'SUR', name: 'Vigilancia (radar)' },
         { code: 'COM', name: 'Comunicaciones de Radio' },
       ]
       vi.stubGlobal(
@@ -856,7 +856,7 @@ describe('fileServices', () => {
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
       expect(result).toEqual([
-        { id: 'VIG', code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { id: 'SUR', code: 'SUR', name: 'Vigilancia (radar)' },
         { id: 'COM', code: 'COM', name: 'Comunicaciones de Radio' },
       ])
       expect(result[0]).toHaveProperty('code')
@@ -873,7 +873,7 @@ describe('fileServices', () => {
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
       expect(result).toEqual([
-        { id: 'VIG', code: 'VIG', name: 'Sistemas de Vigilancia' },
+        { id: 'SUR', code: 'SUR', name: 'Vigilancia (radar)' },
         { id: 'COM', code: 'COM', name: 'Comunicaciones de Radio' },
       ])
     })
@@ -883,7 +883,7 @@ describe('fileServices', () => {
       window.electronAPI.getPath.mockReturnValue('/mocked/path')
       window.electronAPI.checkPath.mockResolvedValue(true)
 
-      const result = await fs.setSavePath('VIG')
+      const result = await fs.setSavePath('SUR')
 
       expect(result).toBe('/mocked/path')
     })
@@ -893,8 +893,8 @@ describe('fileServices', () => {
       window.electronAPI.getPath.mockReturnValue('/mocked/path')
       window.electronAPI.checkPath.mockRejectedValue(new Error('check failed'))
 
-      await expect(fs.setSavePath('VIG')).rejects.toThrow(
-        'setSavePath: could not save path VIG : check failed'
+      await expect(fs.setSavePath('SUR')).rejects.toThrow(
+        'setSavePath: could not save path SUR : check failed'
       )
     })
 
@@ -912,7 +912,7 @@ describe('fileServices', () => {
       const csvContent = 'ref,question,comment\nREF001,Question 1,OK'
       window.electronAPI.saveFile.mockRejectedValue(new Error('write failed'))
 
-      await expect(fs.saveExportFile(csvContent, 'VIG')).rejects.toThrow(
+      await expect(fs.saveExportFile(csvContent, 'SUR')).rejects.toThrow(
         'saveExportFile: could not save file: write failed'
       )
     })
@@ -945,20 +945,20 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.deleteFile.mockResolvedValue(true)
 
-      const result = await fs.deleteEvidence('VIG', 'file.txt')
+      const result = await fs.deleteEvidence('SUR', 'file.txt')
 
       expect(result).toBe(true)
-      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'VIG', 'Evidence', 'file.txt')
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'SUR', 'Evidence', 'file.txt')
     })
 
     it('deleteAudio should return deletion result', async () => {
       const fs = createFileService()
       window.electronAPI.deleteFile.mockResolvedValue(true)
 
-      const result = await fs.deleteAudio('VIG', 'audio.webm')
+      const result = await fs.deleteAudio('SUR', 'audio.webm')
 
       expect(result).toBe(true)
-      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'VIG', 'Audio', 'audio.webm')
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'SUR', 'Audio', 'audio.webm')
     })
 
     it('getSizeAndSuffix handles decimal sizes correctly', () => {
@@ -981,11 +981,11 @@ describe('fileServices', () => {
         .mockResolvedValueOnce(true) // checklist exists
         .mockResolvedValueOnce(true) // session exists
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify({
-        summary: { specialty: 'VIG', finalized: false },
+        summary: { specialty: 'SUR', finalized: false },
         responses: {}
       }))
 
-      const result = await fs.getChecklistImportState('VIG')
+      const result = await fs.getChecklistImportState('SUR')
 
       expect(result).toEqual({
         hasChecklist: true,
@@ -1000,7 +1000,7 @@ describe('fileServices', () => {
         .mockResolvedValueOnce(true) // checklist exists
         .mockResolvedValueOnce(false) // session does not exist
 
-      const result = await fs.getChecklistImportState('VIG')
+      const result = await fs.getChecklistImportState('SUR')
 
       expect(result).toEqual({
         hasChecklist: true,
@@ -1015,7 +1015,7 @@ describe('fileServices', () => {
         .mockResolvedValueOnce(false) // checklist does not exist
         .mockResolvedValueOnce(false) // session does not exist
 
-      const result = await fs.getChecklistImportState('VIG')
+      const result = await fs.getChecklistImportState('SUR')
 
       expect(result).toEqual({
         hasChecklist: false,
@@ -1057,16 +1057,16 @@ describe('fileServices', () => {
 
       parseChecklist.mockReturnValue(mockChecklist)
 
-      const result = await fs.fetchChecklistFromApi('INS1', 'VIG', {})
+      const result = await fs.fetchChecklistFromApi('INS1', 'SUR', {})
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspectionId=INS1&specialty=VIG')
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspectionId=INS1&specialty=SUR')
       expect(result).toEqual(mockChecklist)
     })
 
     it('fetchChecklistFromApi throws error for missing parameters', async () => {
       const fs = createFileService()
 
-      await expect(fs.fetchChecklistFromApi('', 'VIG', {})).rejects.toThrow(
+      await expect(fs.fetchChecklistFromApi('', 'SUR', {})).rejects.toThrow(
         'fetchChecklistFromApi: could not fetch checklist: Missing required parameters'
       )
 
@@ -1082,7 +1082,7 @@ describe('fileServices', () => {
         status: 404
       }))
 
-      await expect(fs.fetchChecklistFromApi('INS1', 'VIG', {})).rejects.toThrow(
+      await expect(fs.fetchChecklistFromApi('INS1', 'SUR', {})).rejects.toThrow(
         'fetchChecklistFromApi: could not fetch checklist: Import failed with status 404'
       )
     })
@@ -1095,10 +1095,10 @@ describe('fileServices', () => {
       }))
       parseChecklist.mockReturnValue(mockChecklist)
 
-      await fs.fetchChecklistFromApi('INS1', 'VIG', { inspectedProviderId: 'SP1', siteVisitId: 'SV1' })
+      await fs.fetchChecklistFromApi('INS1', 'SUR', { inspectedProviderId: 'SP1', siteVisitId: 'SV1' })
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:1880/checklist?inspectionId=INS1&specialty=VIG&siteVisitId=SV1&inspectedProviderId=SP1',
+        'http://localhost:1880/checklist?inspectionId=INS1&specialty=SUR&siteVisitId=SV1&inspectedProviderId=SP1',
       )
     })
 
@@ -1125,9 +1125,9 @@ describe('fileServices', () => {
 
     it('ensureSpecialtyEntry works when specialty already exists upstream', async () => {
       const fs = createFileService()
-      const result = await fs.ensureSpecialtyEntry('VIG', 'Vigilancia')
+      const result = await fs.ensureSpecialtyEntry('SUR', 'Vigilancia')
 
-      expect(result).toEqual({ code: 'VIG', name: 'Vigilancia' })
+      expect(result).toEqual({ code: 'SUR', name: 'Vigilancia' })
       expect(window.electronAPI.saveFile).not.toHaveBeenCalled()
     })
 
@@ -1157,13 +1157,13 @@ describe('fileServices', () => {
       window.electronAPI.createDir.mockResolvedValue(undefined)
       window.electronAPI.saveFile.mockResolvedValue(undefined)
 
-      await fs.saveChecklist('VIG', mockChecklist)
+      await fs.saveChecklist('SUR', mockChecklist)
 
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'VIG', 'Evidence')
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'SUR', 'Evidence')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         JSON.stringify(mockChecklist, null, 2),
         null,
-        'VIG',
+        'SUR',
         'checklist.json'
       )
     })
@@ -1175,7 +1175,7 @@ describe('fileServices', () => {
         'saveChecklist: could not save checklist: Missing required parameters'
       )
 
-      await expect(fs.saveChecklist('VIG', null)).rejects.toThrow(
+      await expect(fs.saveChecklist('SUR', null)).rejects.toThrow(
         'saveChecklist: could not save checklist: Missing required parameters'
       )
     })
@@ -1185,7 +1185,7 @@ describe('fileServices', () => {
       const mockFindings = [
         {
           schemaVersion: '1.0',
-          findingId: 'MDPP-VIG-2026-01',
+          findingId: 'MDPP-SUR-2026-01',
           locationId: 'loc-001',
         },
       ]
@@ -1200,10 +1200,10 @@ describe('fileServices', () => {
 
       parseFindings.mockReturnValue(mockFindings)
 
-      const result = await fs.fetchFindingsFromApi('VIG', 'loc-001', '0224')
+      const result = await fs.fetchFindingsFromApi('SUR', 'loc-001', '0224')
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:1880/findings/open?specialtyCode=VIG&locationCode=loc-001&inspection=0224'
+        'http://localhost:1880/findings/open?specialtyCode=SUR&locationCode=loc-001&inspection=0224'
       )
       expect(result).toEqual(mockFindings)
     })
@@ -1219,7 +1219,7 @@ describe('fileServices', () => {
         })
       )
 
-      await expect(fs.fetchFindingsFromApi('VIG', 'loc-001')).rejects.toThrow(
+      await expect(fs.fetchFindingsFromApi('SUR', 'loc-001')).rejects.toThrow(
         'fetchFindingsFromApi: could not fetch findings: Findings import failed with status 500'
       )
     })
@@ -1230,14 +1230,14 @@ describe('fileServices', () => {
       window.electronAPI.createDir.mockResolvedValue(undefined)
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path/findings.json')
 
-      const result = await fs.saveFindings('VIG', findings, 'loc-001')
+      const result = await fs.saveFindings('SUR', findings, 'loc-001')
 
       expect(result).toBe('/mocked/path/findings.json')
-      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'LOC-001_VIG')
+      expect(window.electronAPI.createDir).toHaveBeenCalledWith(null, 'LOC-001_SUR')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         JSON.stringify(findings, null, 2),
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'findings.json'
       )
     })
@@ -1250,12 +1250,12 @@ describe('fileServices', () => {
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(findings))
       parseFindings.mockReturnValue(findings)
 
-      const result = await fs.loadFindings('VIG', 'loc-001')
+      const result = await fs.loadFindings('SUR', 'loc-001')
 
       expect(result).toEqual(findings)
       expect(window.electronAPI.checkPath).toHaveBeenCalledWith(
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'findings.json'
       )
     })
@@ -1264,7 +1264,7 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockResolvedValue(false)
 
-      const result = await fs.loadFindings('VIG', 'loc-001')
+      const result = await fs.loadFindings('SUR', 'loc-001')
 
       expect(result).toBeNull()
     })
@@ -1278,7 +1278,7 @@ describe('fileServices', () => {
         JSON.stringify({ summary: { finalized: false }, responses: {} })
       )
 
-      const result = await fs.getFindingsImportState('VIG', 'loc-001')
+      const result = await fs.getFindingsImportState('SUR', 'loc-001')
 
       expect(result).toEqual({
         hasFindings: true,
@@ -1291,7 +1291,7 @@ describe('fileServices', () => {
       const fs = createFileService()
 
       const checklist = {
-        specialtyName: 'VIG',
+        specialtyName: 'SUR',
         questions: [
           {
             id: 'q1',
@@ -1320,20 +1320,20 @@ describe('fileServices', () => {
   describe('workspace scaffolding', () => {
     it('builds workspace key using location and specialty', () => {
       const fs = createFileService()
-      const key = fs.getWorkspaceKey('loc-001', 'vig')
-      expect(key).toBe('loc-001__VIG')
+      const key = fs.getWorkspaceKey('loc-001', 'sur')
+      expect(key).toBe('loc-001__SUR')
     })
 
     it('builds workspace legs with location context', () => {
       const fs = createFileService()
-      const legs = fs.getWorkspaceLegs('vig', 'loc-001')
-      expect(legs).toEqual(['LOC-001_VIG'])
+      const legs = fs.getWorkspaceLegs('sur', 'loc-001')
+      expect(legs).toEqual(['LOC-001_SUR'])
     })
 
     it('builds legacy workspace legs when location is not provided', () => {
       const fs = createFileService()
-      const legs = fs.getWorkspaceLegs('vig')
-      expect(legs).toEqual(['VIG'])
+      const legs = fs.getWorkspaceLegs('sur')
+      expect(legs).toEqual(['SUR'])
     })
 
     it('builds file and directory paths from workspace', () => {
@@ -1383,7 +1383,7 @@ describe('fileServices', () => {
 
     it('loads workspace registry when file exists', async () => {
       const fs = createFileService()
-      const registry = [{ workspaceKey: 'loc-001__VIG' }]
+      const registry = [{ workspaceKey: 'loc-001__SUR' }]
       window.electronAPI.checkPath.mockResolvedValue(true)
       window.electronAPI.readFile.mockResolvedValue(JSON.stringify(registry))
 
@@ -1400,15 +1400,15 @@ describe('fileServices', () => {
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
 
       const entry = await fs.upsertWorkspaceRegistryEntry({
-        specialtyCode: 'vig',
+        specialtyCode: 'sur',
         specialtyName: 'Vigilancia',
         locationId: 'loc-001',
         locationName: 'Location 1',
       })
 
-      expect(entry.workspaceKey).toBe('loc-001__VIG')
+      expect(entry.workspaceKey).toBe('loc-001__SUR')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
-        expect.stringContaining('loc-001__VIG'),
+        expect.stringContaining('loc-001__SUR'),
         null,
         'workspaces.json'
       )
@@ -1420,8 +1420,8 @@ describe('fileServices', () => {
       window.electronAPI.readFile.mockResolvedValue(
         JSON.stringify([
           {
-            workspaceKey: 'loc-001__VIG',
-            specialtyCode: 'VIG',
+            workspaceKey: 'loc-001__SUR',
+            specialtyCode: 'SUR',
             specialtyName: 'Vigilancia',
             locationId: 'loc-001',
             locationName: 'Location 1',
@@ -1436,7 +1436,7 @@ describe('fileServices', () => {
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
 
       await fs.upsertWorkspaceRegistryEntry({
-        specialtyCode: 'VIG',
+        specialtyCode: 'SUR',
         locationId: 'loc-001',
         checklistTouched: true,
       })
@@ -1456,7 +1456,7 @@ describe('fileServices', () => {
         JSON.stringify({ checklistTouched: true, followUpTouched: false })
       )
 
-      const result = await fs.getWorkspaceTouchedState('VIG', 'loc-001')
+      const result = await fs.getWorkspaceTouchedState('SUR', 'loc-001')
 
       expect(result).toEqual({ checklistTouched: true, followUpTouched: false })
     })
@@ -1470,12 +1470,12 @@ describe('fileServices', () => {
       window.electronAPI.createDir.mockResolvedValue(undefined)
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path')
 
-      await fs.markWorkspaceTouched('VIG', 'loc-001')
+      await fs.markWorkspaceTouched('SUR', 'loc-001')
 
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         expect.stringContaining('"checklistTouched": true'),
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'workspace.json'
       )
     })
@@ -1486,13 +1486,13 @@ describe('fileServices', () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockImplementation(async (root, ...legs) => {
         const key = legs.join('/')
-        if (key == 'LOC-001_VIG/workspace.json') return true
+        if (key == 'LOC-001_SUR/workspace.json') return true
         if (key == 'workspaces.json') return true
-        if (key == 'LOC-001_VIG/session.json') return true
-        if (key == 'LOC-001_VIG/checklist.json') return true
-        if (key == 'LOC-001_VIG/Evidence') return true
-        if (key == 'LOC-001_VIG/Audio') return true
-        if (key == 'LOC-001_VIG/followup.session.json') return true
+        if (key == 'LOC-001_SUR/session.json') return true
+        if (key == 'LOC-001_SUR/checklist.json') return true
+        if (key == 'LOC-001_SUR/Evidence') return true
+        if (key == 'LOC-001_SUR/Audio') return true
+        if (key == 'LOC-001_SUR/followup.session.json') return true
         return false
       })
       window.electronAPI.readFile
@@ -1502,8 +1502,8 @@ describe('fileServices', () => {
         .mockResolvedValueOnce(
           JSON.stringify([
             {
-              workspaceKey: 'loc-001__VIG',
-              specialtyCode: 'VIG',
+              workspaceKey: 'loc-001__SUR',
+              specialtyCode: 'SUR',
               locationId: 'loc-001',
               checklistTouched: true,
               checklistUploaded: true,
@@ -1522,23 +1522,23 @@ describe('fileServices', () => {
       window.electronAPI.createDir.mockResolvedValue(undefined)
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspace.json')
 
-      const result = await fs.removeInspectionSession('VIG', 'loc-001')
+      const result = await fs.removeInspectionSession('SUR', 'loc-001')
 
       expect(result).toEqual({ removed: true, workspaceDeleted: false })
-      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'session.json')
-      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'checklist.json')
-      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Evidence')
-      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'Audio')
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_SUR', 'session.json')
+      expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(null, 'LOC-001_SUR', 'checklist.json')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_SUR', 'Evidence')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_SUR', 'Audio')
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         expect.stringContaining('"checklistUploaded": false'),
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'workspace.json'
       )
       expect(window.electronAPI.saveFile).toHaveBeenCalledWith(
         expect.stringContaining('"checklistPresent": false'),
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'workspace.json'
       )
     })
@@ -1546,13 +1546,13 @@ describe('fileServices', () => {
     it('blocks inspection session removal when touched and not uploaded', async () => {
       const fs = createFileService()
       window.electronAPI.checkPath.mockImplementation(async (root, ...legs) => {
-        return legs.join('/') == 'LOC-001_VIG/workspace.json'
+        return legs.join('/') == 'LOC-001_SUR/workspace.json'
       })
       window.electronAPI.readFile.mockResolvedValue(
         JSON.stringify({ checklistTouched: true, checklistUploaded: false })
       )
 
-      await expect(fs.removeInspectionSession('VIG', 'loc-001')).rejects.toThrow(
+      await expect(fs.removeInspectionSession('SUR', 'loc-001')).rejects.toThrow(
         'Inspection session cannot be removed until it is uploaded or remains untouched'
       )
     })
@@ -1563,12 +1563,12 @@ describe('fileServices', () => {
       let hasWorkspaceFolder = true
       window.electronAPI.checkPath.mockImplementation(async (root, ...legs) => {
         const key = legs.join('/')
-        if (key == 'LOC-001_VIG/workspace.json') return true
+        if (key == 'LOC-001_SUR/workspace.json') return true
         if (key == 'workspaces.json') return true
-        if (key == 'LOC-001_VIG/followup.session.json') return hasFollowUpSession
-        if (key == 'LOC-001_VIG/FollowUpEvidence') return true
-        if (key == 'LOC-001_VIG/session.json') return false
-        if (key == 'LOC-001_VIG') return hasWorkspaceFolder
+        if (key == 'LOC-001_SUR/followup.session.json') return hasFollowUpSession
+        if (key == 'LOC-001_SUR/FollowUpEvidence') return true
+        if (key == 'LOC-001_SUR/session.json') return false
+        if (key == 'LOC-001_SUR') return hasWorkspaceFolder
         return false
       })
       window.electronAPI.readFile
@@ -1578,8 +1578,8 @@ describe('fileServices', () => {
         .mockResolvedValueOnce(
           JSON.stringify([
             {
-              workspaceKey: 'loc-001__VIG',
-              specialtyCode: 'VIG',
+              workspaceKey: 'loc-001__SUR',
+              specialtyCode: 'SUR',
               locationId: 'loc-001',
             },
           ])
@@ -1587,30 +1587,30 @@ describe('fileServices', () => {
       window.electronAPI.listPath.mockResolvedValue([{ name: 'followup_payload_2026.zip' }])
       window.electronAPI.deleteFile.mockImplementation(async (root, ...legs) => {
         const key = legs.join('/')
-        if (key == 'LOC-001_VIG/followup.session.json') {
+        if (key == 'LOC-001_SUR/followup.session.json') {
           hasFollowUpSession = false
         }
         return true
       })
       window.electronAPI.deletePath.mockImplementation(async (root, ...legs) => {
         const key = legs.join('/')
-        if (key == 'LOC-001_VIG') {
+        if (key == 'LOC-001_SUR') {
           hasWorkspaceFolder = false
         }
         return true
       })
       window.electronAPI.saveFile.mockResolvedValue('/mocked/path/workspaces.json')
 
-      const result = await fs.removeFollowUpSession('VIG', 'loc-001')
+      const result = await fs.removeFollowUpSession('SUR', 'loc-001')
 
       expect(result).toEqual({ removed: true, workspaceDeleted: true })
       expect(window.electronAPI.deleteFile).toHaveBeenCalledWith(
         null,
-        'LOC-001_VIG',
+        'LOC-001_SUR',
         'followup.session.json'
       )
-      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG', 'FollowUpEvidence')
-      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_VIG')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_SUR', 'FollowUpEvidence')
+      expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_SUR')
     })
   })
 })

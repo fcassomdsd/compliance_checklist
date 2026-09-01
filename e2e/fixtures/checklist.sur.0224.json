@@ -1,6 +1,6 @@
 {
-  "specialtyName": "Sistemas de Vigilancia",
-  "specialtyCode": "VIG",
+  "specialtyName": "Vigilancia (radar)",
+  "specialtyCode": "SUR",
   "inspection": "0224",
   "location": "Aeropuerto Internacional de las Americas",
   "locationId": "MDSD",
@@ -9,7 +9,7 @@
   "questions": [
     {
       "id": "q1",
-      "code": "VIG-0001",
+      "code": "SUR-0001",
       "topic": "General",
       "reference": {
         "normativa": {

@@ -66,9 +66,9 @@ describe('Audio Store', () => {
         { name: 'audio1.webm', URL: '/mocked/audio1.webm', count: 0 },
         { name: 'audio2.webm', URL: '/mocked/audio2.webm', count: 0 },
       ])
-      await audio.load('VIG')
+      await audio.load('SUR')
 
-      expect(mockFs.readAudio).toBeCalledWith('VIG')
+      expect(mockFs.readAudio).toBeCalledWith('SUR')
       expect(audio.files.value).toEqual({
         'audio1.webm': { URL: '/mocked/audio1.webm', count: 0 },
         'audio2.webm': { URL: '/mocked/audio2.webm', count: 0 },
@@ -77,9 +77,9 @@ describe('Audio Store', () => {
 
     it('handles case when no files are read', async () => {
       mockFs.readAudio.mockResolvedValue([])
-      await audio.load('VIG')
+      await audio.load('SUR')
 
-      expect(mockFs.readAudio).toBeCalledWith('VIG')
+      expect(mockFs.readAudio).toBeCalledWith('SUR')
       expect(audio.files.value).toEqual({})
     })
 
@@ -87,7 +87,7 @@ describe('Audio Store', () => {
       mockFs.readAudio.mockRejectedValue(new Error('Directory not found'))
       const consoleSpy = vi.spyOn(console, 'log')
 
-      await audio.load('VIG')
+      await audio.load('SUR')
 
       expect(consoleSpy).toHaveBeenCalledWith('audioStore.load: Directory not found')
       expect(audio.files.value).toEqual({})
@@ -118,27 +118,27 @@ describe('Audio Store', () => {
 
     test('when file is new and not in files object', async () => {
       const buffer = new ArrayBuffer(8)
-      await audio.add('VIG', 'audio1.webm', buffer)
+      await audio.add('SUR', 'audio1.webm', buffer)
 
-      expect(mockFs.saveAudio).toBeCalledWith('VIG', 'audio1.webm', buffer)
+      expect(mockFs.saveAudio).toBeCalledWith('SUR', 'audio1.webm', buffer)
       expect(mockFs.saveAudio).toHaveReturned('/mocked/audio1.webm')
       expect(audio.files.value['audio1.webm']).toEqual({ URL: '/mocked/audio1.webm', count: 0 })
     })
 
     test('when file exists and in files object', async () => {
       const buffer = new ArrayBuffer(8)
-      await audio.add('VIG', 'exists.webm', buffer)
+      await audio.add('SUR', 'exists.webm', buffer)
 
-      expect(mockFs.saveAudio).toBeCalledWith('VIG', 'exists.webm', buffer)
+      expect(mockFs.saveAudio).toBeCalledWith('SUR', 'exists.webm', buffer)
       expect(mockFs.saveAudio).toHaveReturned(null)
       expect(audio.files.value['exists.webm']).toEqual({ URL: '/mocked/exists.webm', count: 1 })
     })
 
     test('when file exists but has been updated', async () => {
       const buffer = new ArrayBuffer(8)
-      await audio.add('VIG', 'updated.webm', buffer)
+      await audio.add('SUR', 'updated.webm', buffer)
 
-      expect(mockFs.saveAudio).toBeCalledWith('VIG', 'updated.webm', buffer)
+      expect(mockFs.saveAudio).toBeCalledWith('SUR', 'updated.webm', buffer)
       expect(mockFs.saveAudio).toHaveReturned('/mocked/updated.webm')
       expect(audio.files.value['updated.webm']).toEqual({ URL: '/mocked/updated.webm', count: 1 })
     })
@@ -146,9 +146,9 @@ describe('Audio Store', () => {
     test('when file doesnt exist but is in files object', async () => {
       // shouldn't happen.  Somebody must have erased it while app was running.
       const buffer = new ArrayBuffer(8)
-      await audio.add('VIG', 'notOnDisk.webm', buffer)
+      await audio.add('SUR', 'notOnDisk.webm', buffer)
 
-      expect(mockFs.saveAudio).toBeCalledWith('VIG', 'notOnDisk.webm', buffer)
+      expect(mockFs.saveAudio).toBeCalledWith('SUR', 'notOnDisk.webm', buffer)
       expect(mockFs.saveAudio).toHaveReturned('/mocked/notOnDisk.webm')
       expect(audio.files.value['notOnDisk.webm']).toEqual({
         URL: '/mocked/notOnDisk.webm',
@@ -160,11 +160,11 @@ describe('Audio Store', () => {
       // shouldn't happen.  File was copied while running.  This is a problem
       const buffer = new ArrayBuffer(8)
 
-      await expect(audio.add('VIG', 'unaccounted.webm', buffer)).rejects.toThrow(
+      await expect(audio.add('SUR', 'unaccounted.webm', buffer)).rejects.toThrow(
         'audioStore.add: could not add audio: audio.add: detected untracked file: unaccounted.webm'
       )
 
-      expect(mockFs.saveAudio).toBeCalledWith('VIG', 'unaccounted.webm', buffer)
+      expect(mockFs.saveAudio).toBeCalledWith('SUR', 'unaccounted.webm', buffer)
     })
   })
 
@@ -201,7 +201,7 @@ describe('Audio Store', () => {
       }
       mockFs.deleteAudio.mockResolvedValue(true)
 
-      await audio.subtract('VIG', 'audio1.webm')
+      await audio.subtract('SUR', 'audio1.webm')
 
       expect(audio.files.value['audio1.webm'].count).toBe(2)
       expect(mockFs.deleteAudio).not.toHaveBeenCalled()
@@ -213,9 +213,9 @@ describe('Audio Store', () => {
       }
       mockFs.deleteAudio.mockResolvedValue(true)
 
-      await audio.subtract('VIG', 'audio1.webm')
+      await audio.subtract('SUR', 'audio1.webm')
 
-      expect(mockFs.deleteAudio).toHaveBeenCalledWith('VIG', 'audio1.webm')
+      expect(mockFs.deleteAudio).toHaveBeenCalledWith('SUR', 'audio1.webm')
       expect(audio.files.value['audio1.webm']).toBeUndefined()
     })
 
@@ -225,7 +225,7 @@ describe('Audio Store', () => {
       }
       mockFs.deleteAudio.mockRejectedValue(new Error('Delete failed'))
 
-      await expect(audio.subtract('VIG', 'audio1.webm')).rejects.toThrow('Delete failed')
+      await expect(audio.subtract('SUR', 'audio1.webm')).rejects.toThrow('Delete failed')
 
       // File should still be in store since deletion failed
       expect(audio.files.value['audio1.webm']).toBeDefined()
@@ -236,7 +236,7 @@ describe('Audio Store', () => {
       mockFs.deleteAudio.mockResolvedValue(true)
 
       // Should throw error if file doesn't exist
-      await expect(audio.subtract('VIG', 'nonexistent.webm')).rejects.toThrow()
+      await expect(audio.subtract('SUR', 'nonexistent.webm')).rejects.toThrow()
       expect(mockFs.deleteAudio).not.toHaveBeenCalled()
     })
   })
