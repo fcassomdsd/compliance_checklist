@@ -742,7 +742,7 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP001-SUR-01',
+            findingId: 'H-MDPPI0001-SUR-001',
             domain: 'SUR',
             providerId: 'provider-1',
             locationId: 'loc-1',
@@ -755,8 +755,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-SUR-01': {
-            findingId: 'MDPP001-SUR-01',
+          'H-MDPPI0001-SUR-001': {
+            findingId: 'H-MDPPI0001-SUR-001',
             followUpType: 'Closure Verification',
             percentComplete: 100,
             effectivenessConfirmed: true,
@@ -802,7 +802,7 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP001-SUR-01',
+            findingId: 'H-MDPPI0001-SUR-001',
             domain: 'SUR',
             providerId: 'provider-1',
             locationId: 'loc-1',
@@ -815,8 +815,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-SUR-01': {
-            findingId: 'MDPP001-SUR-01',
+          'H-MDPPI0001-SUR-001': {
+            findingId: 'H-MDPPI0001-SUR-001',
             followUpType: 'Progress Verification',
             percentComplete: 10,
             effectivenessConfirmed: null,
@@ -845,7 +845,7 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP001-SUR-02',
+            findingId: 'H-MDPPI0001-SUR-002',
             domain: 'SUR',
             providerId: 'provider-1',
             locationId: 'MDPP',
@@ -859,7 +859,7 @@ describe('ipcHandles', () => {
         summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           orphan_key: {
-            findingId: 'MDPP001-SUR-02',
+            findingId: 'H-MDPPI0001-SUR-002',
             followUpType: 'Progress Verification',
             percentComplete: 20,
             effectivenessConfirmed: null,
@@ -891,7 +891,7 @@ describe('ipcHandles', () => {
 
       const findings = [
         {
-          findingId: 'MDPP001-SUR-02',
+          findingId: 'H-MDPPI0001-SUR-002',
           domain: 'SUR',
           providerId: 'provider-1',
           locationId: 'MDPP',
@@ -903,8 +903,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-SUR-02': {
-            findingId: 'MDPP001-SUR-02',
+          'H-MDPPI0001-SUR-002': {
+            findingId: 'H-MDPPI0001-SUR-002',
             followUpType: 'Progress Verification',
             percentComplete: 5,
             effectivenessConfirmed: null,
@@ -936,7 +936,7 @@ describe('ipcHandles', () => {
 
       const findings = [
         {
-          findingId: 'MDPP001-SUR-03',
+          findingId: 'H-MDPPI0001-SUR-003',
           specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
           providerId: 'provider-1',
           locationId: 'MDPP',
@@ -949,8 +949,8 @@ describe('ipcHandles', () => {
       const followUpSession = {
         summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-SUR-03': {
-            findingId: 'MDPP001-SUR-03',
+          'H-MDPPI0001-SUR-003': {
+            findingId: 'H-MDPPI0001-SUR-003',
             followUpType: 'Progress Verification',
             percentComplete: 80,
             effectivenessConfirmed: null,
