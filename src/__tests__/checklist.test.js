@@ -5,15 +5,15 @@ import { parseChecklist } from '../utils/checklist'
 describe('checklist.js', () => {
   it('parses a valid checklist object successfully', async () => {
     const validJson = JSON.stringify({
-      specialtyName: 'VIG',
-      specialtyCode: 'VIG',
+      specialtyName: 'SUR',
+      specialtyCode: 'SUR',
       locationName: 'Location 1',
       inspection: '0224',
       startDate: '2024-01-01',
       questions: [
         {
           id: '1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: {
             normativa: {
@@ -36,7 +36,7 @@ describe('checklist.js', () => {
 
   it('throws an error for an invalid checklist object', async () => {
     const invalidJson = JSON.stringify({
-      specialtyName: 'VIG',
+      specialtyName: 'SUR',
       questions: [
         {
           id: '1',
@@ -57,11 +57,11 @@ describe('checklist.js', () => {
 
   it('parses a checklist with empty normativa object', async () => {
     const validJson = JSON.stringify({
-      specialtyName: 'VIG',
+      specialtyName: 'SUR',
       questions: [
         {
           id: '1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: { normativa: {}, guidance: 'GM only text' },
           question: 'Question 1',
@@ -75,8 +75,8 @@ describe('checklist.js', () => {
 
   it('parses a checklist with providerName and new top-level fields', async () => {
     const validJson = JSON.stringify({
-      specialtyName: 'VIG',
-      specialtyCode: 'VIG',
+      specialtyName: 'SUR',
+      specialtyCode: 'SUR',
       specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
       inspection: 'MDPP-2026-01',
       inspectionId: 'abc123',
@@ -90,7 +90,7 @@ describe('checklist.js', () => {
       questions: [
         {
           id: '1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: {
             normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Text', ICAOref: 'A10' },
@@ -106,7 +106,7 @@ describe('checklist.js', () => {
     expect(result.providerId).toBe('prov789')
     expect(result.inspectionId).toBe('abc123')
     expect(result.endDate).toBe('2026-03-26')
-    expect(result.specialtyCode).toBe('VIG')
+    expect(result.specialtyCode).toBe('SUR')
     expect(result.specialtyId).toBe('a01k0f67dskef2a475yzd8a5dxd')
     expect(result.locationName).toBe('Aeropuerto Internacional Gregorio Luperon')
     expect(result.locationCode).toBe('MDPP')
@@ -114,14 +114,14 @@ describe('checklist.js', () => {
 
   it('parses a checklist with location alias fields', async () => {
     const validJson = JSON.stringify({
-      specialtyName: 'VIG',
-      specialtyCode: 'VIG',
+      specialtyName: 'SUR',
+      specialtyCode: 'SUR',
       location: 'Aeropuerto Internacional de las Americas',
       locationIcao: 'MDSD',
       questions: [
         {
           id: '1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: { normativa: {}, guidance: 'GM only text' },
           question: 'Question 1',
@@ -137,31 +137,31 @@ describe('checklist.js', () => {
 
   it('parses a checklist question with priorFindingId', async () => {
     const validJson = JSON.stringify({
-      specialtyName: 'VIG',
+      specialtyName: 'SUR',
       questions: [
         {
           id: '1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: { normativa: {}, guidance: 'GM only text' },
           question: 'Question 1',
           verification: 'Verification 1',
-          priorFindingId: 'MDPP001-VIG-01',
+          priorFindingId: 'MDPP001-SUR-01',
         },
       ],
     })
 
     const result = parseChecklist(validJson)
-    expect(result.questions[0].priorFindingId).toBe('MDPP001-VIG-01')
+    expect(result.questions[0].priorFindingId).toBe('MDPP001-SUR-01')
   })
 
   it('parses a checklist question with riskLevel', async () => {
     const validJson = JSON.stringify({
-      specialtyName: 'VIG',
+      specialtyName: 'SUR',
       questions: [
         {
           id: '1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: { normativa: {}, guidance: 'GM only text' },
           question: 'Question 1',

@@ -28,7 +28,7 @@ describe('ChecklistTable.vue', () => {
         questions: [
           {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1' }, guidance: 'GM 1' },
             question: 'Question 1?',
@@ -36,7 +36,7 @@ describe('ChecklistTable.vue', () => {
           },
           {
             id: 'checklist-2',
-            code: 'VIG-0002',
+            code: 'SUR-0002',
             topic: 'Topic 1',
             reference: { normativa: {}, guidance: 'GM 2' },
             question: 'Question 2?',
@@ -44,7 +44,7 @@ describe('ChecklistTable.vue', () => {
           },
           {
             id: 'checklist-3',
-            code: 'VIG-0003',
+            code: 'SUR-0003',
             topic: 'Topic 2',
             reference: { normativa: { reglamento: 'RAD 20', articulo: '20.1' }, guidance: 'GM 3' },
             question: 'Question 3?',
@@ -58,9 +58,9 @@ describe('ChecklistTable.vue', () => {
 
     mockSession = {
       responses: {
-        'VIG-0001': { compliance: 'Compliant', id: 'checklist-1', code: 'VIG-0001' },
-        'VIG-0002': { compliance: 'Non-Compliant', id: 'checklist-2', code: 'VIG-0002' },
-        'VIG-0003': { compliance: 'Non-Compliant', id: 'checklist-3', code: 'VIG-0003' },
+        'SUR-0001': { compliance: 'Compliant', id: 'checklist-1', code: 'SUR-0001' },
+        'SUR-0002': { compliance: 'Non-Compliant', id: 'checklist-2', code: 'SUR-0002' },
+        'SUR-0003': { compliance: 'Non-Compliant', id: 'checklist-3', code: 'SUR-0003' },
       },
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
@@ -110,46 +110,46 @@ describe('ChecklistTable.vue', () => {
     const rows = wrapper.findAllComponents(ChecklistRow)
     expect(rows[0].props()).toEqual({
       newTopic: true,
-      questionCode: 'VIG-0001',
+      questionCode: 'SUR-0001',
       row: {
         id: 'checklist-1',
-        code: 'VIG-0001',
+        code: 'SUR-0001',
         topic: 'Topic 1',
         reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1' }, guidance: 'GM 1' },
         question: 'Question 1?',
         verification: 'Verify 1',
       },
-      session: { compliance: 'Compliant', id: 'checklist-1', code: 'VIG-0001' },
+      session: { compliance: 'Compliant', id: 'checklist-1', code: 'SUR-0001' },
       readOnly: false,
       linkedFindingId: '',
     })
     expect(rows[1].props()).toEqual({
       newTopic: false,
-      questionCode: 'VIG-0002',
+      questionCode: 'SUR-0002',
       row: {
         id: 'checklist-2',
-        code: 'VIG-0002',
+        code: 'SUR-0002',
         topic: 'Topic 1',
         reference: { normativa: {}, guidance: 'GM 2' },
         question: 'Question 2?',
         verification: 'Verify 2',
       },
-      session: { compliance: 'Non-Compliant', id: 'checklist-2', code: 'VIG-0002' },
+      session: { compliance: 'Non-Compliant', id: 'checklist-2', code: 'SUR-0002' },
       readOnly: false,
       linkedFindingId: '',
     })
     expect(rows[2].props()).toEqual({
       newTopic: true,
-      questionCode: 'VIG-0003',
+      questionCode: 'SUR-0003',
       row: {
         id: 'checklist-3',
-        code: 'VIG-0003',
+        code: 'SUR-0003',
         topic: 'Topic 2',
         reference: { normativa: { reglamento: 'RAD 20', articulo: '20.1' }, guidance: 'GM 3' },
         question: 'Question 3?',
         verification: 'Verify 3',
       },
-      session: { compliance: 'Non-Compliant', id: 'checklist-3', code: 'VIG-0003' },
+      session: { compliance: 'Non-Compliant', id: 'checklist-3', code: 'SUR-0003' },
       readOnly: false,
       linkedFindingId: '',
     })
@@ -198,7 +198,7 @@ describe('ChecklistTable.vue', () => {
   })
 
   it('handles missing session data for a row', () => {
-    mockSession.responses = { 'VIG-0001': { compliance: 'Compliant' } } // Only session for first row
+    mockSession.responses = { 'SUR-0001': { compliance: 'Compliant' } } // Only session for first row
     wrapper = mount(ChecklistTable, {
       global: {
         plugins: [pinia],

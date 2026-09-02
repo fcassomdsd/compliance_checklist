@@ -263,8 +263,8 @@ describe('pdfGenerator', () => {
 
       // New header format: locationName replaces location, locationCode is present
       const mockChecklistData = {
-        specialtyName: 'Sistemas de Vigilancia',
-        specialtyCode: 'VIG',
+        specialtyName: 'Vigilancia (radar)',
+        specialtyCode: 'SUR',
         inspection: 'MDPP-2026-01',
         inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
         locationName: 'Aeropuerto Internacional Gregorio Luperon',
@@ -279,7 +279,7 @@ describe('pdfGenerator', () => {
 
       const mockSessionData = {
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2026-03-25T10:00:00Z',
           generalComments: '',

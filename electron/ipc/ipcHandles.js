@@ -75,7 +75,7 @@ const checklistSchema = {
         inspectionId: { type: 'string' },
         inspectionCode: {
           type: 'string',
-          pattern: '^[A-Z0-9]{4}-\\d{3}$',
+          pattern: '^[A-Z0-9]{4}-[A-Z]-\\d{4}$',
         },
         scope: { type: 'string' },
         locationId: { type: 'string' },
@@ -87,7 +87,7 @@ const checklistSchema = {
         specialtyName: { type: 'string' },
         checklistId: {
           type: 'string',
-          pattern: '^CHK-[A-Z0-9]{7}-[A-Z0-9]{3,6}$',
+          pattern: '^LV-[A-Z0-9]{4}[A-Z]\\d{4}-[A-Z]{3,4}$',
         },
         providerId: { type: 'string' },
         providerName: { type: 'string' },
@@ -182,7 +182,7 @@ const findingSchema = {
         contentType: { type: 'string' },
         findingId: {
           type: 'string',
-          pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
+          pattern: '^H-[A-Z0-9]{4}[A-Z]\\d{4}-[A-Z]{3,4}-\\d{3}$',
         },
         specialtyId: { type: 'string' },
         specialtyCode: { type: 'string' },
@@ -249,7 +249,7 @@ const findingSchema = {
           properties: {
             capId: {
               type: 'string',
-              pattern: '^CA-([A-Z0-9]{4}[0-9]{3})([A-Z0-9]{3,6})-([0-9]{2})-([0-9]{2})$'
+              pattern: '^P-([A-Z0-9]{4}[A-Z]\\d{4})-([A-Z]{3,4})(\\d{3})-(\\d{2})$'
             },
             proposedAction: { type: 'string' },
             responsibleEntity: { type: 'string' },
@@ -323,11 +323,11 @@ const followUpReportSchema = {
         contentType: { type: 'string' },
         followUpId: {
           type: 'string',
-          pattern: '^FU-[A-Z0-9]{7}[A-Z0-9]{3,6}-\\d{2}-\\d{6}$',
+          pattern: '^S-([A-Z0-9]{4}[A-Z]\\d{4})-([A-Z]{3,4})(\\d{3})-(\\d{2})$',
         },
         findingId: {
           type: 'string',
-          pattern: '^[A-Z0-9]{7}-[A-Z0-9]{3,6}-\\d{2}$',
+          pattern: '^H-[A-Z0-9]{4}[A-Z]\\d{4}-[A-Z]{3,4}-\\d{3}$',
         },
         specialtyId: { type: 'string' },
         specialtyCode: { type: 'string' },
@@ -441,26 +441,30 @@ const normalizeFindingLevel = (value) => {
   return 'Non-Compliance'
 }
 
+// Activity code compact form: ICAO(4) + type letter(1) + sequence(4) = 9 chars.
 const compactInspectionCode = (inspectionCode = '') =>
   sanitizeUpperAlnum(inspectionCode)
-    .slice(0, 7)
-    .padEnd(7, 'X')
+    .slice(0, 9)
+    .padEnd(9, 'X')
 
-const normalizeInspectionSequence = (rawValue, fallback = '001') => {
+const normalizeInspectionSequence = (rawValue, fallback = '0001') => {
   const digits = String(rawValue || '').replace(/\D/g, '')
-  const seq = digits.slice(-3) || fallback
-  return seq.padStart(3, '0').slice(-3)
+  const seq = digits.slice(-4) || fallback
+  return seq.padStart(4, '0').slice(-4)
 }
 
+// checklistObj.inspection carries the Inspection/Activity code, e.g.
+// "AV-MDPP-I-0002". compliance_import's inspectionCode field expects the
+// same value with the "AV-" prefix stripped: "MDPP-I-0002".
 const inferInspectionCode = (checklistObj) => {
   const existing = safeString(checklistObj?.inspection)
-  if (/^[A-Z0-9]{4}-\d{3}$/.test(existing)) {
-    return existing
-  }
 
-  const legacyMatch = existing.match(/^([A-Z0-9]{4})-(\d{4})-(\d{2})$/)
-  if (legacyMatch) {
-    return `${legacyMatch[1]}-${legacyMatch[3].padStart(3, '0')}`
+  const activityMatch = existing.match(/^AV-([A-Z0-9]{4})-([A-Z])-(\d{4})$/)
+  if (activityMatch) {
+    return `${activityMatch[1]}-${activityMatch[2]}-${activityMatch[3]}`
+  }
+  if (/^[A-Z0-9]{4}-[A-Z]-\d{4}$/.test(existing)) {
+    return existing
   }
 
   const locationToken =
@@ -472,11 +476,11 @@ const inferInspectionCode = (checklistObj) => {
     )
       .slice(0, 4)
       .padEnd(4, 'X')
-  const seq3 = normalizeInspectionSequence(
+  const seq4 = normalizeInspectionSequence(
     checklistObj?.inspectionNumber || checklistObj?.inspection,
-    '001'
+    '0001'
   )
-  return `${locationToken}-${seq3}`
+  return `${locationToken}-I-${seq4}`
 }
 
 const inferSpecialtyCode = (checklistObj, specialty) => {
@@ -500,7 +504,7 @@ const inferDomainName = (checklistObj, specialty, specialtyCode) => {
 }
 
 const inferChecklistId = (inspectionCode, domainCode) => {
-  return `CHK-${compactInspectionCode(inspectionCode)}-${domainCode}`
+  return `LV-${compactInspectionCode(inspectionCode)}-${domainCode}`
 }
 
 const inferItemCode = (row, domainCode, index) => {
@@ -732,7 +736,7 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
       schemaVersion: '1.0',
       finding: {
         contentType: 'Finding',
-        findingId: `${inspectionCompact}-${specialtyCode}-${String(findingNumber).padStart(2, '0')}`,
+        findingId: `H-${inspectionCompact}-${specialtyCode}-${String(findingNumber).padStart(3, '0')}`,
         providerId: checklistPayload?.checklist?.providerId || '',
         providerName: checklistPayload?.checklist?.providerName || safeString(checklistObj?.providerName),
         locationId: checklistPayload?.checklist?.locationId || '',

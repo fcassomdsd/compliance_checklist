@@ -58,9 +58,9 @@ describe('Follow Up Store', () => {
       responses: { F1: { findingId: 'F1', percentComplete: 60 } },
     })
 
-    await store.loadFollowUpSession('VIG', 'loc-001')
+    await store.loadFollowUpSession('SUR', 'loc-001')
 
-    expect(store.summary.value.specialty).toBe('VIG')
+    expect(store.summary.value.specialty).toBe('SUR')
     expect(store.responses.F1.percentComplete).toBe(60)
     expect(mockToast.success).toHaveBeenCalledWith('Follow-up session loaded')
   })
@@ -68,21 +68,21 @@ describe('Follow Up Store', () => {
   it('creates a new follow-up session when one does not exist', async () => {
     mockFs.loadFollowUpSession.mockResolvedValue(null)
 
-    await store.loadFollowUpSession('VIG', 'loc-001')
+    await store.loadFollowUpSession('SUR', 'loc-001')
 
     expect(store.summary.value.finalized).toBe(false)
     expect(mockToast.info).toHaveBeenCalledWith('New follow-up session created')
   })
 
   it('updates follow-up responses and marks workspace touched', async () => {
-    store.summary.value.specialty = 'VIG'
+    store.summary.value.specialty = 'SUR'
     store.context.value.locationId = 'loc-001'
 
     store.updateFollowUp('F1', 'percentComplete', 100)
 
     expect(store.responses.F1.percentComplete).toBe(100)
     expect(mockFs.saveFollowUpSession).toHaveBeenCalled()
-    expect(mockFs.markWorkspaceTouched).toHaveBeenCalledWith('VIG', 'loc-001', 'followUpTouched')
+    expect(mockFs.markWorkspaceTouched).toHaveBeenCalledWith('SUR', 'loc-001', 'followUpTouched')
   })
 
   it('normalizes malformed nested follow-up sessions', async () => {
@@ -104,7 +104,7 @@ describe('Follow Up Store', () => {
       },
     })
 
-    await store.loadFollowUpSession('VIG', 'loc-001')
+    await store.loadFollowUpSession('SUR', 'loc-001')
 
     expect(store.responses.summary).toBeUndefined()
     expect(store.responses.responses).toBeUndefined()
@@ -118,7 +118,7 @@ describe('Follow Up Store', () => {
   })
 
   it('finalizes follow-up session and persists it', async () => {
-    store.summary.value.specialty = 'VIG'
+    store.summary.value.specialty = 'SUR'
     store.context.value.locationId = 'loc-001'
 
     await store.finalize()
@@ -157,7 +157,7 @@ describe('Follow Up Store', () => {
       },
     })
 
-    await store.loadFollowUpSession('VIG', 'loc-001')
+    await store.loadFollowUpSession('SUR', 'loc-001')
 
     expect(store.summary.value.generalComments).toBe('')
     expect(store.responses.F2).toEqual({
@@ -175,7 +175,7 @@ describe('Follow Up Store', () => {
 
   it('shows toast when markWorkspaceTouched fails', async () => {
     mockFs.markWorkspaceTouched.mockRejectedValue(new Error('touch failed'))
-    store.summary.value.specialty = 'VIG'
+    store.summary.value.specialty = 'SUR'
     store.context.value.locationId = 'loc-001'
 
     store.updateFollowUp('F1', 'percentComplete', 25)

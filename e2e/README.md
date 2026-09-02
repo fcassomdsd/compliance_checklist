@@ -48,14 +48,14 @@ npm run e2e:headed
 
 1. app launch in Electron
 2. opening import modal
-3. inspection import (`0224`, `VIG`)
+3. inspection import (`0224`, `SUR`)
 4. checklist table render
 5. workspace selection update
 
 ### 2) Follow-up journey (`electron.followup.spec.mjs`)
 
 1. switch to follow-up mode
-2. import findings (`MDSD`, `VIG`)
+2. import findings (`MDSD`, `SUR`)
 3. verify follow-up table render
 
 ### 3) Upload journey (`electron.upload.spec.mjs`)

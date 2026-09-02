@@ -46,7 +46,7 @@ describe('FollowUpTable.vue', () => {
     vi.mocked(useToast).mockReturnValue(mockToast)
 
     mockFollowUpStore = {
-      summary: { finalized: false, specialty: 'VIG' },
+      summary: { finalized: false, specialty: 'SUR' },
       context: { locationId: 'loc-001' },
       responses: {},
       updateFollowUp: vi.fn((findingId, field, value) => {
@@ -102,7 +102,7 @@ describe('FollowUpTable.vue', () => {
         dateIssued: '2026-04-01',
         resolutionDeadline: '2099-05-01',
         correctiveAction: {
-          capId: 'CA-ABCD001VIG-01-01',
+          capId: 'CA-ABCD001SUR-01-01',
           dueDate: '2026-05-12',
         },
       },
@@ -121,7 +121,7 @@ describe('FollowUpTable.vue', () => {
         dateIssued: '2026-04-01',
         resolutionDeadline: '2099-05-01',
         correctiveAction: {
-          capId: 'CA-ABCD001VIG-01-01',
+          capId: 'CA-ABCD001SUR-01-01',
           proposedAction: 'Replace module',
           responsibleEntity: 'Ops',
           dueDate: '2026-05-12',
@@ -137,7 +137,7 @@ describe('FollowUpTable.vue', () => {
     await wrapper.find('.cap-badge').trigger('click')
 
     expect(wrapper.find('.cap-modal').exists()).toBe(true)
-    expect(wrapper.text()).toContain('CA-ABCD001VIG-01-01')
+    expect(wrapper.text()).toContain('CA-ABCD001SUR-01-01')
     expect(wrapper.text()).toContain('Replace module')
   })
 
@@ -175,7 +175,7 @@ describe('FollowUpTable.vue', () => {
 
     await fileInput.trigger('change')
 
-    expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', file, 'loc-001', 'followUp')
+    expect(mockEvidenceStore.add).toHaveBeenCalledWith('SUR', file, 'loc-001', 'followUp')
     expect(mockEvidenceStore.addCount).toHaveBeenCalledWith('proof.jpg')
     expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'evidence', [{ name: 'proof.jpg' }])
   })
@@ -196,7 +196,7 @@ describe('FollowUpTable.vue', () => {
     const removeButton = wrapper.find('input[type="image"]')
     await removeButton.trigger('click')
 
-    expect(mockEvidenceStore.subtract).toHaveBeenCalledWith('VIG', 'proof.jpg', 'loc-001', 'followUp')
+    expect(mockEvidenceStore.subtract).toHaveBeenCalledWith('SUR', 'proof.jpg', 'loc-001', 'followUp')
     expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'evidence', [])
   })
 

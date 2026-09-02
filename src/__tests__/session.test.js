@@ -7,7 +7,7 @@ describe('session.js', () => {
     it('parses a valid session object successfully', async () => {
       const validJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
@@ -19,7 +19,7 @@ describe('session.js', () => {
     it('parses a valid session object with responses successfully', async () => {
       const validJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
           locationId: 'MDPP',
@@ -40,14 +40,14 @@ describe('session.js', () => {
     it('parses a valid session object with item-code response keys successfully', async () => {
       const validJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
         responses: {
-          'VIG-0054': {
+          'SUR-0054': {
             id: 'q1',
-            code: 'VIG-0054',
+            code: 'SUR-0054',
             compliance: 'Compliant',
             comments: 'Test comments',
             evidence: [{ name: 'file1.txt' }, { name: 'file2.txt' }],
@@ -56,13 +56,13 @@ describe('session.js', () => {
       })
       const result = await parseSession(validJson)
       expect(result).toEqual(JSON.parse(validJson))
-      expect(result.responses['VIG-0054'].code).toBe('VIG-0054')
+      expect(result.responses['SUR-0054'].code).toBe('SUR-0054')
     })
 
     it('parses a valid session object with audio recordings', async () => {
       const validJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
@@ -97,14 +97,14 @@ describe('session.js', () => {
     it('parses a valid session object with non-conformity details risk level', async () => {
       const validJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
         responses: {
-          'VIG-0001': {
+          'SUR-0001': {
             id: '1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             compliance: 'Non-Compliant',
             nonConformityDetails: {
               description: 'Issue description',
@@ -117,9 +117,9 @@ describe('session.js', () => {
       })
 
       const result = await parseSession(validJson)
-      expect(result.responses['VIG-0001'].nonConformityDetails.riskLevel).toBe('Critical')
-      expect(result.responses['VIG-0001'].nonConformityDetails.findingLevel).toBe('Recommendation')
-      expect(result.responses['VIG-0001'].nonConformityDetails.pendingReview).toBe(true)
+      expect(result.responses['SUR-0001'].nonConformityDetails.riskLevel).toBe('Critical')
+      expect(result.responses['SUR-0001'].nonConformityDetails.findingLevel).toBe('Recommendation')
+      expect(result.responses['SUR-0001'].nonConformityDetails.pendingReview).toBe(true)
     })
 
     it('throws an error for a session object no summary', async () => {
@@ -149,12 +149,12 @@ describe('session.js', () => {
     it('throws an error for an invalid response key', async () => {
       const invalidJson = JSON.stringify({
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2023-01-01T10:00:00Z',
         },
         responses: {
-          'VIG 0054': {
+          'SUR 0054': {
             id: 'q1',
             compliance: 'Compliant',
           },

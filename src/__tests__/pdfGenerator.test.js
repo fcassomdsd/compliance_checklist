@@ -97,7 +97,7 @@ describe('PDF Generator', () => {
       inspection: '1125',
       location: 'Aeropuerto Internacional',
       startDate: '2025-01-26',
-      specialtyName: 'Sistemas de Vigilancia',
+      specialtyName: 'Vigilancia (radar)',
       questions: [
         {
           id: 1,
@@ -124,7 +124,7 @@ describe('PDF Generator', () => {
     const result = await generateFindingsReport({
       checklistString,
       sessionString,
-      specialty: 'Sistemas de Vigilancia',
+      specialty: 'Vigilancia (radar)',
       outputPath: '/path/to/report.pdf',
     })
 
