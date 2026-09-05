@@ -256,7 +256,6 @@ describe('ipcHandles', () => {
     })
 
     it('saves Buffer data', async () => {
-      // eslint-disable-next-line no-undef
       const buffer = Buffer.from([0x74, 0x65, 0x73, 0x74]) // 'test'
       vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt')
       const result = await handles['save-file']({}, buffer, '/mocked/path', ['file.txt'])
