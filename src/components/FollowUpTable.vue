@@ -11,14 +11,14 @@
     </colgroup>
     <thead>
       <tr>
-        <th>Finding ID</th>
-        <th>Description</th>
-        <th>Percent Complete</th>
-        <th>Follow-Up Type</th>
-        <th>Effectiveness Confirmed</th>
-        <th>Residual Risk</th>
-        <th>Follow-Up Comment</th>
-        <th>Evidence</th>
+        <th>{{ t('followUpTable.findingId') }}</th>
+        <th>{{ t('followUpTable.description') }}</th>
+        <th>{{ t('followUpTable.percentComplete') }}</th>
+        <th>{{ t('followUpTable.followUpType') }}</th>
+        <th>{{ t('followUpTable.effectivenessConfirmed') }}</th>
+        <th>{{ t('followUpTable.residualRisk') }}</th>
+        <th>{{ t('followUpTable.followUpComment') }}</th>
+        <th>{{ t('followUpTable.evidence') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -35,7 +35,7 @@
             :disabled="!getCorrectiveAction(entry)"
             @click="openCapModal(entry)"
           >
-            CAP
+            {{ t('followUpTable.capBadge') }}
             <span class="status-dot cap-dot" :style="{ backgroundColor: capDotColor(entry) }"></span>
           </button>
         </td>
@@ -56,9 +56,9 @@
             :value="getField(entry, 'followUpType')"
             @change="onFieldChange(entry, 'followUpType', $event.target.value)"
           >
-            <option value="Progress Verification">Progress Verification</option>
-            <option v-if="hasCorrectiveAction(entry)" value="CAP Verification">CAP Verification</option>
-            <option value="Closure Verification">Closure Verification</option>
+            <option value="Progress Verification">{{ t('followUpType.progressVerification') }}</option>
+            <option v-if="hasCorrectiveAction(entry)" value="CAP Verification">{{ t('followUpType.capVerification') }}</option>
+            <option value="Closure Verification">{{ t('followUpType.closureVerification') }}</option>
           </select>
         </td>
         <td>
@@ -68,13 +68,13 @@
               :value="effectivenessValue(getField(entry, 'effectivenessConfirmed'))"
               @change="onFieldChange(entry, 'effectivenessConfirmed', parseEffectiveness($event.target.value))"
             >
-              <option :value="null">Unset</option>
-              <option :value="true">Yes</option>
-              <option :value="false">No</option>
+              <option :value="null">{{ t('followUpTable.unset') }}</option>
+              <option :value="true">{{ t('followUpTable.yes') }}</option>
+              <option :value="false">{{ t('followUpTable.no') }}</option>
             </select>
           </template>
           <template v-else>
-            <span style="color: #888">N/A</span>
+            <span style="color: #888">{{ t('followUpTable.notApplicable') }}</span>
           </template>
         </td>
         <td>
@@ -83,10 +83,10 @@
             :value="getField(entry, 'currentResidualRisk')"
             @change="onFieldChange(entry, 'currentResidualRisk', $event.target.value)"
           >
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Critical">Critical</option>
+            <option value="Low">{{ t('riskLevel.low') }}</option>
+            <option value="Medium">{{ t('riskLevel.medium') }}</option>
+            <option value="High">{{ t('riskLevel.high') }}</option>
+            <option value="Critical">{{ t('riskLevel.critical') }}</option>
           </select>
         </td>
         <td>
@@ -94,7 +94,7 @@
             :disabled="isRowReadOnly(entry)"
             :value="getField(entry, 'comments')"
             @input="onFieldChange(entry, 'comments', $event.target.value)"
-            placeholder="Enter follow-up comment"
+            :placeholder="t('followUpTable.commentPlaceholder')"
             rows="3"
           ></textarea>
         </td>
@@ -113,7 +113,7 @@
               :disabled="isRowReadOnly(entry)"
               @click="triggerEvidenceUpload(getFindingId(entry))"
             >
-              Add evidence
+              {{ t('followUpTable.addEvidence') }}
             </button>
           </div>
           <ul v-if="getEvidenceList(entry).length > 0" class="evidence-list">
@@ -139,16 +139,16 @@
 
   <div v-if="showCapModal" class="modal-overlay">
     <div class="modal-container cap-modal">
-      <h2>Corrective Action</h2>
+      <h2>{{ t('followUpTable.capModalTitle') }}</h2>
       <div class="cap-modal-grid">
-        <div><strong>CAP ID:</strong> {{ activeCap?.capId || 'N/A' }}</div>
-        <div><strong>Proposed Action:</strong> {{ activeCap?.proposedAction || 'N/A' }}</div>
-        <div><strong>Responsible Entity:</strong> {{ activeCap?.responsibleEntity || 'N/A' }}</div>
-        <div><strong>Due Date:</strong> {{ activeCap?.dueDate || 'N/A' }}</div>
-        <div><strong>Acceptance Status:</strong> {{ activeCap?.acceptanceStatus || 'N/A' }}</div>
+        <div><strong>{{ t('followUpTable.capId') }}</strong> {{ activeCap?.capId || t('followUpTable.notAvailableShort') }}</div>
+        <div><strong>{{ t('followUpTable.proposedAction') }}</strong> {{ activeCap?.proposedAction || t('followUpTable.notAvailableShort') }}</div>
+        <div><strong>{{ t('followUpTable.responsibleEntity') }}</strong> {{ activeCap?.responsibleEntity || t('followUpTable.notAvailableShort') }}</div>
+        <div><strong>{{ t('followUpTable.dueDate') }}</strong> {{ activeCap?.dueDate || t('followUpTable.notAvailableShort') }}</div>
+        <div><strong>{{ t('followUpTable.acceptanceStatus') }}</strong> {{ activeCap?.acceptanceStatus || t('followUpTable.notAvailableShort') }}</div>
       </div>
       <div class="modal-actions">
-        <button type="button" @click="closeCapModal">Close</button>
+        <button type="button" @click="closeCapModal">{{ t('followUpTable.close') }}</button>
       </div>
     </div>
   </div>
@@ -156,12 +156,14 @@
 
 <script setup>
   import { ref, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useToast } from 'vue-toastification'
   import { useChecklistStore } from '../stores/checklistStore'
   import { useFollowUpStore } from '../stores/followUpStore'
   import { useEvidenceStore } from '../stores/evidenceStore'
   import trash from '../assets/images/trash.png'
 
+  const { t } = useI18n()
   const store = useChecklistStore()
   const followUpStore = useFollowUpStore()
   const evidenceStore = useEvidenceStore()

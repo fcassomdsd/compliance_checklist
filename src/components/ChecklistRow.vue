@@ -9,25 +9,25 @@
       <button
         v-if="readOnly && linkedFindingId"
         class="followup-link"
-        title="This question has an open linked finding. Click to switch to follow-up mode"
+        :title="t('checklistRow.followUpLinkTitle')"
         @click="emit('go-follow-up', linkedFindingId)"
       >
-        Follow-up
+        {{ t('checklistRow.followUpLink') }}
       </button>
     </td>
     <td class="reference">
       <div v-if="row.reference?.normativa?.reglamento">
-        <span class="ref-label">STD</span><br />
+        <span class="ref-label">{{ t('checklistRow.stdLabel') }}</span><br />
         <button
           class="normativa-link"
-          title="Click to view ICAO reference and full text"
+          :title="t('checklistRow.normativaTitle')"
           @click="openNormativa(row.reference.normativa)"
         >
           {{ row.reference.normativa.reglamento }} {{ row.reference.normativa.articulo }}
         </button>
       </div>
       <div v-if="row.reference?.guidance">
-        <span class="ref-label">GM</span><br />
+        <span class="ref-label">{{ t('checklistRow.gmLabel') }}</span><br />
         <span>{{ row.reference.guidance }}</span>
       </div>
     </td>
@@ -43,17 +43,17 @@
           :checked="session.compliance === radioBtn"
           @change="radioChange($event)"
         />
-        {{ radioBtn }}
+        {{ complianceLabel(radioBtn) }}
         <br />
       </label>
       <div class="non-conformity" :hidden="session.compliance != 'Non-Compliant'">
         <button class="nc-modal-trigger" @click="openNonConformityModal">
-          {{ isReadOnly ? 'View Non-conformity' : 'Edit Non-conformity' }}
+          {{ isReadOnly ? t('checklistRow.viewNonConformity') : t('checklistRow.editNonConformity') }}
         </button>
         <div class="nc-summary">
-          <span class="risk-pill">{{ assignedRiskLevel }}</span>
+          <span class="risk-pill">{{ t(`riskLevel.${assignedRiskLevel.toLowerCase()}`) }}</span>
           <span class="nc-summary-text">
-            {{ nonConformityDescription ? 'Description added' : 'No description yet' }}
+            {{ nonConformityDescription ? t('checklistRow.descriptionAdded') : t('checklistRow.noDescriptionYet') }}
           </span>
         </div>
       </div>
@@ -67,7 +67,7 @@
       ></textarea>
       <div class="audio-controls">
         <button
-          :title="`${recordingComments ? 'Stop' : 'Start'} Recording Comments`"
+          :title="recordingComments ? t('checklistRow.stopRecordingComments') : t('checklistRow.startRecordingComments')"
           :disabled="isReadOnly"
           @click="toggleAudioRecordingComments"
           :class="{ recording: recordingComments }"
@@ -89,7 +89,7 @@
             :key="index"
             class="audio-item"
           >
-            <button @click="playAudio(audio)" title="Play recording">
+            <button @click="playAudio(audio)" :title="t('checklistRow.playRecording')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z" />
               </svg>
@@ -98,7 +98,7 @@
             <button
               @click="removeAudio(index, 'comments')"
               :disabled="isReadOnly"
-              title="Delete recording"
+              :title="t('checklistRow.deleteRecording')"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path
@@ -165,26 +165,26 @@
   <div v-if="showCameraModal" class="camera-modal">
     <video ref="video" autoplay></video>
     <canvas ref="canvas" style="display: none"></canvas>
-    <button @click="capturePhoto">Capture</button>
-    <button @click="closeCameraModal">Cancel</button>
+    <button @click="capturePhoto">{{ t('checklistRow.capture') }}</button>
+    <button @click="closeCameraModal">{{ t('checklistRow.cancel') }}</button>
   </div>
   <div v-if="showNormativaModal" class="normativa-modal-overlay" @click.self="showNormativaModal = false">
     <div class="normativa-modal">
       <h3>{{ selectedNormativa?.reglamento }} {{ selectedNormativa?.articulo }}</h3>
-      <p><strong>ICAO Reference:</strong> {{ selectedNormativa?.ICAOref }}</p>
+      <p><strong>{{ t('checklistRow.icaoReferenceLabel') }}</strong> {{ selectedNormativa?.ICAOref }}</p>
       <p class="normativa-texto">{{ selectedNormativa?.texto }}</p>
-      <button @click="showNormativaModal = false">Close</button>
+      <button @click="showNormativaModal = false">{{ t('checklistRow.close') }}</button>
     </div>
   </div>
   <div v-if="showNonConformityModal" class="nc-modal-overlay" @click.self="closeNonConformityModal">
     <div class="nc-modal">
       <div class="nc-modal-header">
-        <h3>Non-conformity details</h3>
-        <button class="nc-close" @click="closeNonConformityModal">Close</button>
+        <h3>{{ t('checklistRow.nonConformityDetailsTitle') }}</h3>
+        <button class="nc-close" @click="closeNonConformityModal">{{ t('checklistRow.close') }}</button>
       </div>
       <div class="non-conformity-meta">
         <label class="risk-row" :for="`findingLevel-${domQuestionCode}`">
-          <span class="risk-label">Finding Level</span>
+          <span class="risk-label">{{ t('checklistRow.findingLevel') }}</span>
           <select
             :id="`findingLevel-${domQuestionCode}`"
             :name="`findingLevel-${domQuestionCode}`"
@@ -192,15 +192,15 @@
             :disabled="isReadOnly"
             @change="findingLevelChange($event)"
           >
-            <option v-for="level in findingLevels" :key="level" :value="level">{{ level }}</option>
+            <option v-for="level in findingLevels" :key="level" :value="level">{{ findingLevelLabel(level) }}</option>
           </select>
         </label>
         <div class="risk-row nominal-risk">
-          <span class="risk-label">Nominal Risk</span>
-          <span class="risk-value">{{ nominalRiskLevel }}</span>
+          <span class="risk-label">{{ t('checklistRow.nominalRisk') }}</span>
+          <span class="risk-value">{{ t(`riskLevel.${nominalRiskLevel.toLowerCase()}`) }}</span>
         </div>
         <label class="risk-row" :for="`riskLevel-${domQuestionCode}`">
-          <span class="risk-label">Assigned Risk</span>
+          <span class="risk-label">{{ t('checklistRow.assignedRisk') }}</span>
           <select
             :id="`riskLevel-${domQuestionCode}`"
             :name="`riskLevel-${domQuestionCode}`"
@@ -208,11 +208,11 @@
             :disabled="isReadOnly"
             @change="riskLevelChange($event)"
           >
-            <option v-for="level in riskLevels" :key="level" :value="level">{{ level }}</option>
+            <option v-for="level in riskLevels" :key="level" :value="level">{{ t(`riskLevel.${level.toLowerCase()}`) }}</option>
           </select>
         </label>
         <label class="risk-row" :for="`findingSeverity-${domQuestionCode}`">
-          <span class="risk-label">Severity</span>
+          <span class="risk-label">{{ t('checklistRow.severity') }}</span>
           <select
             :id="`findingSeverity-${domQuestionCode}`"
             :name="`findingSeverity-${domQuestionCode}`"
@@ -221,7 +221,7 @@
             @change="severityChange($event)"
           >
             <option v-for="level in severityLevels" :key="level.id" :value="level.id">
-              {{ level.name }} — {{ level.daysToSolution }} days
+              {{ level.name }} — {{ t('checklistRow.daysSuffix', { count: level.daysToSolution }) }}
             </option>
           </select>
         </label>
@@ -230,12 +230,12 @@
         :name="`nonConformity-${domQuestionCode}`"
         :value="nonConformityDescription"
         :disabled="isReadOnly"
-        placeholder="Describa la no conformidad"
+        :placeholder="t('checklistRow.nonConformityPlaceholder')"
         @input="nonConformityChange($event)"
       ></textarea>
       <div class="audio-controls">
         <button
-          :title="`${recordingNonConformity ? 'Stop' : 'Start'} Recording Non-conformity`"
+          :title="recordingNonConformity ? t('checklistRow.stopRecordingNonConformity') : t('checklistRow.startRecordingNonConformity')"
           :disabled="isReadOnly"
           @click="toggleAudioRecordingNonConformity"
           :class="{ recording: recordingNonConformity }"
@@ -257,7 +257,7 @@
             :key="index"
             class="audio-item"
           >
-            <button @click="playAudio(audio)" title="Play recording">
+            <button @click="playAudio(audio)" :title="t('checklistRow.playRecording')">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 5v14l11-7z" />
               </svg>
@@ -266,7 +266,7 @@
             <button
               @click="removeAudio(index, 'nonConformity')"
               :disabled="isReadOnly"
-              title="Delete recording"
+              :title="t('checklistRow.deleteRecording')"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path
@@ -283,6 +283,7 @@
 
 <script setup>
   import { computed, ref } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import { useSessionStore } from '../stores/sessionStore'
   import { useEvidenceStore } from '../stores/evidenceStore'
   import { useAudioStore } from '../stores/audioStore'
@@ -302,7 +303,10 @@
 
   const emit = defineEmits(['go-follow-up'])
 
+  const { t } = useI18n()
   const toast = useToast()
+  // Values stay the English enum strings the backend/schema expects — only
+  // the displayed label is translated, via complianceLabel() below.
   const radioButtons = ref(['Not applicable', 'Compliant', 'Non-Compliant'])
 
   const radioColors = ref({
@@ -310,6 +314,20 @@
     Compliant: 'border : 3px solid #55FF55',
     'Non-Compliant': 'border : 3px solid #FF5555',
   })
+
+  const complianceLabelKeys = {
+    'Not applicable': 'compliance.notApplicable',
+    Compliant: 'compliance.compliant',
+    'Non-Compliant': 'compliance.nonCompliant',
+  }
+  const complianceLabel = (value) => t(complianceLabelKeys[value] || value)
+
+  const findingLevelKeys = {
+    'Non-Compliance': 'findingLevel.nonCompliance',
+    Observation: 'findingLevel.observation',
+    Recommendation: 'findingLevel.recommendation',
+  }
+  const findingLevelLabel = (value) => t(findingLevelKeys[value] || value)
 
   const validRiskLevels = ['Low', 'Medium', 'High', 'Critical']
   const riskLevels = ref(validRiskLevels)
@@ -492,9 +510,9 @@
       } else {
         recordingNonConformity.value = true
       }
-      toast.info('Recording started...')
+      toast.info(t('toast.recordingStarted'))
     } catch (error) {
-      toast.error('Could not access microphone: ' + error.message)
+      toast.error(t('toast.micAccessFailed', { message: error.message }))
     }
   }
 
@@ -541,9 +559,9 @@
       } else {
         updateNonConformityDetail('audioNonConformity', currentAudioList)
       }
-      toast.success('Audio recording saved')
+      toast.success(t('toast.audioSaved'))
     } catch (error) {
-      toast.error('Failed to save audio: ' + error.message)
+      toast.error(t('toast.audioSaveFailed', { message: error.message }))
     }
   }
 
@@ -552,7 +570,7 @@
       // Get the audio file URL from the store
       const audioURL = audioStore.files[fileName]?.URL
       if (!audioURL) {
-        toast.error('Audio file not found')
+        toast.error(t('toast.audioNotFound'))
         return
       }
 
@@ -560,7 +578,7 @@
       const audio = new Audio(audioURL)
       await audio.play()
     } catch (error) {
-      toast.error('Failed to play audio: ' + error.message)
+      toast.error(t('toast.audioPlayFailed', { message: error.message }))
     }
   }
 
@@ -586,9 +604,9 @@
       } else {
         updateNonConformityDetail('audioNonConformity', updatedAudioList)
       }
-      toast.success('Audio recording removed')
+      toast.success(t('toast.audioRemoved'))
     } catch (error) {
-      toast.error('Failed to delete audio: ' + error.message)
+      toast.error(t('toast.audioRemoveFailed', { message: error.message }))
     }
   }
 
@@ -625,7 +643,7 @@
     }
 
     updateResponse('evidence', table)
-    toast.success('Evidence updated')
+    toast.success(t('toast.evidenceUpdated'))
   }
 
   const removeEvidence = async (index, evidence) => {
@@ -673,7 +691,7 @@
       table.push({ name: file.name })
     }
     updateResponse('evidence', table)
-    toast.success('Evidence updated')
+    toast.success(t('toast.evidenceUpdated'))
     closeCameraModal()
   }
 

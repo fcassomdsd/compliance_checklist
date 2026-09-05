@@ -35,6 +35,7 @@ npm run e2e:headed
 - `global-setup.mjs` / `global-teardown.mjs`: starts and stops mock services on `localhost:1880` and `localhost:8000`.
 	- setup temporarily rewrites `app.config.json` hosts to isolated E2E ports (`127.0.0.1:31880` import, `127.0.0.1:38000` upload)
 	- teardown restores the original `app.config.json`
+	- `specs/helpers/electron-app.mjs`'s `launchApp()` sets `CHECKLIST_FORCE_LOCALE=en` so specs asserting on rendered text stay deterministic regardless of the host machine's OS locale or any saved `settings.json` preference
 - `mock-server.mjs`: fixture-driven import/upload API stubs.
 - `specs/electron.smoke.spec.mjs`: inspection import smoke flow.
 - `specs/electron.followup.spec.mjs`: follow-up findings import flow.

@@ -153,22 +153,22 @@ describe('Session Store', () => {
     it('handles invalid specialty value errors with toast', async () => {
       await sessionStore.loadSession('')
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: '
+        'Could not create session: Invalid specialty value: '
       )
 
       await sessionStore.loadSession(null)
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: null'
+        'Could not create session: Invalid specialty value: null'
       )
 
       await sessionStore.loadSession(undefined)
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: undefined'
+        'Could not create session: Invalid specialty value: undefined'
       )
 
       await sessionStore.loadSession({})
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: [object Object]'
+        'Could not create session: Invalid specialty value: [object Object]'
       )
     })
 
@@ -176,7 +176,7 @@ describe('Session Store', () => {
       mockFs.loadSession.mockRejectedValue(new Error('Load failed'))
 
       await sessionStore.loadSession('SUR')
-      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Load failed')
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session: Load failed')
     })
 
     it('updates evidence counts after loading', async () => {

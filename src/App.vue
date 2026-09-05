@@ -3,25 +3,41 @@
     <div class="header">
       <img :src="logo" />
       <span>
-        <h2>Operational Safety Compliance Checklist</h2>
+        <h2>{{ t('app.title') }}</h2>
       </span>
+      <div class="locale-switcher">
+        <button
+          type="button"
+          :class="{ active: sessionStore.locale == 'en' }"
+          @click="sessionStore.setLocale('en')"
+        >
+          EN
+        </button>
+        <button
+          type="button"
+          :class="{ active: sessionStore.locale == 'es' }"
+          @click="sessionStore.setLocale('es')"
+        >
+          ES
+        </button>
+      </div>
       <div class="service-status">
-        <span class="service-label">Import</span>
+        <span class="service-label">{{ t('app.serviceImportLabel') }}</span>
         <span :class="['service-dot', store.importServiceOnline ? 'online' : 'offline']"></span>
-        <span class="service-label">Upload</span>
+        <span class="service-label">{{ t('app.serviceUploadLabel') }}</span>
         <span :class="['service-dot', store.uploadServiceOnline ? 'online' : 'offline']"></span>
       </div>
     </div>
     <div class="workspace-controls">
-      <label>Mode:</label>
+      <label>{{ t('toolbar.modeLabel') }}</label>
       <select id="modeSelect" v-model="store.uiMode" @change="onModeChange">
-        <option value="inspection">Inspection</option>
-        <option value="followUp">Follow-up</option>
+        <option value="inspection">{{ t('toolbar.modeInspection') }}</option>
+        <option value="followUp">{{ t('toolbar.modeFollowUp') }}</option>
       </select>
 
-      <label>Workspace:</label>
+      <label>{{ t('toolbar.workspaceLabel') }}</label>
       <select id="workspaceSelect" v-model="store.activeWorkspaceKey" @change="onWorkspaceChange">
-        <option value="">Select a workspace</option>
+        <option value="">{{ t('toolbar.selectWorkspace') }}</option>
         <option
           v-for="(workspace, index) in store.workspaceList"
           :key="index"
@@ -35,28 +51,28 @@
         :class="{ 'offline-action': !store.importServiceOnline }"
         @click="showImportModal = true"
       >
-        {{ store.uiMode == 'inspection' ? 'Import Inspection' : 'Import Follow-up' }}
+        {{ store.uiMode == 'inspection' ? t('toolbar.importInspectionBtn') : t('toolbar.importFollowUpBtn') }}
       </button>
     </div>
 
     <div class="controls-container">
-      <span>Inspection: {{ store.checklist?.inspection || '' }}</span>
-      <span>Start: {{ store.checklist?.startDate || '' }}</span>
-      <span>Provider: {{ store.checklist?.providerName || '' }}</span>
+      <span>{{ t('controls.inspection', { value: store.checklist?.inspection || '' }) }}</span>
+      <span>{{ t('controls.start', { value: store.checklist?.startDate || '' }) }}</span>
+      <span>{{ t('controls.provider', { value: store.checklist?.providerName || '' }) }}</span>
 
       <button
         id="finalizeBtn"
         :disabled="store.uiMode == 'inspection' ? sessionStore.summary.finalized : followUpStore.summary.finalized"
         @click="onFinalize()"
       >
-        {{ store.uiMode == 'inspection' ? 'Finalize inspection' : 'Finalize follow-up' }}
+        {{ store.uiMode == 'inspection' ? t('controls.finalizeInspection') : t('controls.finalizeFollowUp') }}
       </button>
       <button
         id="exportBtn"
         :disabled="store.uiMode == 'followUp' || !sessionStore.summary.finalized || !store.checklistLoaded"
         @click="store.exportChecklist()"
       >
-        {{ store.uiMode == 'followUp' ? 'Follow-up reports are uploaded only' : 'Report Findings' }}
+        {{ store.uiMode == 'followUp' ? t('controls.followUpUploadOnly') : t('controls.reportFindings') }}
       </button>
       <button
         id="exportUploadBtn"
@@ -64,7 +80,7 @@
         :class="{ 'offline-action': !store.uploadServiceOnline }"
         @click="store.exportUploadPayload()"
       >
-        {{ store.isUploading ? 'Uploading...' : uploadLabel }}
+        {{ store.isUploading ? t('controls.uploading') : uploadLabel }}
       </button>
       <button id="removeSessionBtn" class="danger-action" :disabled="removeSessionDisabled" @click="onRemoveSession">
         {{ removeSessionLabel }}
@@ -74,7 +90,7 @@
         :disabled="!store.generatedReportPath"
         @click="store.viewGeneratedReport()"
       >
-        View Report
+        {{ t('controls.viewReport') }}
       </button>
 
       <button
@@ -82,7 +98,7 @@
         @click="showGenComments = !showGenComments"
         :disabled="!store.checklistLoaded"
       >
-        {{ showGenComments ? 'Hide General Comments' : 'Show General Comments' }}
+        {{ showGenComments ? t('controls.hideGeneralComments') : t('controls.showGeneralComments') }}
       </button>
     </div>
 
@@ -91,13 +107,13 @@
       <textarea
         id="generalComments"
         :value="sessionStore.summary.generalComments"
-        placeholder="Add general comments about this checklist..."
+        :placeholder="t('generalComments.placeholderComments')"
         @input="onGeneralCommentsInput($event)"
       ></textarea>
       <textarea
         id="interviewee"
         :value="sessionStore.summary.interviewee"
-        placeholder="Add interviewee name(s) for this checklist..."
+        :placeholder="t('generalComments.placeholderInterviewee')"
         @input="onIntervieweeInput($event)"
       ></textarea>
       <div>
@@ -106,7 +122,7 @@
           @click="clearGeneralComments()"
           :disabled="sessionStore.summary.finalized"
         >
-          Clear
+          {{ t('generalComments.clear') }}
         </button>
       </div>
     </div>
@@ -121,34 +137,34 @@
     />
     <div v-if="store.apiKeyPromptVisible" class="modal-overlay">
       <div class="modal-container">
-        <h2>Upload API Key Required</h2>
+        <h2>{{ t('apiKeyModal.title') }}</h2>
         <p class="modal-explanation">
-          The upload service requires an API key. Enter the key provided by your system administrator.
+          {{ t('apiKeyModal.explanation') }}
         </p>
         <input
           v-model="store.apiKeyInput"
           type="password"
           class="api-key-input"
-          placeholder="Enter API key"
+          :placeholder="t('apiKeyModal.placeholder')"
           @keyup.enter="store.submitApiKey"
         />
         <div class="modal-actions">
-          <button @click="store.cancelApiKeyPrompt" class="btn-cancel">Cancel</button>
-          <button @click="store.submitApiKey" class="btn-confirm">Save and Upload</button>
+          <button @click="store.cancelApiKeyPrompt" class="btn-cancel">{{ t('apiKeyModal.cancel') }}</button>
+          <button @click="store.submitApiKey" class="btn-confirm">{{ t('apiKeyModal.saveAndUpload') }}</button>
         </div>
       </div>
     </div>
     <div v-if="showImportModal" class="modal-overlay">
       <div class="modal-container import-modal">
-        <h2>{{ store.uiMode == 'inspection' ? 'Import Inspection Data' : 'Import Follow-up Data' }}</h2>
+        <h2>{{ store.uiMode == 'inspection' ? t('importModal.titleInspection') : t('importModal.titleFollowUp') }}</h2>
         <p class="modal-explanation">
-          Import is explicit and online-only. Existing touched local drafts are protected from overwrite.
+          {{ t('importModal.explanation') }}
         </p>
 
         <div class="modal-form-row" v-if="store.uiMode == 'inspection'">
-          <label for="importInspection">Inspection / Provider</label>
+          <label for="importInspection">{{ t('importModal.inspectionProviderLabel') }}</label>
           <select id="importInspection" v-model="selectedInspectionProvider">
-            <option value="">Select inspection</option>
+            <option value="">{{ t('importModal.selectInspection') }}</option>
             <option
               v-for="ip in inspectionProviderList"
               :key="ip.inspectionId"
@@ -160,9 +176,9 @@
         </div>
 
         <div class="modal-form-row" v-else>
-          <label for="importLocation">Location</label>
+          <label for="importLocation">{{ t('importModal.locationLabel') }}</label>
           <select id="importLocation" v-model="importLocationId">
-            <option value="">Select location</option>
+            <option value="">{{ t('importModal.selectLocation') }}</option>
             <option
               v-for="(location, index) in store.locationList"
               :key="index"
@@ -174,9 +190,9 @@
         </div>
 
         <div class="modal-form-row">
-          <label for="importSpecialty">Specialty</label>
+          <label for="importSpecialty">{{ t('importModal.specialtyLabel') }}</label>
           <select id="importSpecialty" v-model="importSpecialtyCode">
-            <option value="">Select specialty</option>
+            <option value="">{{ t('importModal.selectSpecialty') }}</option>
             <option
               v-for="(specialtyOption, index) in store.specialtyList"
               :key="index"
@@ -188,16 +204,16 @@
         </div>
 
         <div class="import-summary">
-          <p><strong>Mode:</strong> {{ store.uiMode == 'inspection' ? 'Inspection' : 'Follow-up' }}</p>
+          <p><strong>{{ t('importModal.summaryMode') }}</strong> {{ store.uiMode == 'inspection' ? t('toolbar.modeInspection') : t('toolbar.modeFollowUp') }}</p>
           <p v-if="store.uiMode == 'inspection'">
-            <strong>Inspection:</strong> {{ selectedInspectionProviderDisplay }}
+            <strong>{{ t('importModal.summaryInspection') }}</strong> {{ selectedInspectionProviderDisplay }}
           </p>
-          <p v-else><strong>Location:</strong> {{ selectedLocationLabel }}</p>
-          <p><strong>Specialty:</strong> {{ selectedSpecialtyLabel }}</p>
+          <p v-else><strong>{{ t('importModal.summaryLocation') }}</strong> {{ selectedLocationLabel }}</p>
+          <p><strong>{{ t('importModal.summarySpecialty') }}</strong> {{ selectedSpecialtyLabel }}</p>
         </div>
 
         <div class="modal-actions">
-          <button id="cancelImportModalBtn" class="btn-cancel" @click="showImportModal = false">Cancel</button>
+          <button id="cancelImportModalBtn" class="btn-cancel" @click="showImportModal = false">{{ t('importModal.cancel') }}</button>
           <button
             id="importDataBtn"
             class="btn-confirm"
@@ -218,6 +234,7 @@
 
 <script setup>
   import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+  import { useI18n } from 'vue-i18n'
   import ChecklistTable from './components/ChecklistTable.vue'
   import FollowUpTable from './components/FollowUpTable.vue'
   import ModalWindow from './components/ModalWindow.vue'
@@ -229,6 +246,7 @@
   import logo from './assets/images/compliance-logo.png'
 
   const fs = createFileService()
+  const { t } = useI18n()
 
   // Access the Pinia store
   const store = useChecklistStore()
@@ -274,7 +292,7 @@
 
   const onImportData = async () => {
     if (!store.importServiceOnline) {
-      toast.error('Import service offline (localhost:1880)')
+      toast.error(t('toast.importServiceOffline'))
       return false
     }
 
@@ -283,7 +301,7 @@
     if (store.uiMode == 'inspection') {
       const selected = selectedInspectionProvider.value
       if (!selected) {
-        toast.error('Please select an inspection and provider')
+        toast.error(t('toast.selectInspectionAndProvider'))
         return false
       }
 
@@ -291,7 +309,7 @@
       try {
         parsed = JSON.parse(selected)
       } catch {
-        toast.error('Invalid selection')
+        toast.error(t('toast.invalidSelection'))
         return false
       }
 
@@ -300,19 +318,19 @@
       const siteVisitId = parsed.siteVisitId
 
       if (!inspectionId) {
-        toast.error('Selected inspection has no inspectionId — it may need to be recreated')
+        toast.error(t('toast.inspectionMissingId'))
         return false
       }
 
       if (!specialtyCode) {
-        toast.error('Inspection and specialty are required to import')
+        toast.error(t('toast.inspectionSpecialtyRequired'))
         return false
       }
       await store.importChecklist(inspectionId, specialtyCode, { inspectedProviderId, siteVisitId })
     } else {
       const locationId = importLocationId.value.trim()
       if (!locationId || !specialtyCode) {
-        toast.error('Location and specialty are required to import findings')
+        toast.error(t('toast.locationSpecialtyRequired'))
         return false
       }
       await store.importFindings(specialtyCode, locationId)
@@ -357,26 +375,26 @@
 
   const importLabel = computed(() => {
     if (store.isImporting || store.isImportingFindings) {
-      return 'Importing...'
+      return t('importModal.importing')
     }
-    return store.uiMode == 'inspection' ? 'Import Inspection' : 'Import Follow-up'
+    return store.uiMode == 'inspection' ? t('importModal.importInspection') : t('importModal.importFollowUp')
   })
 
   const selectedInspectionProviderDisplay = computed(() => {
     const val = selectedInspectionProvider.value
-    if (!val) return 'Not selected'
+    if (!val) return t('importModal.notSelected')
     try {
       const p = JSON.parse(val)
       return `${p.code} / ${p.serviceProviderName || p.inspectedProviderId}`
     } catch {
-      return 'Not selected'
+      return t('importModal.notSelected')
     }
   })
 
   const selectedSpecialtyLabel = computed(() => {
     const code = importSpecialtyCode.value.trim()
     if (!code) {
-      return 'Not selected'
+      return t('importModal.notSelected')
     }
     const specialtyEntry = store.specialtyList.find((entry) => entry.code == code)
     return specialtyEntry ? `${specialtyEntry.code} - ${specialtyEntry.name}` : code
@@ -385,7 +403,7 @@
   const selectedLocationLabel = computed(() => {
     const icao = importLocationId.value.trim()
     if (!icao) {
-      return 'Not selected'
+      return t('importModal.notSelected')
     }
     const locationEntry = store.locationList.find((entry) => entry.icaoCode == icao)
     return locationEntry ? `${locationEntry.icaoCode} - ${locationEntry.name}` : icao
@@ -408,7 +426,7 @@
       : !sessionStore.summary.finalized || !store.checklistLoaded || store.isUploading
   )
 
-  const uploadLabel = computed(() => (store.uiMode == 'followUp' ? 'Upload Follow-up' : 'Upload'))
+  const uploadLabel = computed(() => (store.uiMode == 'followUp' ? t('controls.uploadFollowUp') : t('controls.upload')))
 
   const localInspectionTouched = computed(() => {
     const responsesCount = Object.keys(sessionStore.responses || {}).length
@@ -445,7 +463,7 @@
   })
 
   const removeSessionLabel = computed(() =>
-    store.uiMode == 'inspection' ? 'Remove Inspection Session' : 'Remove Follow-up Session'
+    store.uiMode == 'inspection' ? t('controls.removeInspectionSession') : t('controls.removeFollowUpSession')
   )
 
   watch(
@@ -467,6 +485,7 @@
   )
 
   onMounted(async () => {
+    await sessionStore.initLocale()
     // Check if the default path exists
     await store.checkDefaultPath()
     // Load specialties from file
@@ -511,8 +530,26 @@
     font-weight: 600;
     margin: 0;
   }
-  .service-status {
+  .locale-switcher {
     margin-left: auto;
+    display: flex;
+    gap: 0.3rem;
+  }
+  .locale-switcher button {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: white;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .locale-switcher button.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+  .service-status {
     display: flex;
     align-items: center;
     gap: 0.4rem;

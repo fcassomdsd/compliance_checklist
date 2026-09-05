@@ -99,7 +99,8 @@ describe('main.js', () => {
     it('should call mount after all plugins are registered', async () => {
       const useCallCount = mockAppInstance.use.mock.calls.length
       const mountCallCount = mockAppInstance.mount.mock.calls.length
-      expect(useCallCount).toBe(2)
+      // Pinia, Toast, and now the i18n plugin.
+      expect(useCallCount).toBe(3)
       expect(mountCallCount).toBe(1)
     })
   })
@@ -108,7 +109,7 @@ describe('main.js', () => {
     it('should support method chaining for app.use()', async () => {
       mockAppInstance.use.mockReturnValueOnce(mockAppInstance)
       mockAppInstance.use.mockReturnValueOnce(mockAppInstance)
-      expect(mockAppInstance.use).toHaveBeenCalledTimes(2)
+      expect(mockAppInstance.use).toHaveBeenCalledTimes(3)
     })
   })
 })

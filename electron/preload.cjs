@@ -1,4 +1,3 @@
-// eslint-disable-next-line no-undef
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -25,5 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveApiKey: (key) => ipcRenderer.invoke('save-api-key', key),
   readAlfrescoCred: () => ipcRenderer.invoke('read-alfresco-cred'),
   saveAlfrescoCred: (username, password) => ipcRenderer.invoke('save-alfresco-cred', username, password),
+  getLocale: () => ipcRenderer.invoke('settings:getLocale'),
+  setLocale: (locale) => ipcRenderer.invoke('settings:setLocale', locale),
 })
 

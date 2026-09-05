@@ -4,6 +4,9 @@ import { defineStore } from 'pinia'
 import { createFileService } from '../utils/fileServices.js'
 import { useEvidenceStore } from './evidenceStore.js'
 import { useAudioStore } from './audioStore.js'
+import i18n, { normalizeLocale, DEFAULT_LOCALE } from '../i18n/index.js'
+
+const t = (key, params) => i18n.global.t(key, params)
 
 export const useSessionStore = defineStore('session', () => {
   const fs = createFileService()
@@ -16,6 +19,30 @@ export const useSessionStore = defineStore('session', () => {
   // session summary: no longer holds location (moved to checklist.json)
   const summary = ref({ finalized: true, generalComments: '', interviewee: '' })
   const context = ref({ specialty: '', locationId: null })
+  const locale = ref(DEFAULT_LOCALE)
+
+  // Cross-cutting UI preference: resolved from the persisted Electron setting
+  // (falling back to OS locale) on app init, then kept in sync both ways.
+  const initLocale = async () => {
+    try {
+      const resolved = await window.electronAPI.getLocale()
+      locale.value = normalizeLocale(resolved)
+    } catch {
+      locale.value = DEFAULT_LOCALE
+    }
+    i18n.global.locale.value = locale.value
+  }
+
+  const setLocale = async (nextLocale) => {
+    const normalized = normalizeLocale(nextLocale)
+    locale.value = normalized
+    i18n.global.locale.value = normalized
+    try {
+      await window.electronAPI.setLocale(normalized)
+    } catch (error) {
+      toast.error(t('toast.localeSaveFailed', { message: error.message }))
+    }
+  }
 
   const reset = (finalized = true) => {
     summary.value = { finalized, generalComments: '', interviewee: '' }
@@ -96,13 +123,13 @@ export const useSessionStore = defineStore('session', () => {
       fs.saveSession(summary.value, responses, displayToast, locationId)
 
       if (sessionRead !== null) {
-        toast.success('Session loaded')
+        toast.success(t('toast.sessionLoaded'))
       } else {
-        toast.info('New session created')
+        toast.info(t('toast.newSessionCreated'))
       }
     } catch (error) {
       summary.value.finalized = true
-      toast.error('Could not create session:' + error.message)
+      toast.error(t('toast.createSessionFailed', { message: error.message }))
     }
   }
 
@@ -115,7 +142,7 @@ export const useSessionStore = defineStore('session', () => {
     }
     fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
     fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId).catch((error) => {
-      toast.error('Could not update workspace touched state: ' + error.message)
+      toast.error(t('toast.workspaceTouchedFailed', { message: error.message }))
     })
   }
 
@@ -124,7 +151,7 @@ export const useSessionStore = defineStore('session', () => {
     summary.value.generalComments = comments || ''
     fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
     fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId).catch((error) => {
-      toast.error('Could not update workspace touched state: ' + error.message)
+      toast.error(t('toast.workspaceTouchedFailed', { message: error.message }))
     })
   }
 
@@ -132,7 +159,7 @@ export const useSessionStore = defineStore('session', () => {
     summary.value.interviewee = value || ''
     fs.saveSession(summary.value, responses, displayToast, context.value.locationId)
     fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId).catch((error) => {
-      toast.error('Could not update workspace touched state: ' + error.message)
+      toast.error(t('toast.workspaceTouchedFailed', { message: error.message }))
     })
   }
 
@@ -171,6 +198,9 @@ export const useSessionStore = defineStore('session', () => {
     responses,
     summary,
     context,
+    locale,
+    initLocale,
+    setLocale,
     reset,
     loadSession,
     updateSession,

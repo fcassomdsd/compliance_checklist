@@ -26,6 +26,10 @@ async function ensureReadyForImport(window) {
 export async function launchApp() {
   const electronApp = await electron.launch({
     args: [join(process.cwd(), 'electron', 'main.mjs')],
+    // Pin the UI locale to English so text assertions in these specs stay
+    // deterministic regardless of the host OS locale or any persisted
+    // per-user preference. See electron/utils/userSettings.js.
+    env: { ...process.env, CHECKLIST_FORCE_LOCALE: 'en' },
   })
   const window = await electronApp.firstWindow()
 

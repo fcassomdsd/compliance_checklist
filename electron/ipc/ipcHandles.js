@@ -21,6 +21,7 @@ import {
 import { safeJoin } from '../utils/fileSec.js'
 import { logger } from '../utils/logger.js'
 import { generateFindingsReport } from '../utils/pdfGenerator.js'
+import { getLocale, setLocale } from '../utils/userSettings.js'
 
 const ajv = new Ajv2020({ allErrors: true })
 addFormats(ajv)
@@ -1169,15 +1170,33 @@ export function setupIpcHandles(ipcMain) {
     }
   })
 
-  ipcMain.handle('generate-pdf', async (event, { checklistString, sessionString, specialty, outputPath }) => {
+  ipcMain.handle('generate-pdf', async (event, { checklistString, sessionString, specialty, outputPath, locale }) => {
     try {
       if (!checklistString || !sessionString || !specialty || !outputPath) {
         throw new Error('Missing required parameters: checklistString, sessionString, specialty, outputPath')
       }
-      const result = await generateFindingsReport({ checklistString, sessionString, specialty, outputPath })
+      const result = await generateFindingsReport({ checklistString, sessionString, specialty, outputPath, locale })
       return result
     } catch (err) {
       logger.error(`generate-pdf: Could not generate PDF: ${err.message}`)
+      throw err
+    }
+  })
+
+  ipcMain.handle('settings:getLocale', async () => {
+    try {
+      return await getLocale()
+    } catch (err) {
+      logger.error(`settings:getLocale: Could not read locale: ${err.message}`)
+      return 'en'
+    }
+  })
+
+  ipcMain.handle('settings:setLocale', async (event, locale) => {
+    try {
+      return await setLocale(locale)
+    } catch (err) {
+      logger.error(`settings:setLocale: Could not save locale: ${err.message}`)
       throw err
     }
   })
