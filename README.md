@@ -180,6 +180,15 @@ The upload service (`uploadHost`) may require an API key. On first upload, the a
 
 When running E2E tests, `global-setup.mjs` temporarily rewrites `app.config.json` to point to isolated local test ports and restores it on teardown.
 
+### Locale Preference
+
+The app supports English and Spanish (`vue-i18n` in the renderer, `src/i18n/`). Unlike `app.config.json` above, the user's locale choice is a runtime preference, not deployment config — it's stored separately in a small `settings.json` file under Electron's `userData` directory (not the project root), managed by `electron/utils/userSettings.js`.
+
+- Resolution order on startup: a saved preference in `settings.json` → the OS locale (`app.getLocale()`) collapsed to `en`/`es` → `en` fallback.
+- The renderer reads/writes it via two IPC channels exposed on the preload bridge: `settings:getLocale` and `settings:setLocale`. A toggle in `App.vue`'s header calls these.
+- `CHECKLIST_FORCE_LOCALE` (env var, `en` or `es`) overrides everything above — used by the Playwright e2e suite (`e2e/specs/helpers/electron-app.mjs`) to pin the locale deterministically, since guessing Electron's `userData` path from the test process isn't reliable.
+- The PDF findings report (`electron/utils/pdfGenerator.js`) takes the current locale as a parameter and looks up its strings from a `labels.en`/`labels.es` table in the same file.
+
 ---
 
 ## 📜 Available Scripts
