@@ -88,8 +88,11 @@ describe('App.vue', () => {
     mockSession = {
       summary: { finalized: false, generalComments: '' },
       responses: {},
+      locale: 'en',
       updateGeneralComments: vi.fn(),
       loadSession: vi.fn(),
+      initLocale: vi.fn().mockResolvedValue(undefined),
+      setLocale: vi.fn().mockResolvedValue(undefined),
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
 

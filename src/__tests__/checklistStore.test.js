@@ -219,7 +219,7 @@ describe('Checklist Store', () => {
 
   describe('confirmModal', () => {
     it('handles finalize modal', async () => {
-      store.tituloModal.value = 'Finalize Checklist'
+      store.showFinalize()
       store.confirmModal()
       await vi.waitFor(() => {
         vi.advanceTimersByTime(1000)
@@ -230,7 +230,6 @@ describe('Checklist Store', () => {
     })
 
     it('handles create default path modal', async () => {
-      store.tituloModal.value = 'Create default path'
       store.specialtyList.value = [
         { code: 'SUR', name: 'Vigilancia Radar' },
         { code: 'COM', name: 'Comunicaciones de Radio' },
@@ -240,6 +239,7 @@ describe('Checklist Store', () => {
       mockFs.createDefaultRoot.mockResolvedValue({ success: true })
       mockFs.loadSpecialties.mockResolvedValue(store.specialtyList.value)
 
+      await store.checkDefaultPath()
       await store.confirmModal()
 
       expect(mockFs.createDefaultRoot).toHaveBeenCalled()
@@ -262,7 +262,7 @@ describe('Checklist Store', () => {
       expect(mockFs.defaultPathExists).toHaveBeenCalled()
       expect(store.tituloModal.value).toBe('Create default path')
       expect(store.explanationModal.value).toBe(
-        'The default path for inspection data does not exist.  I can create it for you.'
+        'The default path for inspection data does not exist. I can create it for you.'
       )
       expect(store.accionModal.value).toBe('create the default path')
       expect(store.showModal.value).toBe(true)
@@ -432,7 +432,8 @@ describe('Checklist Store', () => {
         store.checklist.value,
         expectedSessionObj,
         'SUR',
-        null
+        null,
+        mockSession.locale
       )
       expect(mockToast.success).toHaveBeenCalledWith('Report generated successfully')
       expect(store.generatedReportPath.value).toBe('report.pdf')
