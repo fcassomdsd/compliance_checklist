@@ -47,14 +47,19 @@ export default async function globalSetup() {
   const currentInspectionDir = join(homedir(), 'Documents', 'Current_inspection')
   const workspaceDir = join(currentInspectionDir, 'MDSD_SUR')
   const registryFile = join(currentInspectionDir, 'workspaces.json')
+  const apiKeyFile = join(currentInspectionDir, 'api-key.json')
   const backupWorkspaceDir = join(stateBackupDir, 'MDSD_SUR')
   const backupRegistryFile = join(stateBackupDir, 'workspaces.json')
+  const backupApiKeyFile = join(stateBackupDir, 'api-key.json')
 
   if (existsSync(backupWorkspaceDir)) {
     await rm(backupWorkspaceDir, { recursive: true, force: true })
   }
   if (existsSync(backupRegistryFile)) {
     await rm(backupRegistryFile, { force: true })
+  }
+  if (existsSync(backupApiKeyFile)) {
+    await rm(backupApiKeyFile, { force: true })
   }
 
   if (existsSync(workspaceDir)) {
@@ -63,6 +68,19 @@ export default async function globalSetup() {
   if (existsSync(registryFile)) {
     await rename(registryFile, backupRegistryFile)
   }
+  if (existsSync(apiKeyFile)) {
+    await rename(apiKeyFile, backupApiKeyFile)
+  }
+
+  // The upload store's exportUploadPayload() blocks on an API-key prompt
+  // modal whenever no key is on disk (readApiKey() -> null); a fresh CI
+  // runner never has one, so electron.upload.spec.mjs's upload click would
+  // hang on that modal forever instead of ever reaching the mock server.
+  // Seed a fixture key so the prompt never appears.
+  if (!existsSync(currentInspectionDir)) {
+    mkdirSync(currentInspectionDir, { recursive: true })
+  }
+  await writeFile(apiKeyFile, JSON.stringify({ key: 'e2e-test-api-key' }, null, 2), 'utf8')
 
   const appConfigRaw = await readFile(appConfigPath, 'utf8')
   await writeFile(appConfigBackupFile, appConfigRaw, 'utf8')
