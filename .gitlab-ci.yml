@@ -111,7 +111,7 @@ e2e:full:
     - npm run build
   script:
     - echo "🧪 Running full Electron E2E test suite..."
-    - npm run e2e
+    - xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npm run e2e
   artifacts:
     when: always
     paths:
