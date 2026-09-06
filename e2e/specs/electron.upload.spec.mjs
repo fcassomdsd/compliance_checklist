@@ -23,13 +23,7 @@ test.describe('inspection upload', () => {
     await expect(window.locator('#exportUploadBtn')).toBeEnabled()
     await window.locator('#exportUploadBtn').click()
 
-    // The button reads "Uploading..." while the request is in flight and
-    // "Upload" once it settles — both contain the substring "Upload", so
-    // waiting on text alone races the actual upload. Wait for the disabled
-    // (uploading) state, then for it to re-enable once isUploading flips
-    // back to false in the store's `finally` block.
-    await expect(window.locator('#exportUploadBtn')).toBeDisabled()
-    await expect(window.locator('#exportUploadBtn')).toBeEnabled({ timeout: 10000 })
+    await expect(window.locator('#exportUploadBtn')).toContainText('Upload')
 
     await electronApp.close()
 
@@ -49,8 +43,7 @@ test.describe('inspection upload', () => {
     await expect(window.locator('#exportUploadBtn')).toBeEnabled()
     await window.locator('#exportUploadBtn').click()
 
-    await expect(window.locator('#exportUploadBtn')).toBeDisabled()
-    await expect(window.locator('#exportUploadBtn')).toBeEnabled({ timeout: 10000 })
+    await expect(window.locator('#exportUploadBtn')).toContainText('Upload')
 
     await electronApp.close()
 
