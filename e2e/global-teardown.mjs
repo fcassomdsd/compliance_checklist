@@ -41,12 +41,10 @@ export default async function globalTeardown() {
   const currentInspectionDir = join(homedir(), 'Documents', 'Current_inspection')
   const workspaceDir = join(currentInspectionDir, 'MDSD_SUR')
   const registryFile = join(currentInspectionDir, 'workspaces.json')
-  const apiKeyFile = join(currentInspectionDir, 'api-key.json')
   const backupWorkspaceDir = join(stateBackupDir, 'MDSD_SUR')
   const backupRegistryFile = join(stateBackupDir, 'workspaces.json')
-  const backupApiKeyFile = join(stateBackupDir, 'api-key.json')
 
-  if (existsSync(backupWorkspaceDir) || existsSync(backupRegistryFile) || existsSync(backupApiKeyFile)) {
+  if (existsSync(backupWorkspaceDir) || existsSync(backupRegistryFile)) {
     await mkdir(currentInspectionDir, { recursive: true })
   }
 
@@ -64,15 +62,25 @@ export default async function globalTeardown() {
     await rename(backupRegistryFile, registryFile)
   }
 
-  if (existsSync(backupApiKeyFile)) {
-    if (existsSync(apiKeyFile)) {
+  // Mirror of global-setup.mjs's dual-path API-key fixture seeding (see
+  // the comment there for why both roots are needed).
+  const apiKeyRoots = [join(homedir(), 'Documents'), homedir()]
+  for (const root of apiKeyRoots) {
+    const dir = join(root, 'Current_inspection')
+    const apiKeyFile = join(dir, 'api-key.json')
+    const backupApiKeyFile = join(stateBackupDir, `api-key.${root === homedir() ? 'home' : 'documents'}.json`)
+
+    if (existsSync(backupApiKeyFile)) {
+      await mkdir(dir, { recursive: true })
+      if (existsSync(apiKeyFile)) {
+        await rm(apiKeyFile, { force: true })
+      }
+      await rename(backupApiKeyFile, apiKeyFile)
+    } else if (existsSync(apiKeyFile)) {
+      // No pre-existing key was backed up, meaning global-setup's fixture
+      // key is what's on disk — remove it rather than leaving a fake key
+      // in place of whatever a real user would otherwise be prompted for.
       await rm(apiKeyFile, { force: true })
     }
-    await rename(backupApiKeyFile, apiKeyFile)
-  } else if (existsSync(apiKeyFile)) {
-    // No pre-existing key was backed up, meaning global-setup's fixture
-    // key is what's on disk — remove it rather than leaving a fake key
-    // in place of whatever a real user would otherwise be prompted for.
-    await rm(apiKeyFile, { force: true })
   }
 }
