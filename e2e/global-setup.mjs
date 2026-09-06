@@ -47,19 +47,14 @@ export default async function globalSetup() {
   const currentInspectionDir = join(homedir(), 'Documents', 'Current_inspection')
   const workspaceDir = join(currentInspectionDir, 'MDSD_SUR')
   const registryFile = join(currentInspectionDir, 'workspaces.json')
-  const apiKeyFile = join(currentInspectionDir, 'api-key.json')
   const backupWorkspaceDir = join(stateBackupDir, 'MDSD_SUR')
   const backupRegistryFile = join(stateBackupDir, 'workspaces.json')
-  const backupApiKeyFile = join(stateBackupDir, 'api-key.json')
 
   if (existsSync(backupWorkspaceDir)) {
     await rm(backupWorkspaceDir, { recursive: true, force: true })
   }
   if (existsSync(backupRegistryFile)) {
     await rm(backupRegistryFile, { force: true })
-  }
-  if (existsSync(backupApiKeyFile)) {
-    await rm(backupApiKeyFile, { force: true })
   }
 
   if (existsSync(workspaceDir)) {
@@ -68,19 +63,37 @@ export default async function globalSetup() {
   if (existsSync(registryFile)) {
     await rename(registryFile, backupRegistryFile)
   }
-  if (existsSync(apiKeyFile)) {
-    await rename(apiKeyFile, backupApiKeyFile)
-  }
 
   // The upload store's exportUploadPayload() blocks on an API-key prompt
   // modal whenever no key is on disk (readApiKey() -> null); a fresh CI
   // runner never has one, so electron.upload.spec.mjs's upload click would
   // hang on that modal forever instead of ever reaching the mock server.
   // Seed a fixture key so the prompt never appears.
-  if (!existsSync(currentInspectionDir)) {
-    mkdirSync(currentInspectionDir, { recursive: true })
+  //
+  // Electron's app.getPath('documents') is environment-dependent: on a
+  // real desktop it's ~/Documents, but a minimal CI container with no
+  // XDG user-dirs config falls back to bare $HOME (confirmed empirically
+  // — the app's own workspace path showed up as /root/Current_inspection,
+  // not /root/Documents/Current_inspection). Seed both candidates so the
+  // fixture is found regardless of which one Electron resolves to here.
+  const apiKeyRoots = [join(homedir(), 'Documents'), homedir()]
+  for (const root of apiKeyRoots) {
+    const dir = join(root, 'Current_inspection')
+    const apiKeyFile = join(dir, 'api-key.json')
+    const backupApiKeyFile = join(stateBackupDir, `api-key.${root === homedir() ? 'home' : 'documents'}.json`)
+
+    if (existsSync(backupApiKeyFile)) {
+      await rm(backupApiKeyFile, { force: true })
+    }
+    if (existsSync(apiKeyFile)) {
+      await rename(apiKeyFile, backupApiKeyFile)
+    }
+
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true })
+    }
+    await writeFile(apiKeyFile, JSON.stringify({ key: 'e2e-test-api-key' }, null, 2), 'utf8')
   }
-  await writeFile(apiKeyFile, JSON.stringify({ key: 'e2e-test-api-key' }, null, 2), 'utf8')
 
   const appConfigRaw = await readFile(appConfigPath, 'utf8')
   await writeFile(appConfigBackupFile, appConfigRaw, 'utf8')
