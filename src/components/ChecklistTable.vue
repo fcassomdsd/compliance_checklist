@@ -11,13 +11,13 @@
     </colgroup>
     <thead>
       <tr>
-        <th>Code</th>
-        <th>Reference</th>
-        <th class="question">Question</th>
-        <th class="verification">Verification</th>
-        <th class="compliance">Compliance</th>
-        <th class="comments">Comments</th>
-        <th class="evidence">Evidence</th>
+        <th>{{ t('checklistTable.code') }}</th>
+        <th>{{ t('checklistTable.reference') }}</th>
+        <th class="question">{{ t('checklistTable.question') }}</th>
+        <th class="verification">{{ t('checklistTable.verification') }}</th>
+        <th class="compliance">{{ t('checklistTable.compliance') }}</th>
+        <th class="comments">{{ t('checklistTable.comments') }}</th>
+        <th class="evidence">{{ t('checklistTable.evidence') }}</th>
       </tr>
     </thead>
     <tbody>
@@ -37,10 +37,12 @@
 </template>
 
 <script setup>
+  import { useI18n } from 'vue-i18n'
   import ChecklistRow from './ChecklistRow.vue'
   import { useChecklistStore } from '../stores/checklistStore'
   import { useSessionStore } from '../stores/sessionStore'
 
+  const { t } = useI18n()
   // Access the Pinia store
   const store = useChecklistStore()
   const sessionStore = useSessionStore()

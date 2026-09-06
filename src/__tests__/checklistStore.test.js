@@ -66,8 +66,8 @@ describe('Checklist Store', () => {
       loadWorkspaceRegistry: vi.fn().mockResolvedValue([]),
       saveWorkspaceRegistry: vi.fn(),
       upsertWorkspaceRegistryEntry: vi.fn().mockResolvedValue({
-        workspaceKey: 'loc-001__VIG',
-        specialtyCode: 'VIG',
+        workspaceKey: 'loc-001__SUR',
+        specialtyCode: 'SUR',
         locationId: 'loc-001',
       }),
       loadFindings: vi.fn().mockResolvedValue([]),
@@ -94,7 +94,7 @@ describe('Checklist Store', () => {
     vi.mocked(useSessionStore).mockReturnValue(mockSession)
 
     mockFollowUp = {
-      summary: { finalized: true, specialty: 'VIG' },
+      summary: { finalized: true, specialty: 'SUR' },
       responses: {},
       reset: vi.fn(),
       loadFollowUpSession: vi.fn(),
@@ -129,7 +129,7 @@ describe('Checklist Store', () => {
   describe('loadSpecialties', () => {
     it('loads specialties from file service', async () => {
       const mockSpecialties = [
-        { code: 'VIG', name: 'Vigilancia Radar' },
+        { code: 'SUR', name: 'Vigilancia Radar' },
         { code: 'COM', name: 'Comunicaciones de Radio' },
         { code: 'RNA', name: 'Radioayudas' },
         { code: 'EEM', name: 'Energia y Equipos MET' },
@@ -166,9 +166,9 @@ describe('Checklist Store', () => {
     })
 
     it('loads checklist, session, and evidence for valid specialty', async () => {
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       let mockChecklist = {
-        specialty: 'VIG',
+        specialty: 'SUR',
         questions: [
           {
             id: '1',
@@ -181,20 +181,20 @@ describe('Checklist Store', () => {
         ],
       }
       mockFs.loadChecklist.mockResolvedValue(mockChecklist)
-      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+      mockFs.setSavePath.mockResolvedValue('/path/SUR/Evidence')
 
       await store.loadChecklist()
 
       expect(mockToast.error).not.toHaveBeenCalled()
       expect(store.checklist.value).toEqual(mockChecklist)
       expect(store.checklistLoaded.value).toBe(true)
-      expect(store.currentPath.value).toBe('/path/VIG/Evidence')
+      expect(store.currentPath.value).toBe('/path/SUR/Evidence')
 
-      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG', null)
+      expect(mockFs.loadChecklist).toHaveBeenCalledWith('SUR', null)
     })
 
     it('handles load errors with toast', async () => {
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       mockFs.loadChecklist.mockRejectedValue(new Error('Load failed'))
 
       await store.loadChecklist()
@@ -219,7 +219,7 @@ describe('Checklist Store', () => {
 
   describe('confirmModal', () => {
     it('handles finalize modal', async () => {
-      store.tituloModal.value = 'Finalize Checklist'
+      store.showFinalize()
       store.confirmModal()
       await vi.waitFor(() => {
         vi.advanceTimersByTime(1000)
@@ -230,9 +230,8 @@ describe('Checklist Store', () => {
     })
 
     it('handles create default path modal', async () => {
-      store.tituloModal.value = 'Create default path'
       store.specialtyList.value = [
-        { code: 'VIG', name: 'Vigilancia Radar' },
+        { code: 'SUR', name: 'Vigilancia Radar' },
         { code: 'COM', name: 'Comunicaciones de Radio' },
         { code: 'RNA', name: 'Radioayudas' },
         { code: 'EEM', name: 'Energia y Equipos MET' },
@@ -240,6 +239,7 @@ describe('Checklist Store', () => {
       mockFs.createDefaultRoot.mockResolvedValue({ success: true })
       mockFs.loadSpecialties.mockResolvedValue(store.specialtyList.value)
 
+      await store.checkDefaultPath()
       await store.confirmModal()
 
       expect(mockFs.createDefaultRoot).toHaveBeenCalled()
@@ -262,7 +262,7 @@ describe('Checklist Store', () => {
       expect(mockFs.defaultPathExists).toHaveBeenCalled()
       expect(store.tituloModal.value).toBe('Create default path')
       expect(store.explanationModal.value).toBe(
-        'The default path for inspection data does not exist.  I can create it for you.'
+        'The default path for inspection data does not exist. I can create it for you.'
       )
       expect(store.accionModal.value).toBe('create the default path')
       expect(store.showModal.value).toBe(true)
@@ -271,47 +271,47 @@ describe('Checklist Store', () => {
 
   describe('session removal behavior', () => {
     it('removing inspection session resets local inspection state without reloading', async () => {
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       store.activeWorkspace.value = {
-        workspaceKey: 'loc-001__VIG',
-        specialtyCode: 'VIG',
+        workspaceKey: 'loc-001__SUR',
+        specialtyCode: 'SUR',
         locationId: 'loc-001',
       }
-      store.activeWorkspaceKey.value = 'loc-001__VIG'
+      store.activeWorkspaceKey.value = 'loc-001__SUR'
       mockFs.loadWorkspaceRegistry.mockResolvedValue([
         {
-          workspaceKey: 'loc-001__VIG',
-          specialtyCode: 'VIG',
+          workspaceKey: 'loc-001__SUR',
+          specialtyCode: 'SUR',
           locationId: 'loc-001',
         },
       ])
 
       await store.removeInspectionSession()
 
-      expect(mockFs.removeInspectionSession).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(mockFs.removeInspectionSession).toHaveBeenCalledWith('SUR', 'loc-001')
       expect(mockSession.reset).toHaveBeenCalledTimes(1)
       expect(mockSession.loadSession).not.toHaveBeenCalled()
     })
 
     it('removing follow-up session resets local follow-up state without reloading', async () => {
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       store.activeWorkspace.value = {
-        workspaceKey: 'loc-001__VIG',
-        specialtyCode: 'VIG',
+        workspaceKey: 'loc-001__SUR',
+        specialtyCode: 'SUR',
         locationId: 'loc-001',
       }
-      store.activeWorkspaceKey.value = 'loc-001__VIG'
+      store.activeWorkspaceKey.value = 'loc-001__SUR'
       mockFs.loadWorkspaceRegistry.mockResolvedValue([
         {
-          workspaceKey: 'loc-001__VIG',
-          specialtyCode: 'VIG',
+          workspaceKey: 'loc-001__SUR',
+          specialtyCode: 'SUR',
           locationId: 'loc-001',
         },
       ])
 
       await store.removeFollowUpSession()
 
-      expect(mockFs.removeFollowUpSession).toHaveBeenCalledWith('VIG', 'loc-001')
+      expect(mockFs.removeFollowUpSession).toHaveBeenCalledWith('SUR', 'loc-001')
       expect(mockFollowUp.reset).toHaveBeenCalledTimes(1)
       expect(mockFollowUp.loadFollowUpSession).not.toHaveBeenCalled()
     })
@@ -320,9 +320,9 @@ describe('Checklist Store', () => {
   describe('export', () => {
     beforeEach(() => {
       window.electronAPI.readApiKey = vi.fn().mockResolvedValue('test-api-key')
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       store.checklist.value = {
-        specialtyName: 'Sistemas de Vigilancia',
+        specialtyName: 'Vigilancia (radar)',
         inspection: '0224',
         startDate: '2024-01-01',
         location: 'Location 1',
@@ -379,7 +379,7 @@ describe('Checklist Store', () => {
       }
 
       mockSession.summary.value = {
-        specialty: 'VIG',
+        specialty: 'SUR',
         finalized: true,
         lastUpdated: new Date().toISOString(),
         generalComments: '',
@@ -431,8 +431,9 @@ describe('Checklist Store', () => {
       expect(mockFs.saveFindingsReport).toHaveBeenCalledWith(
         store.checklist.value,
         expectedSessionObj,
-        'VIG',
-        null
+        'SUR',
+        null,
+        mockSession.locale
       )
       expect(mockToast.success).toHaveBeenCalledWith('Report generated successfully')
       expect(store.generatedReportPath.value).toBe('report.pdf')
@@ -461,7 +462,7 @@ describe('Checklist Store', () => {
       expect(mockFs.exportInspectionPayload).toHaveBeenCalledWith(
         store.checklist.value,
         expectedSessionObj,
-        'VIG',
+        'SUR',
         null
       )
       expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
@@ -473,7 +474,7 @@ describe('Checklist Store', () => {
       store.findings.value = [{ findingId: 'F-1', locationId: 'loc-1' }]
       store.findingsLoaded.value = true
       store.activeWorkspace.value = { locationId: 'loc-1' }
-      mockFollowUp.summary = { finalized: true, specialty: 'VIG' }
+      mockFollowUp.summary = { finalized: true, specialty: 'SUR' }
       mockFollowUp.responses = { 'F-1': { findingId: 'F-1', percentComplete: 100 } }
 
       await store.exportUploadPayload()
@@ -484,7 +485,7 @@ describe('Checklist Store', () => {
           summary: mockFollowUp.summary,
           responses: mockFollowUp.responses,
         },
-        'VIG',
+        'SUR',
         'loc-1'
       )
       expect(mockFs.notifyImportCanonical).not.toHaveBeenCalled()
@@ -550,28 +551,28 @@ describe('Checklist Store', () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
       mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
       mockFs.saveChecklist.mockResolvedValue(undefined)
-      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Imported Specialty' }])
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'SUR', name: 'Imported Specialty' }])
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
-      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+      mockFs.setSavePath.mockResolvedValue('/path/SUR/Evidence')
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
-      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'TEST LOCATION')
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('SUR', 'TEST LOCATION')
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'SUR', {})
       expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalled()
-      expect(mockFs.ensureSpecialtyEntry).toHaveBeenCalledWith('VIG', 'Imported Specialty')
-      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'TEST LOCATION')
+      expect(mockFs.ensureSpecialtyEntry).toHaveBeenCalledWith('SUR', 'Imported Specialty')
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('SUR', mockImportedChecklist, 'TEST LOCATION')
       expect(mockFs.loadSpecialties).toHaveBeenCalled()
-      expect(store.specialty.value).toBe('VIG')
-      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'TEST LOCATION')
+      expect(store.specialty.value).toBe('SUR')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('SUR', 'TEST LOCATION')
       expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
       expect(store.isImporting.value).toBe(false)
     })
 
     it('imports checklist using locationName and locationCode from new header format', async () => {
       const mockImportedChecklist = {
-        specialtyName: 'Sistemas de Vigilancia',
-        specialtyCode: 'VIG',
+        specialtyName: 'Vigilancia (radar)',
+        specialtyCode: 'SUR',
         specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
         inspection: 'MDPP-2026-01',
         inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
@@ -593,15 +594,15 @@ describe('Checklist Store', () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
       mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
       mockFs.saveChecklist.mockResolvedValue(undefined)
-      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Sistemas de Vigilancia' }])
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'SUR', name: 'Vigilancia (radar)' }])
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
-      mockFs.setSavePath.mockResolvedValue('/path/MDPP/VIG/Evidence')
+      mockFs.setSavePath.mockResolvedValue('/path/MDPP/SUR/Evidence')
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
-      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'MDPP')
-      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'MDPP')
-      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'MDPP')
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('SUR', 'MDPP')
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('SUR', mockImportedChecklist, 'MDPP')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('SUR', 'MDPP')
       expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
       expect(store.isImporting.value).toBe(false)
     })
@@ -610,8 +611,8 @@ describe('Checklist Store', () => {
       // Both locationId (opaque UUID) and locationCode (human ICAO code) are present.
       // The workspace folder / key must be derived from locationCode, not the UUID.
       const mockImportedChecklist = {
-        specialtyName: 'Sistemas de Vigilancia',
-        specialtyCode: 'VIG',
+        specialtyName: 'Vigilancia (radar)',
+        specialtyCode: 'SUR',
         inspection: 'MDPP-2026-01',
         inspectionId: 'a01kkq3s90jeabsj7dp8ddnz4qf',
         locationName: 'Aeropuerto Internacional Gregorio Luperon',
@@ -632,24 +633,24 @@ describe('Checklist Store', () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
       mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
       mockFs.saveChecklist.mockResolvedValue(undefined)
-      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Sistemas de Vigilancia' }])
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'SUR', name: 'Vigilancia (radar)' }])
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
-      mockFs.setSavePath.mockResolvedValue('/path/MDPP/VIG/Evidence')
+      mockFs.setSavePath.mockResolvedValue('/path/MDPP/SUR/Evidence')
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
       // All location-keyed calls must use 'MDPP', not the UUID
-      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'MDPP')
-      expect(mockFs.saveChecklist).toHaveBeenCalledWith('VIG', mockImportedChecklist, 'MDPP')
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('SUR', 'MDPP')
+      expect(mockFs.saveChecklist).toHaveBeenCalledWith('SUR', mockImportedChecklist, 'MDPP')
       expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalledWith(
-        'VIG',
+        'SUR',
         'MDPP',
         expect.objectContaining({ locationId: 'MDPP', locationName: 'Aeropuerto Internacional Gregorio Luperon' }),
       )
       expect(mockFs.upsertWorkspaceRegistryEntry).toHaveBeenCalledWith(
         expect.objectContaining({ locationId: 'MDPP', locationName: 'Aeropuerto Internacional Gregorio Luperon' }),
       )
-      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'MDPP')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('SUR', 'MDPP')
     })
 
     it('imports checklist when session is finalized (re-import)', async () => {
@@ -669,20 +670,20 @@ describe('Checklist Store', () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
       mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
       mockFs.saveChecklist.mockResolvedValue(undefined)
-      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Re-imported Specialty' }])
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'SUR', name: 'Re-imported Specialty' }])
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
-      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+      mockFs.setSavePath.mockResolvedValue('/path/SUR/Evidence')
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'SUR', {})
       expect(mockToast.success).toHaveBeenCalledWith('Checklist imported successfully')
       expect(store.isImporting.value).toBe(false)
     })
 
     it('blocks import when active session exists', async () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue({
-        specialtyName: 'VIG',
+        specialtyName: 'SUR',
         location: 'Test Location',
         questions: [],
       })
@@ -692,9 +693,9 @@ describe('Checklist Store', () => {
         sessionFinalized: false
       })
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'SUR', {})
       expect(mockToast.error).toHaveBeenCalledWith('Cannot import checklist while an active session is in progress')
       expect(store.isImporting.value).toBe(false)
     })
@@ -711,9 +712,9 @@ describe('Checklist Store', () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
 
-      await store.importChecklist('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+      await store.importChecklist('INS1', 'SUR', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
 
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'SUR', { inspectedProviderId: 'IP1', siteVisitId: 'SV1' })
     })
 
     it('passes null provider when not provided', async () => {
@@ -728,13 +729,13 @@ describe('Checklist Store', () => {
       mockFs.fetchChecklistFromApi.mockResolvedValue(mockImportedChecklist)
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
-      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'VIG', {})
+      expect(mockFs.fetchChecklistFromApi).toHaveBeenCalledWith('INS1', 'SUR', {})
     })
 
     it('handles missing inspection parameter', async () => {
-      await store.importChecklist('', 'VIG')
+      await store.importChecklist('', 'SUR')
 
       expect(mockFs.getChecklistImportState).not.toHaveBeenCalled()
       expect(mockToast.error).toHaveBeenCalledWith('Inspection and specialty are required')
@@ -757,7 +758,7 @@ describe('Checklist Store', () => {
       })
       mockFs.fetchChecklistFromApi.mockRejectedValue(new Error('API is down'))
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
       expect(mockToast.error).toHaveBeenCalledWith('API is down')
       expect(store.isImporting.value).toBe(false)
@@ -774,7 +775,7 @@ describe('Checklist Store', () => {
         followUpTouched: false,
       })
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
       expect(mockFs.getChecklistImportState).not.toHaveBeenCalled()
       expect(mockToast.error).toHaveBeenCalledWith(
@@ -802,11 +803,11 @@ describe('Checklist Store', () => {
       })
       mockFs.ensureSpecialtyEntry.mockResolvedValue(undefined)
       mockFs.saveChecklist.mockResolvedValue(undefined)
-      mockFs.loadSpecialties.mockResolvedValue([{ code: 'VIG', name: 'Test' }])
+      mockFs.loadSpecialties.mockResolvedValue([{ code: 'SUR', name: 'Test' }])
       mockFs.loadChecklist.mockResolvedValue(mockImportedChecklist)
-      mockFs.setSavePath.mockResolvedValue('/path/VIG/Evidence')
+      mockFs.setSavePath.mockResolvedValue('/path/SUR/Evidence')
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
       expect(store.isImporting.value).toBe(false)
     })
@@ -816,8 +817,8 @@ describe('Checklist Store', () => {
     it('loads checklist from disk even when registry checklistPresent is false', async () => {
       store.workspaceList.value = [
         {
-          workspaceKey: 'loc-001__VIG',
-          specialtyCode: 'VIG',
+          workspaceKey: 'loc-001__SUR',
+          specialtyCode: 'SUR',
           specialtyName: 'Vigilancia',
           locationId: 'loc-001',
           locationName: 'Location 1',
@@ -830,17 +831,17 @@ describe('Checklist Store', () => {
       ]
       mockFs.getChecklistImportState.mockResolvedValue({ hasChecklist: true })
       mockFs.loadChecklist.mockResolvedValue({ questions: [{ id: 'q1' }] })
-      mockFs.setSavePath.mockResolvedValue('/path/LOC-001_VIG')
+      mockFs.setSavePath.mockResolvedValue('/path/LOC-001_SUR')
 
-      await store.selectWorkspace('loc-001__VIG')
+      await store.selectWorkspace('loc-001__SUR')
 
-      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('VIG', 'loc-001')
-      expect(mockFs.loadChecklist).toHaveBeenCalledWith('VIG', 'loc-001')
-      expect(mockSession.loadSession).toHaveBeenCalledWith('VIG', 'loc-001')
-      expect(store.currentPath.value).toBe('/path/LOC-001_VIG')
+      expect(mockFs.getChecklistImportState).toHaveBeenCalledWith('SUR', 'loc-001')
+      expect(mockFs.loadChecklist).toHaveBeenCalledWith('SUR', 'loc-001')
+      expect(mockSession.loadSession).toHaveBeenCalledWith('SUR', 'loc-001')
+      expect(store.currentPath.value).toBe('/path/LOC-001_SUR')
       expect(mockFs.upsertWorkspaceRegistryEntry).toHaveBeenCalledWith(
         expect.objectContaining({
-          specialtyCode: 'VIG',
+          specialtyCode: 'SUR',
           locationId: 'loc-001',
           checklistPresent: true,
         })
@@ -858,15 +859,15 @@ describe('Checklist Store', () => {
     it('keeps checklist empty when workspace has no checklist on disk', async () => {
       store.workspaceList.value = [
         {
-          workspaceKey: 'loc-001__VIG',
-          specialtyCode: 'VIG',
+          workspaceKey: 'loc-001__SUR',
+          specialtyCode: 'SUR',
           locationId: 'loc-001',
           checklistPresent: false,
         },
       ]
       mockFs.getChecklistImportState.mockResolvedValue({ hasChecklist: false })
 
-      await store.selectWorkspace('loc-001__VIG')
+      await store.selectWorkspace('loc-001__SUR')
 
       expect(store.checklist.value).toBe(null)
       expect(store.checklistLoaded.value).toBe(false)
@@ -907,9 +908,9 @@ describe('Checklist Store', () => {
     it('loads and formats workspace display names', async () => {
       mockFs.loadWorkspaceRegistry.mockResolvedValue([
         {
-          workspaceKey: 'loc-001__VIG',
+          workspaceKey: 'loc-001__SUR',
           locationId: 'loc-001',
-          specialtyCode: 'VIG',
+          specialtyCode: 'SUR',
           draftStatus: 'finalized',
         },
       ])
@@ -931,7 +932,7 @@ describe('Checklist Store', () => {
 
   describe('findings and follow-up actions', () => {
     it('loads findings for active workspace', async () => {
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       store.activeWorkspace.value = { locationId: 'loc-001' }
       mockFs.loadFindings.mockResolvedValue([{ findingId: 'F-1' }])
 
@@ -943,7 +944,7 @@ describe('Checklist Store', () => {
     })
 
     it('handles findings load failure', async () => {
-      store.specialty.value = 'VIG'
+      store.specialty.value = 'SUR'
       mockFs.loadFindings.mockRejectedValue(new Error('findings failed'))
 
       const loaded = await store.loadFindings()
@@ -959,14 +960,14 @@ describe('Checklist Store', () => {
       mockFs.fetchFindingsFromApi.mockResolvedValue(importedFindings)
       mockFs.getWorkspaceTouchedState.mockResolvedValue({ checklistTouched: false, followUpTouched: false })
       mockFs.upsertWorkspaceRegistryEntry.mockResolvedValue({
-        workspaceKey: 'loc-001__VIG',
-        specialtyCode: 'VIG',
+        workspaceKey: 'loc-001__SUR',
+        specialtyCode: 'SUR',
         locationId: 'loc-001',
       })
       mockFs.loadWorkspaceRegistry.mockResolvedValue([])
       mockFs.loadFindings.mockResolvedValue(importedFindings)
 
-      await store.importFindings('VIG', 'loc-001')
+      await store.importFindings('SUR', 'loc-001')
 
       expect(store.uiMode.value).toBe('followUp')
       expect(store.isImportingFindings.value).toBe(false)
@@ -977,7 +978,7 @@ describe('Checklist Store', () => {
       mockFs.fetchFindingsFromApi.mockResolvedValue([{ findingId: 'F-1', locationId: 'loc-001' }])
       mockFs.getWorkspaceTouchedState.mockResolvedValue({ checklistTouched: false, followUpTouched: true })
 
-      await store.importFindings('VIG', 'loc-001')
+      await store.importFindings('SUR', 'loc-001')
 
       expect(mockToast.error).toHaveBeenCalledWith(
         'Cannot import findings because local follow-up edits already exist'
@@ -987,7 +988,7 @@ describe('Checklist Store', () => {
     it('rejects findings import when service is offline', async () => {
       store.importServiceOnline.value = false
 
-      await store.importFindings('VIG', 'loc-001')
+      await store.importFindings('SUR', 'loc-001')
 
       expect(mockToast.error).toHaveBeenCalledWith('Import service offline (localhost:1880)')
     })
@@ -1061,7 +1062,7 @@ describe('Checklist Store', () => {
     it('rejects findings import when API returns empty array', async () => {
       mockFs.fetchFindingsFromApi.mockResolvedValue([])
 
-      await store.importFindings('VIG', 'loc-001')
+      await store.importFindings('SUR', 'loc-001')
 
       expect(mockToast.error).toHaveBeenCalledWith(
         'No findings were returned for this location and specialty'
@@ -1074,17 +1075,17 @@ describe('Checklist Store', () => {
       mockFs.fetchFindingsFromApi.mockResolvedValue(importedFindings)
       mockFs.getWorkspaceTouchedState.mockResolvedValue({ checklistTouched: true, followUpTouched: false })
       mockFs.upsertWorkspaceRegistryEntry.mockResolvedValue({
-        workspaceKey: 'loc-001__VIG',
-        specialtyCode: 'VIG',
+        workspaceKey: 'loc-001__SUR',
+        specialtyCode: 'SUR',
         locationId: 'loc-001',
       })
       mockFs.loadWorkspaceRegistry.mockResolvedValue([])
       mockFs.loadFindings.mockResolvedValue(importedFindings)
 
-      await store.importFindings('VIG', 'loc-001')
+      await store.importFindings('SUR', 'loc-001')
 
       expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalledWith(
-        'VIG',
+        'SUR',
         'loc-001',
         expect.objectContaining({ locationName: 'Known Location', checklistTouched: true })
       )
@@ -1093,7 +1094,7 @@ describe('Checklist Store', () => {
     it('handles import checklist when import service is offline', async () => {
       store.importServiceOnline.value = false
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
       expect(mockToast.error).toHaveBeenCalledWith('Import service offline (localhost:1880)')
       expect(store.isImporting.value).toBe(false)
@@ -1102,11 +1103,11 @@ describe('Checklist Store', () => {
     it('reports unresolved location error when checklist header has no location fields', async () => {
       mockFs.fetchChecklistFromApi = vi.fn()
       mockFs.fetchChecklistFromApi.mockResolvedValue({
-        specialtyName: 'VIG',
+        specialtyName: 'SUR',
         questions: [],
       })
 
-      await store.importChecklist('INS1', 'VIG', {})
+      await store.importChecklist('INS1', 'SUR', {})
 
       expect(mockToast.error).toHaveBeenCalledWith(
         'Imported inspection did not include a resolvable location identifier'

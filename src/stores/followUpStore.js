@@ -3,6 +3,9 @@ import { useToast } from 'vue-toastification'
 import { defineStore } from 'pinia'
 import { createFileService } from '../utils/fileServices.js'
 import { useEvidenceStore } from './evidenceStore.js'
+import i18n from '../i18n/index.js'
+
+const t = (key, params) => i18n.global.t(key, params)
 
 export const useFollowUpStore = defineStore('followUp', () => {
   const fs = createFileService()
@@ -156,13 +159,13 @@ export const useFollowUpStore = defineStore('followUp', () => {
       fs.saveFollowUpSession(summary.value, responses, displayToast, context.value.locationId)
 
       if (loaded !== null) {
-        toast.success('Follow-up session loaded')
+        toast.success(t('toast.followUpSessionLoaded'))
       } else {
-        toast.info('New follow-up session created')
+        toast.info(t('toast.newFollowUpSessionCreated'))
       }
     } catch (error) {
       summary.value.finalized = true
-      toast.error('Could not create follow-up session: ' + error.message)
+      toast.error(t('toast.createFollowUpSessionFailed', { message: error.message }))
     }
   }
 
@@ -175,7 +178,7 @@ export const useFollowUpStore = defineStore('followUp', () => {
 
     fs.saveFollowUpSession(summary.value, responses, displayToast, context.value.locationId)
     fs.markWorkspaceTouched(summary.value.specialty, context.value.locationId, 'followUpTouched').catch((error) => {
-      toast.error('Could not update workspace touched state: ' + error.message)
+      toast.error(t('toast.workspaceTouchedFailed', { message: error.message }))
     })
   }
 

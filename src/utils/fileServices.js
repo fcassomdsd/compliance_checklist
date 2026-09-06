@@ -1008,7 +1008,7 @@ export const createFileService = () => {
     }
   }
 
-  const saveFindingsReport = async (checklist, session, specialty, locationId = null) => {
+  const saveFindingsReport = async (checklist, session, specialty, locationId = null, locale = null) => {
     try {
       if (!checklist || !session || !specialty) {
         throw new Error('Missing required parameters: checklist, session, specialty')
@@ -1023,6 +1023,7 @@ export const createFileService = () => {
         sessionString,
         specialty,
         outputPath: filePath,
+        locale,
       })
       return result
     } catch (error) {

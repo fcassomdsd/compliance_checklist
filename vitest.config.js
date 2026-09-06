@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom', // For Vue component testing
     globals: true,
+    setupFiles: ['./src/__tests__/setup.js'],
     include: ['src/__tests__/*.test.js', 'electron/__tests__/*.test.js'],
     exclude: ['electron/__tests__/preload.test.js', 'electron/__tests__/main.mjs.test.js'],
     coverage: {

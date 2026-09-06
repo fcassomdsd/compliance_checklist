@@ -5,17 +5,21 @@
       <p class="modal-explanation">
         {{ explanation }}
       </p>
-      <p class="modal-confirmation">Do you want to {{ accion }}?</p>
+      <p class="modal-confirmation">{{ t('modal.confirmQuestion', { accion }) }}</p>
 
       <div class="modal-actions">
-        <button @click="$emit('cancel')" class="btn-cancel">Cancel</button>
-        <button @click="$emit('confirm')" class="btn-confirm">Yes, Continue</button>
+        <button @click="$emit('cancel')" class="btn-cancel">{{ t('modal.cancel') }}</button>
+        <button @click="$emit('confirm')" class="btn-confirm">{{ t('modal.yesContinue') }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+  import { useI18n } from 'vue-i18n'
+
+  const { t } = useI18n()
+
   defineProps({
     show: {
       type: Boolean,

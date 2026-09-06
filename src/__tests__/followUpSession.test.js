@@ -5,7 +5,7 @@ import { parseFollowUpSession, getFollowUpEvidenceLinks } from '../utils/followU
 describe('followUpSession.js', () => {
   describe('parseFollowUpSession', () => {
     it('parses a minimal valid follow-up session', () => {
-      const json = JSON.stringify({ summary: { specialty: 'VIG' } })
+      const json = JSON.stringify({ summary: { specialty: 'SUR' } })
       const result = parseFollowUpSession(json)
       expect(result).toEqual(JSON.parse(json))
     })
@@ -13,7 +13,7 @@ describe('followUpSession.js', () => {
     it('parses a full follow-up session with responses and evidence', () => {
       const session = {
         summary: {
-          specialty: 'VIG',
+          specialty: 'SUR',
           finalized: false,
           lastUpdated: '2024-01-01T10:00:00Z',
           generalComments: 'All good',
@@ -50,7 +50,7 @@ describe('followUpSession.js', () => {
 
     it('throws when response item is missing findingId', () => {
       const session = {
-        summary: { specialty: 'VIG' },
+        summary: { specialty: 'SUR' },
         responses: {
           'FIND-001': { followUpType: 'Progress Verification', percentComplete: 50 },
         },
@@ -62,7 +62,7 @@ describe('followUpSession.js', () => {
 
     it('accepts evidence item when evidenceRole is omitted', () => {
       const session = {
-        summary: { specialty: 'VIG' },
+        summary: { specialty: 'SUR' },
         responses: {
           'FIND-001': {
             findingId: 'FIND-001',
@@ -76,7 +76,7 @@ describe('followUpSession.js', () => {
 
     it('accepts legacy response entries without followUpType', () => {
       const session = {
-        summary: { specialty: 'VIG' },
+        summary: { specialty: 'SUR' },
         responses: {
           'FIND-001': {
             findingId: 'FIND-001',
@@ -97,7 +97,7 @@ describe('followUpSession.js', () => {
   describe('getFollowUpEvidenceLinks', () => {
     it('returns an empty object when no evidence is present', () => {
       const session = JSON.stringify({
-        summary: { specialty: 'VIG' },
+        summary: { specialty: 'SUR' },
         responses: { 'F1': { findingId: 'F1' } },
       })
       expect(getFollowUpEvidenceLinks(session)).toEqual({})
@@ -105,7 +105,7 @@ describe('followUpSession.js', () => {
 
     it('returns counts for evidence items across responses', () => {
       const session = JSON.stringify({
-        summary: { specialty: 'VIG' },
+        summary: { specialty: 'SUR' },
         responses: {
           'F1': { findingId: 'F1', followUpType: 'Progress Verification', evidence: [{ name: 'file1.pdf', evidenceRole: 'Progress Evidence' }, { name: 'file2.pdf', evidenceRole: 'Progress Evidence' }] },
           'F2': { findingId: 'F2', followUpType: 'Progress Verification', evidence: [{ name: 'file1.pdf', evidenceRole: 'Progress Evidence' }] },
@@ -118,7 +118,7 @@ describe('followUpSession.js', () => {
 
     it('ignores evidence items without a name string', () => {
       const session = JSON.stringify({
-        summary: { specialty: 'VIG' },
+        summary: { specialty: 'SUR' },
         responses: {
           'F1': { findingId: 'F1', evidence: [{ hashValue: 'abc' }, { name: '' }] },
         },

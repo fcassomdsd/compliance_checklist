@@ -1,8 +1,8 @@
 [
   {
-    "id": "sp-vig",
-    "code": "VIG",
-    "name": "Sistemas de Vigilancia"
+    "id": "sp-sur",
+    "code": "SUR",
+    "name": "Vigilancia (radar)"
   },
   {
     "id": "sp-com",

@@ -21,8 +21,8 @@ function sendJson(res, status, payload) {
 async function createImportServer() {
   const specialties = await loadJson('specialties.json')
   const locations = await loadJson('locations.json')
-  const checklist = await loadJson('checklist.vig.0224.json')
-  const findings = await loadJson('findings.vig.mdsd.json')
+  const checklist = await loadJson('checklist.sur.0224.json')
+  const findings = await loadJson('findings.sur.mdsd.json')
 
   return createServer((req, res) => {
     const url = new URL(req.url || '/', `http://localhost:${importPort}`)
@@ -45,7 +45,7 @@ async function createImportServer() {
     if (url.pathname === '/checklist') {
       const inspectionId = url.searchParams.get('inspectionId') || url.searchParams.get('inspection')
       const specialty = url.searchParams.get('specialty')
-      if ((inspectionId === 'INS1' || inspectionId === '0224') && specialty === 'VIG') {
+      if ((inspectionId === 'INS1' || inspectionId === '0224') && specialty === 'SUR') {
         sendJson(res, 200, checklist)
       } else {
         sendJson(res, 404, { error: 'fixture not found' })

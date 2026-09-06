@@ -4,6 +4,7 @@ import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
 
 import App from './App.vue'
+import i18n from './i18n/index.js'
 
 const app = createApp(App)
 const options = {
@@ -12,4 +13,5 @@ const options = {
 
 app.use(createPinia())
 app.use(Toast, options)
+app.use(i18n)
 app.mount('#app')

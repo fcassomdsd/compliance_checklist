@@ -173,7 +173,6 @@ describe('fileOps', () => {
       vi.spyOn(fs, 'access').mockResolvedValue(undefined)
       vi.spyOn(fs, 'writeFile').mockResolvedValue(undefined)
       vi.spyOn(path, 'dirname').mockReturnValue('/path')
-      // eslint-disable-next-line no-undef
       const buffer = Buffer.from('test')
       const result = await saveFile('/path/file.txt', buffer)
       expect(fs.writeFile).toHaveBeenCalledWith('/path/file.txt', buffer, 'utf-8')

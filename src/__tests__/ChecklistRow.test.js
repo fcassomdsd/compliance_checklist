@@ -66,7 +66,7 @@ describe('ChecklistRow.vue', () => {
 
     // Mock checklist store
     mockSessionStore = {
-      summary: { finalized: false, specialty: 'VIG', generalComments: '' }, // <-- added generalComments
+      summary: { finalized: false, specialty: 'SUR', generalComments: '' }, // <-- added generalComments
       updateSession: vi.fn(),
     }
     vi.mocked(useSessionStore).mockReturnValue(mockSessionStore)
@@ -104,10 +104,10 @@ describe('ChecklistRow.vue', () => {
     wrapper = mount(ChecklistRow, {
       props: {
         newTopic: false,
-        questionCode: 'VIG-0001',
+        questionCode: 'SUR-0001',
         row: {
           id: 'checklist-1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
           question: 'Question 1?',
@@ -133,10 +133,10 @@ describe('ChecklistRow.vue', () => {
     wrapper = mount(ChecklistRow, {
       props: {
         newTopic: true,
-        questionCode: 'VIG-0001',
+        questionCode: 'SUR-0001',
         row: {
           id: 'checklist-1',
-          code: 'VIG-0001',
+          code: 'SUR-0001',
           topic: 'Topic 1',
           reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
           question: 'Question 1?',
@@ -159,7 +159,7 @@ describe('ChecklistRow.vue', () => {
   })
 
   it('renders row data correctly', () => {
-    expect(wrapper.find('td[id="qcode-VIG-0001"]').text()).toBe('VIG-0001')
+    expect(wrapper.find('td[id="qcode-SUR-0001"]').text()).toBe('SUR-0001')
     expect(wrapper.find('td:nth-child(1)').isVisible()).toBeFalsy
     const refCell = wrapper.find('td.reference')
     expect(refCell.text()).toContain('STD')
@@ -192,10 +192,10 @@ describe('ChecklistRow.vue', () => {
       wrapper = mount(ChecklistRow, {
         props: {
           newTopic: false,
-          questionCode: 'VIG-0001',
+          questionCode: 'SUR-0001',
           row: {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: {}, guidance: 'GM only' },
             question: 'Question 1?',
@@ -240,7 +240,7 @@ describe('ChecklistRow.vue', () => {
     it('renders compliance radio buttons', () => {
       const radios = wrapper.findAll('input[type="radio"]')
       expect(radios.length).toBe(3) // Not applicable, Compliant, Non-Compliant
-      expect(radios[0].attributes('name')).toBe('compliance-VIG-0001')
+      expect(radios[0].attributes('name')).toBe('compliance-SUR-0001')
       expect(radios[1].attributes('value')).toBe('Compliant')
       expect(radios[1].element.checked).toBe(true) // Matches session.compliance
       expect(wrapper.find('label').text()).toContain('Not applicable')
@@ -262,11 +262,11 @@ describe('ChecklistRow.vue', () => {
       const radio = wrapper.find('input[value="Non-Compliant"]')
       await radio.setValue(true)
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
-        'VIG-0001',
+        'SUR-0001',
         'checklist-1',
         'compliance',
         'Non-Compliant',
-        'VIG-0001'
+        'SUR-0001'
       )
     })
 
@@ -297,7 +297,7 @@ describe('ChecklistRow.vue', () => {
       wrapper.vm.openNonConformityModal()
       await wrapper.vm.$nextTick?.()
 
-      const findingLevelSelect = wrapper.find('select[name="findingLevel-VIG-0001"]')
+      const findingLevelSelect = wrapper.find('select[name="findingLevel-SUR-0001"]')
       expect(findingLevelSelect.exists()).toBe(true)
       expect(findingLevelSelect.element.value).toBe('Non-Compliance')
     })
@@ -313,15 +313,15 @@ describe('ChecklistRow.vue', () => {
       wrapper.vm.openNonConformityModal()
       await wrapper.vm.$nextTick?.()
 
-      const findingLevelSelect = wrapper.find('select[name="findingLevel-VIG-0001"]')
+      const findingLevelSelect = wrapper.find('select[name="findingLevel-SUR-0001"]')
       await findingLevelSelect.setValue('Observation')
 
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
-        'VIG-0001',
+        'SUR-0001',
         'checklist-1',
         'nonConformityDetails',
         expect.objectContaining({ findingLevel: 'Observation' }),
-        'VIG-0001'
+        'SUR-0001'
       )
     })
 
@@ -336,7 +336,7 @@ describe('ChecklistRow.vue', () => {
       wrapper.vm.openNonConformityModal()
       await wrapper.vm.$nextTick?.()
 
-      const severitySelect = wrapper.find('select[name="findingSeverity-VIG-0001"]')
+      const severitySelect = wrapper.find('select[name="findingSeverity-SUR-0001"]')
       expect(severitySelect.exists()).toBe(true)
       expect(severitySelect.element.value).toBe('C')
     })
@@ -352,7 +352,7 @@ describe('ChecklistRow.vue', () => {
       wrapper.vm.openNonConformityModal()
       await wrapper.vm.$nextTick?.()
 
-      const severitySelect = wrapper.find('select[name="findingSeverity-VIG-0001"]')
+      const severitySelect = wrapper.find('select[name="findingSeverity-SUR-0001"]')
       expect(severitySelect.exists()).toBe(true)
       expect(severitySelect.element.value).toBe('A')
     })
@@ -368,15 +368,15 @@ describe('ChecklistRow.vue', () => {
       wrapper.vm.openNonConformityModal()
       await wrapper.vm.$nextTick?.()
 
-      const severitySelect = wrapper.find('select[name="findingSeverity-VIG-0001"]')
+      const severitySelect = wrapper.find('select[name="findingSeverity-SUR-0001"]')
       await severitySelect.setValue('B')
 
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
-        'VIG-0001',
+        'SUR-0001',
         'checklist-1',
         'nonConformityDetails',
         expect.objectContaining({ findingSeverity: 'B' }),
-        'VIG-0001'
+        'SUR-0001'
       )
     })
   })
@@ -385,7 +385,7 @@ describe('ChecklistRow.vue', () => {
     it('renders comments textarea', () => {
       const textarea = wrapper.find('textarea[name="comments-1"]')
       expect(textarea.exists()).toBe(false)
-      const codeTextarea = wrapper.find('textarea[name="comments-VIG-0001"]')
+      const codeTextarea = wrapper.find('textarea[name="comments-SUR-0001"]')
       expect(codeTextarea.element.value).toBe('Looks good')
     })
 
@@ -395,18 +395,18 @@ describe('ChecklistRow.vue', () => {
         props: wrapper.vm.$props,
         global: { plugins: [pinia] },
       })
-      expect(wrapper.find('textarea[name="comments-VIG-0001"').attributes('disabled')).toBeDefined()
+      expect(wrapper.find('textarea[name="comments-SUR-0001"').attributes('disabled')).toBeDefined()
     })
 
     it('triggers textAreaChange on comments input', async () => {
-      const textarea = wrapper.find('textarea[name="comments-VIG-0001"')
+      const textarea = wrapper.find('textarea[name="comments-SUR-0001"')
       await textarea.setValue('Updated comment')
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
-        'VIG-0001',
+        'SUR-0001',
         'checklist-1',
         'comments',
         'Updated comment',
-        'VIG-0001'
+        'SUR-0001'
       )
     })
   })
@@ -416,9 +416,9 @@ describe('ChecklistRow.vue', () => {
       const click = vi.fn()
       const getElementById = vi.spyOn(document, 'getElementById').mockReturnValue({ click })
 
-      wrapper.vm.evidenceUpload('VIG-0001')
+      wrapper.vm.evidenceUpload('SUR-0001')
 
-      expect(getElementById).toHaveBeenCalledWith('fileInput-VIG-0001')
+      expect(getElementById).toHaveBeenCalledWith('fileInput-SUR-0001')
       expect(click).toHaveBeenCalledTimes(1)
       getElementById.mockRestore()
     })
@@ -426,7 +426,7 @@ describe('ChecklistRow.vue', () => {
     it('renders evidence file input', () => {
       const fileInput = wrapper.find('input[type="file"]')
       expect(fileInput.exists()).toBe(true)
-      expect(fileInput.attributes('name')).toBe('evidence-VIG-0001')
+      expect(fileInput.attributes('name')).toBe('evidence-SUR-0001')
       expect(fileInput.attributes('multiple')).toBeDefined()
     })
 
@@ -452,10 +452,10 @@ describe('ChecklistRow.vue', () => {
       wrapper = mount(ChecklistRow, {
         props: {
           newTopic: false,
-          questionCode: 'VIG-0001',
+          questionCode: 'SUR-0001',
           row: {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
@@ -483,13 +483,13 @@ describe('ChecklistRow.vue', () => {
 
       await fileInput.trigger('change')
 
-      expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[0])
+      expect(mockEvidenceStore.add).toHaveBeenCalledWith('SUR', files[0])
       expect(mockEvidenceStore.addCount).toHaveBeenCalledWith('newfile.jpg')
-      expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[1])
-      expect(mockSessionStore.updateSession).toHaveBeenCalledWith('VIG-0001', 'checklist-1', 'evidence', [
+      expect(mockEvidenceStore.add).toHaveBeenCalledWith('SUR', files[1])
+      expect(mockSessionStore.updateSession).toHaveBeenCalledWith('SUR-0001', 'checklist-1', 'evidence', [
         'file1.jpg',
         { name: 'newfile.jpg' },
-      ], 'VIG-0001')
+      ], 'SUR-0001')
       expect(mockToast.success).toHaveBeenCalledWith('Evidence updated')
     })
 
@@ -497,10 +497,10 @@ describe('ChecklistRow.vue', () => {
       wrapper = mount(ChecklistRow, {
         props: {
           newTopic: false,
-          questionCode: 'VIG-0001',
+          questionCode: 'SUR-0001',
           row: {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
@@ -526,12 +526,12 @@ describe('ChecklistRow.vue', () => {
       )
       await fileInput.trigger('change')
 
-      expect(mockEvidenceStore.add).toHaveBeenCalledWith('VIG', files[0])
+      expect(mockEvidenceStore.add).toHaveBeenCalledWith('SUR', files[0])
       expect(mockEvidenceStore.addCount).toHaveBeenCalledWith('missing.jpg')
       expect(mockEvidenceStore.files['missing.jpg'].count).toBe(1)
-      expect(mockSessionStore.updateSession).toHaveBeenCalledWith('VIG-0001', 'checklist-1', 'evidence', [
+      expect(mockSessionStore.updateSession).toHaveBeenCalledWith('SUR-0001', 'checklist-1', 'evidence', [
         'missing.jpg',
-      ], 'VIG-0001')
+      ], 'SUR-0001')
       expect(mockToast.success).toHaveBeenCalledWith('Evidence updated')
     })
 
@@ -546,22 +546,22 @@ describe('ChecklistRow.vue', () => {
       await fileInput.trigger('change')
 
       expect(mockToast.error).toHaveBeenCalledWith('Upload failed')
-      expect(mockSessionStore.updateSession).toHaveBeenCalledWith('VIG-0001', 'checklist-1', 'evidence', [
+      expect(mockSessionStore.updateSession).toHaveBeenCalledWith('SUR-0001', 'checklist-1', 'evidence', [
         'file1.jpg',
-      ], 'VIG-0001')
+      ], 'SUR-0001')
     })
 
     it('handles removeEvidence', async () => {
       const trashButton = wrapper.findAll('input[type="image"]')
       await trashButton[2].trigger('click')
 
-      expect(mockEvidenceStore.subtract).toHaveBeenCalledWith('VIG', 'file1.jpg')
+      expect(mockEvidenceStore.subtract).toHaveBeenCalledWith('SUR', 'file1.jpg')
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
-        'VIG-0001',
+        'SUR-0001',
         'checklist-1',
         'evidence',
         [],
-        'VIG-0001'
+        'SUR-0001'
       )
     })
 
@@ -581,11 +581,11 @@ describe('ChecklistRow.vue', () => {
 
       expect(mockToast.error).toHaveBeenCalledWith('Remove failed')
       expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
-        'VIG-0001',
+        'SUR-0001',
         'checklist-1',
         'evidence',
         [],
-        'VIG-0001'
+        'SUR-0001'
       )
     })
 
@@ -593,10 +593,10 @@ describe('ChecklistRow.vue', () => {
       wrapper = mount(ChecklistRow, {
         props: {
           newTopic: false,
-          questionCode: 'VIG-0001',
+          questionCode: 'SUR-0001',
           row: {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
@@ -808,10 +808,10 @@ describe('ChecklistRow.vue', () => {
       wrapper = mount(ChecklistRow, {
         props: {
           newTopic: false,
-          questionCode: 'VIG-0001',
+          questionCode: 'SUR-0001',
           row: {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',
@@ -829,7 +829,7 @@ describe('ChecklistRow.vue', () => {
 
       await wrapper.vm.removeAudio(0, 'comments')
 
-      expect(mockAudioStore.subtract).toHaveBeenCalledWith('VIG', 'audio1.webm')
+      expect(mockAudioStore.subtract).toHaveBeenCalledWith('SUR', 'audio1.webm')
       expect(mockSessionStore.updateSession).toHaveBeenCalled()
       expect(mockToast.success).toHaveBeenCalledWith('Audio recording removed')
     })
@@ -838,10 +838,10 @@ describe('ChecklistRow.vue', () => {
       wrapper = mount(ChecklistRow, {
         props: {
           newTopic: false,
-          questionCode: 'VIG-0001',
+          questionCode: 'SUR-0001',
           row: {
             id: 'checklist-1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             topic: 'Topic 1',
             reference: { normativa: { reglamento: 'RAD 10', articulo: '10.1', texto: 'Sample texto', ICAOref: 'A10 PI 1.1' }, guidance: 'Manual 1.2' },
             question: 'Question 1?',

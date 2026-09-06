@@ -3,6 +3,7 @@ stages:
   - lint
   - test
   - build
+  - release
 
 variables:
   NODE_ENV: test
@@ -119,4 +120,32 @@ e2e:full:
     expire_in: 7 days
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Release stage - creates a GitLab Release tagged with the current date
+# whenever a pipeline runs on main (i.e. on every merge to main).
+compute_release_tag:
+  stage: release
+  image: alpine:latest
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - echo "RELEASE_TAG=$(date +%Y-%m-%d)" >> release.env
+  artifacts:
+    reports:
+      dotenv: release.env
+
+create_release:
+  stage: release
+  needs: ["compute_release_tag"]
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  before_script: []
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - echo "Creating release $RELEASE_TAG"
+  release:
+    tag_name: '$RELEASE_TAG'
+    description: "Release $RELEASE_TAG"
+    ref: '$CI_COMMIT_SHA'
 

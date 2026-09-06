@@ -256,7 +256,6 @@ describe('ipcHandles', () => {
     })
 
     it('saves Buffer data', async () => {
-      // eslint-disable-next-line no-undef
       const buffer = Buffer.from([0x74, 0x65, 0x73, 0x74]) // 'test'
       vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt')
       const result = await handles['save-file']({}, buffer, '/mocked/path', ['file.txt'])
@@ -437,7 +436,7 @@ describe('ipcHandles', () => {
         questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
       }
       const session = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           1: {
             id: 'q1',
@@ -450,7 +449,7 @@ describe('ipcHandles', () => {
       const result = await handles['export-inspection-payload']({}, {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
 
       expect(fileOps.saveFile).toHaveBeenCalled()
@@ -486,7 +485,7 @@ describe('ipcHandles', () => {
         questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
       }
       const session = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           1: {
             id: 'q1',
@@ -499,7 +498,7 @@ describe('ipcHandles', () => {
       await handles['export-inspection-payload']({}, {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
 
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
@@ -524,7 +523,7 @@ describe('ipcHandles', () => {
         questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
       }
       const session = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           1: {
             id: 'q1',
@@ -537,7 +536,7 @@ describe('ipcHandles', () => {
       await handles['export-inspection-payload']({}, {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
 
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
@@ -562,7 +561,7 @@ describe('ipcHandles', () => {
         questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
       }
       const session = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           1: {
             id: 'q1',
@@ -576,7 +575,7 @@ describe('ipcHandles', () => {
         handles['export-inspection-payload']({}, {
           checklistString: JSON.stringify(checklist),
           sessionString: JSON.stringify(session),
-          specialty: 'VIG',
+          specialty: 'SUR',
         })
       ).rejects.toThrow('Import API failed with status 400')
     })
@@ -591,22 +590,22 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: 'MDPP-2026-01',
         specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
-        specialtyCode: 'VIG',
-        specialtyName: 'Sistemas de Vigilancia',
+        specialtyCode: 'SUR',
+        specialtyName: 'Vigilancia (radar)',
         providerId: 'provider-1',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
         questions: [
-          { id: 'q1', code: 'VIG-0054', question: 'Question?', verification: 'Verify' },
+          { id: 'q1', code: 'SUR-0054', question: 'Question?', verification: 'Verify' },
         ],
       }
       const session = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'VIG-0054': {
+          'SUR-0054': {
             id: 'q1',
-            code: 'VIG-0054',
+            code: 'SUR-0054',
             compliance: 'Compliant',
             evidence: [
               { name: 'photo-1.jpg' },
@@ -620,7 +619,7 @@ describe('ipcHandles', () => {
       await handles['export-inspection-payload']({}, {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
 
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
@@ -628,8 +627,8 @@ describe('ipcHandles', () => {
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
 
       expect(checklistJson.checklist.specialtyId).toBe('a01k0f67dskef2a475yzd8a5dxd')
-      expect(checklistJson.checklist.specialtyCode).toBe('VIG')
-      expect(checklistJson.checklist.specialtyName).toBe('Sistemas de Vigilancia')
+      expect(checklistJson.checklist.specialtyCode).toBe('SUR')
+      expect(checklistJson.checklist.specialtyName).toBe('Vigilancia (radar)')
       expect(checklistJson.items[0].evidenceItems).toEqual([
         {
           evidenceId: 'EV-0001-01',
@@ -662,8 +661,8 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: 'MDPP-2026-01',
         specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
-        specialtyCode: 'VIG',
-        specialtyName: 'Sistemas de Vigilancia',
+        specialtyCode: 'SUR',
+        specialtyName: 'Vigilancia (radar)',
         providerId: 'provider-1',
         locationId: 'MDPP',
         locationName: 'Test Location',
@@ -671,14 +670,14 @@ describe('ipcHandles', () => {
         questions: [
           {
             id: 'q1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             question: 'Question 1?',
             verification: 'Verify 1',
             riskLevel: 'High',
           },
           {
             id: 'q2',
-            code: 'VIG-0002',
+            code: 'SUR-0002',
             question: 'Question 2?',
             verification: 'Verify 2',
             riskLevel: 'Medium',
@@ -687,17 +686,17 @@ describe('ipcHandles', () => {
       }
 
       const session = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'VIG-0001': {
+          'SUR-0001': {
             id: 'q1',
-            code: 'VIG-0001',
+            code: 'SUR-0001',
             compliance: 'Non-Compliant',
             nonConformityDetails: { description: 'Issue 1' },
           },
-          'VIG-0002': {
+          'SUR-0002': {
             id: 'q2',
-            code: 'VIG-0002',
+            code: 'SUR-0002',
             compliance: 'Non-Compliant',
             nonConformityDetails: { description: 'Issue 2', riskLevel: 'Critical' },
           },
@@ -707,7 +706,7 @@ describe('ipcHandles', () => {
       await handles['export-inspection-payload']({}, {
         checklistString: JSON.stringify(checklist),
         sessionString: JSON.stringify(session),
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
 
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
@@ -734,7 +733,7 @@ describe('ipcHandles', () => {
         ok: true,
         status: 200,
         text: vi.fn().mockResolvedValue(
-          JSON.stringify({ followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'] })
+          JSON.stringify({ followUpFiles: ['FU-MDPP001SUR-01-01', 'FU-MDPP001SUR-02-01'] })
         ),
       })
 
@@ -742,8 +741,8 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP001-VIG-01',
-            domain: 'VIG',
+            findingId: 'H-MDPPI0001-SUR-001',
+            domain: 'SUR',
             providerId: 'provider-1',
             locationId: 'loc-1',
             locationName: 'Test Location',
@@ -753,10 +752,10 @@ describe('ipcHandles', () => {
         },
       ]
       const followUpSession = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-VIG-01': {
-            findingId: 'MDPP001-VIG-01',
+          'H-MDPPI0001-SUR-001': {
+            findingId: 'H-MDPPI0001-SUR-001',
             followUpType: 'Closure Verification',
             percentComplete: 100,
             effectivenessConfirmed: true,
@@ -767,7 +766,7 @@ describe('ipcHandles', () => {
       const result = await handles['export-follow-up-payload']({}, {
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
-        specialty: 'VIG',
+        specialty: 'SUR',
         locationId: 'loc-1',
       })
 
@@ -785,7 +784,7 @@ describe('ipcHandles', () => {
       expect(result).toEqual(
         expect.objectContaining({
           uploadStatus: 200,
-          followUpFiles: ['FU-MDPP001VIG-01-01', 'FU-MDPP001VIG-02-01'],
+          followUpFiles: ['FU-MDPP001SUR-01-01', 'FU-MDPP001SUR-02-01'],
           reportsCount: 1,
         })
       )
@@ -802,8 +801,8 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP001-VIG-01',
-            domain: 'VIG',
+            findingId: 'H-MDPPI0001-SUR-001',
+            domain: 'SUR',
             providerId: 'provider-1',
             locationId: 'loc-1',
             locationName: 'Test Location',
@@ -813,10 +812,10 @@ describe('ipcHandles', () => {
         },
       ]
       const followUpSession = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-VIG-01': {
-            findingId: 'MDPP001-VIG-01',
+          'H-MDPPI0001-SUR-001': {
+            findingId: 'H-MDPPI0001-SUR-001',
             followUpType: 'Progress Verification',
             percentComplete: 10,
             effectivenessConfirmed: null,
@@ -828,7 +827,7 @@ describe('ipcHandles', () => {
         handles['export-follow-up-payload']({}, {
           findingsString: JSON.stringify(findings),
           followUpSessionString: JSON.stringify(followUpSession),
-          specialty: 'VIG',
+          specialty: 'SUR',
           locationId: 'loc-1',
         })
       ).rejects.toThrow('Follow-up import API failed with status 400')
@@ -845,8 +844,8 @@ describe('ipcHandles', () => {
         {
           schemaVersion: '1.0',
           finding: {
-            findingId: 'MDPP001-VIG-02',
-            domain: 'VIG',
+            findingId: 'H-MDPPI0001-SUR-002',
+            domain: 'SUR',
             providerId: 'provider-1',
             locationId: 'MDPP',
             locationName: 'Test Location',
@@ -856,10 +855,10 @@ describe('ipcHandles', () => {
         },
       ]
       const followUpSession = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
           orphan_key: {
-            findingId: 'MDPP001-VIG-02',
+            findingId: 'H-MDPPI0001-SUR-002',
             followUpType: 'Progress Verification',
             percentComplete: 20,
             effectivenessConfirmed: null,
@@ -870,7 +869,7 @@ describe('ipcHandles', () => {
       const result = await handles['export-follow-up-payload']({}, {
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
-        specialty: 'VIG',
+        specialty: 'SUR',
         locationId: 'MDPP',
       })
 
@@ -891,8 +890,8 @@ describe('ipcHandles', () => {
 
       const findings = [
         {
-          findingId: 'MDPP001-VIG-02',
-          domain: 'VIG',
+          findingId: 'H-MDPPI0001-SUR-002',
+          domain: 'SUR',
           providerId: 'provider-1',
           locationId: 'MDPP',
           locationName: 'Test Location',
@@ -901,10 +900,10 @@ describe('ipcHandles', () => {
         },
       ]
       const followUpSession = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-VIG-02': {
-            findingId: 'MDPP001-VIG-02',
+          'H-MDPPI0001-SUR-002': {
+            findingId: 'H-MDPPI0001-SUR-002',
             followUpType: 'Progress Verification',
             percentComplete: 5,
             effectivenessConfirmed: null,
@@ -915,7 +914,7 @@ describe('ipcHandles', () => {
       const result = await handles['export-follow-up-payload']({}, {
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
-        specialty: 'VIG',
+        specialty: 'SUR',
         locationId: 'MDPP',
       })
 
@@ -936,7 +935,7 @@ describe('ipcHandles', () => {
 
       const findings = [
         {
-          findingId: 'MDPP001-VIG-03',
+          findingId: 'H-MDPPI0001-SUR-003',
           specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
           providerId: 'provider-1',
           locationId: 'MDPP',
@@ -947,10 +946,10 @@ describe('ipcHandles', () => {
         },
       ]
       const followUpSession = {
-        summary: { specialty: 'VIG', lastUpdated: '2026-03-21T10:00:00.000Z' },
+        summary: { specialty: 'SUR', lastUpdated: '2026-03-21T10:00:00.000Z' },
         responses: {
-          'MDPP001-VIG-03': {
-            findingId: 'MDPP001-VIG-03',
+          'H-MDPPI0001-SUR-003': {
+            findingId: 'H-MDPPI0001-SUR-003',
             followUpType: 'Progress Verification',
             percentComplete: 80,
             effectivenessConfirmed: null,
@@ -961,7 +960,7 @@ describe('ipcHandles', () => {
       const result = await handles['export-follow-up-payload']({}, {
         findingsString: JSON.stringify(findings),
         followUpSessionString: JSON.stringify(followUpSession),
-        specialty: 'VIG',
+        specialty: 'SUR',
         locationId: 'MDPP',
       })
 

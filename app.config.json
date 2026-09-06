@@ -16,109 +16,84 @@
   "fallback": {
     "specialties": [
       {
-        "id": "a01k0f67dskef2a475yzd8a5dxd",
-        "code": "VIG",
-        "name": "Sistemas de Vigilancia"
+        "id": "sp-apr",
+        "code": "APR",
+        "name": "Plataforma"
       },
       {
-        "id": "a01k0f6y5xre0wr42sbqeyabeb3",
-        "code": "COM",
-        "name": "Comunicaciones de Radio"
+        "id": "sp-avis",
+        "code": "AVIS",
+        "name": "Ayudas Visuales"
       },
       {
-        "id": "a01k0f6yf9ae4198h6mmzhwqhcv",
-        "code": "RNA",
-        "name": "Radioayudas a la Navegacion"
-      },
-      {
-        "id": "a01k777msrhe66tzrqf1mrxdj6e",
-        "code": "PAV",
-        "name": "Gestion de Pavimento y Caracteristicas Fisicas"
-      },
-      {
-        "id": "a01k777nj8ye479pxnj5ajfhshs",
+        "id": "sp-fau",
         "code": "FAU",
-        "name": "Control de Fauna Silvestre"
+        "name": "Control de fauna"
       },
       {
-        "id": "a01k777q2ayedk962kxxg02nb61",
-        "code": "PTFM",
-        "name": "Gestion de Plataformas"
+        "id": "sp-pav",
+        "code": "PAV",
+        "name": "Pavimento y caracteristicas fisicas"
       },
       {
-        "id": "a01k777rcree6fb56d4yb0es15b",
+        "id": "sp-ssei",
         "code": "SSEI",
-        "name": "Servicios de Salvamento y Extincion de Incendios"
+        "name": "Servicio de salvamento y extincion de incendios"
       },
       {
-        "id": "a01k7qe580def6s7znmspkd7mtb",
-        "code": "ECNS",
-        "name": "Energia CNS"
-      },
-      {
-        "id": "a01k7qe5jkbe0kbkp385qzcqbgb",
-        "code": "EMET",
-        "name": "Equipos Meteorologicos"
-      },
-      {
-        "id": "a01k7qe3xgae7dsaqsjt36k4vq0",
-        "code": "CHT",
-        "name": "Cartografia Aeronautica"
-      },
-      {
-        "id": "a01k7qe2p9wea28tvrv0phc8wkk",
-        "code": "NOTAM",
-        "name": "Servicio de NOTAM"
-      },
-      {
-        "id": "a01k7qe33jwe62t3r2vntz6cm4t",
-        "code": "PUB",
-        "name": "Publicaciones Aeronauticas"
-      },
-      {
-        "id": "a01k7qe4k53e4ctxash5ww8xar4",
+        "id": "sp-aim",
         "code": "AIM",
         "name": "Gestion de informacion aeronautica"
       },
       {
-        "id": "a01kn7gb73pe17a4w43e8xnjyqq",
-        "code": "P/OPS",
-        "name": "PANS/OPS"
-      },
-      {
-        "id": "a01k7qe0jg9e3ys850sxqhbv04x",
-        "code": "MET-AD",
-        "name": "Meteorologia Aeronautica"
-      },
-      {
-        "id": "a01k7qdygyge5dtfbme2m7xnwj4",
+        "id": "sp-ats",
         "code": "ATS",
-        "name": "Control de Transito Aereo"
+        "name": "Servicio de transito aereo"
       },
       {
-        "id": "a01k777g91tefrvd0qn71c0v3bq",
-        "code": "AGA",
-        "name": "Aerodromos"
+        "id": "sp-com",
+        "code": "COM",
+        "name": "Comunicaciones (voz)"
       },
       {
-        "id": "a01k7qe1zhxe8zbxexyaaen0v66",
+        "id": "sp-ecns",
+        "code": "ECNS",
+        "name": "Energia CNS"
+      },
+      {
+        "id": "sp-emet",
+        "code": "EMET",
+        "name": "Equipos meteorologicos"
+      },
+      {
+        "id": "sp-fis",
         "code": "FIS",
-        "name": "Servicio de Informacion Aeronautica"
+        "name": "Servicio de informacion de vuelo"
       },
       {
-        "id": "a01k7qe91qnef8rpmj9kn12qwtc",
-        "code": "AY/VIS",
-        "name": "Ayudas Visuales"
+        "id": "sp-met",
+        "code": "MET",
+        "name": "Meteorologia aeronautica"
       },
       {
-        "id": "a01k7qe1d7me81b19f53k89zp4n",
+        "id": "sp-nav",
+        "code": "NAV",
+        "name": "Navegacion (radio ayudas)"
+      },
+      {
+        "id": "sp-sar",
         "code": "SAR",
-        "name": "Busqueda y Salvamento"
+        "name": "Busqueda y salvamento"
       },
       {
-        "id": "a01k0f6tzh4e46b7y45fxd8q9kg",
-        "code": "CNS",
-        "name": "Comunicacion, Navegacion y Vigilancia (CNS)"
+        "id": "sp-sur",
+        "code": "SUR",
+        "name": "Vigilancia (radar)"
+      },
+      {
+        "id": "sp-dpr",
+        "code": "DPR",
+        "name": "Procesamiento de datos (radar/ATN)"
       }
     ],
     "locations": [

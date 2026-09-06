@@ -26,6 +26,10 @@ async function ensureReadyForImport(window) {
 export async function launchApp() {
   const electronApp = await electron.launch({
     args: [join(process.cwd(), 'electron', 'main.mjs')],
+    // Pin the UI locale to English so text assertions in these specs stay
+    // deterministic regardless of the host OS locale or any persisted
+    // per-user preference. See electron/utils/userSettings.js.
+    env: { ...process.env, CHECKLIST_FORCE_LOCALE: 'en' },
   })
   const window = await electronApp.firstWindow()
 
@@ -38,7 +42,7 @@ export async function launchApp() {
   return { electronApp, window }
 }
 
-export async function importInspection(window, inspectionCode = '0224', specialtyCode = 'VIG') {
+export async function importInspection(window, inspectionCode = '0224', specialtyCode = 'SUR') {
   const expectedWorkspaceKey = `MDSD__${specialtyCode.toUpperCase()}`
 
   const ensureWorkspaceLoaded = async () => {
@@ -80,7 +84,7 @@ export async function importInspection(window, inspectionCode = '0224', specialt
   await expect(window.locator('#cklTable')).toBeVisible()
 }
 
-export async function importFollowUp(window, locationIcao = 'MDSD', specialtyCode = 'VIG') {
+export async function importFollowUp(window, locationIcao = 'MDSD', specialtyCode = 'SUR') {
   const expectedWorkspaceKey = `${locationIcao.toUpperCase()}__${specialtyCode.toUpperCase()}`
 
   const ensureWorkspaceLoaded = async () => {

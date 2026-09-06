@@ -96,46 +96,46 @@ describe('Session Store', () => {
       mockEvidence.load.mockResolvedValue([{ name: 'file.txt', URL: '/path/file.txt', count: 1 }])
       mockAudio.load.mockResolvedValue([{ name: 'audio.webm', URL: 'blob:audio.webm', count: 1 }])
 
-      await sessionStore.loadSession('VIG')
+      await sessionStore.loadSession('SUR')
 
       expect(mockToast.success).toHaveBeenCalledWith('Session loaded')
       expect(sessionStore.summary.value).toEqual({
         finalized: false,
         generalComments: '',
         interviewee: '',
-        specialty: 'VIG',
+        specialty: 'SUR',
       })
       expect(sessionStore.responses).toEqual({ 1: { id: '1' } })
 
-      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG', null)
-      expect(mockEvidence.load).toHaveBeenCalledWith('VIG', null, 'inspection')
-      expect(mockAudio.load).toHaveBeenCalledWith('VIG', null)
+      expect(mockFs.loadSession).toHaveBeenCalledWith('SUR', null)
+      expect(mockEvidence.load).toHaveBeenCalledWith('SUR', null, 'inspection')
+      expect(mockAudio.load).toHaveBeenCalledWith('SUR', null)
     })
 
     it('correctly creates session summary when file doesnt exist', async () => {
       mockFs.loadSession.mockResolvedValue(null)
 
-      await expect(sessionStore.loadSession('VIG')).resolves.toBe(undefined)
+      await expect(sessionStore.loadSession('SUR')).resolves.toBe(undefined)
 
       expect(mockToast.info).toHaveBeenCalledWith('New session created')
       expect(sessionStore.summary.value).toEqual({
         finalized: false,
-        specialty: 'VIG',
+        specialty: 'SUR',
         generalComments: '',
         interviewee: '',
       })
       expect(sessionStore.responses).toEqual({})
 
-      expect(mockFs.loadSession).toHaveBeenCalledWith('VIG', null)
+      expect(mockFs.loadSession).toHaveBeenCalledWith('SUR', null)
       expect(mockEvidence.load).not.toHaveBeenCalledWith()
     })
 
     it('rebinds summary specialty/location when switching workspaces', async () => {
       mockFs.loadSession.mockResolvedValue(null)
 
-      await sessionStore.loadSession('VIG', 'MDPP')
+      await sessionStore.loadSession('SUR', 'MDPP')
       expect(mockFs.saveSession).toHaveBeenLastCalledWith(
-        expect.objectContaining({ specialty: 'VIG', locationId: 'MDPP' }),
+        expect.objectContaining({ specialty: 'SUR', locationId: 'MDPP' }),
         expect.any(Object),
         expect.any(Function),
         'MDPP'
@@ -153,30 +153,30 @@ describe('Session Store', () => {
     it('handles invalid specialty value errors with toast', async () => {
       await sessionStore.loadSession('')
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: '
+        'Could not create session: Invalid specialty value: '
       )
 
       await sessionStore.loadSession(null)
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: null'
+        'Could not create session: Invalid specialty value: null'
       )
 
       await sessionStore.loadSession(undefined)
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: undefined'
+        'Could not create session: Invalid specialty value: undefined'
       )
 
       await sessionStore.loadSession({})
       expect(mockToast.error).toHaveBeenCalledWith(
-        'Could not create session:Invalid specialty value: [object Object]'
+        'Could not create session: Invalid specialty value: [object Object]'
       )
     })
 
     it('handles load errors with toast', async () => {
       mockFs.loadSession.mockRejectedValue(new Error('Load failed'))
 
-      await sessionStore.loadSession('VIG')
-      expect(mockToast.error).toHaveBeenCalledWith('Could not create session:Load failed')
+      await sessionStore.loadSession('SUR')
+      expect(mockToast.error).toHaveBeenCalledWith('Could not create session: Load failed')
     })
 
     it('updates evidence counts after loading', async () => {
@@ -185,9 +185,9 @@ describe('Session Store', () => {
         responses: { 1: { evidence: [{ name: 'file.txt' }] } },
       })
 
-      await sessionStore.loadSession('VIG')
+      await sessionStore.loadSession('SUR')
 
-      expect(mockEvidence.load).toHaveBeenCalledWith('VIG', null, 'inspection')
+      expect(mockEvidence.load).toHaveBeenCalledWith('SUR', null, 'inspection')
       expect(mockEvidence.updateCount).toHaveBeenCalledWith({ 1: { evidence: [{ name: 'file.txt' }] } })
     })
 
@@ -197,9 +197,9 @@ describe('Session Store', () => {
         responses: { 1: { audioComments: ['audio.webm'] } },
       })
 
-      await sessionStore.loadSession('VIG')
+      await sessionStore.loadSession('SUR')
 
-      expect(mockAudio.load).toHaveBeenCalledWith('VIG', null)
+      expect(mockAudio.load).toHaveBeenCalledWith('SUR', null)
       expect(mockAudio.updateCount).toHaveBeenCalledWith({ 1: { audioComments: ['audio.webm'] } })
     })
 
@@ -223,7 +223,7 @@ describe('Session Store', () => {
       })
       mockEvidence.load.mockResolvedValue([{ name: 'file.txt', URL: '/path/file.txt', count: 1 }])
 
-      await sessionStore.loadSession('VIG')
+      await sessionStore.loadSession('SUR')
 
       expect(sessionStore.responses['2'].nonConformityDetails).toBeDefined()
       expect(sessionStore.responses['1'].nonConformityDetails).toBeUndefined()
@@ -254,7 +254,7 @@ describe('Session Store', () => {
   describe('finalize', () => {
     it('sets finalized to true, saves session, and hashes evidence', async () => {
       sessionStore.summary.value = {
-        specialty: 'VIG',
+        specialty: 'SUR',
         finalized: false,
         lastUpdated: new Date().toISOString(),
         generalComments: '',
@@ -276,7 +276,7 @@ describe('Session Store', () => {
 
     it('removes dangling non-conformity entries', async () => {
       sessionStore.summary.value = {
-        specialty: 'VIG',
+        specialty: 'SUR',
         finalized: false,
         lastUpdated: new Date().toISOString(),
         generalComments: '',

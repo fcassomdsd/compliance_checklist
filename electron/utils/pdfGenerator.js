@@ -1,6 +1,73 @@
 import PDFDocument from 'pdfkit'
 import fs from 'fs'
 
+// English labels are authored here from scratch — the original report was
+// Spanish-only with no English baseline to translate from.
+const LABELS = {
+  es: {
+    noFindings: 'No se encontraron hallazgos durante esta inspección.',
+    generalComments: 'Comentarios Generales',
+    none: 'Ninguno',
+    endOfFindings: 'Fin de los hallazgos',
+    footnote: (total) =>
+      `Nota: del total de ${total} preguntas del protocolo utilizado en la inspección, ` +
+      `aquellas que no aparecen en la relación anterior fueron respondidas de manera satisfactoria.`,
+    signatureInspector: 'Inspector actuante',
+    signatureCounterpart: 'Contraparte inspeccionada',
+    entityHeaderLine1: 'DIRECCIÓN DE VIGILANCIA DE LA SEGURIDAD OPERACIONAL',
+    entityHeaderLine2: 'DEPARTAMENTO DE VIGILANCIA SNA/AGA',
+    reportTitle: 'Reporte de Hallazgos',
+    version: (v) => `Versión: ${v}`,
+    issued: (date) => `Emisión: ${date}`,
+    page: (current, total) => `Página ${current} de ${total}`,
+    inspection: 'Inspección',
+    date: 'Fecha',
+    location: 'Localidad',
+    specialty: 'Especialidad',
+    tableReference: 'Referencia',
+    tableCode: 'Codigo',
+    tableQuestion: 'Pregunta',
+    tableNonConformity: 'No conformidad',
+    tableComment: 'Comentario',
+    nominalRisk: 'Riesgo Nominal',
+    assignedRisk: 'Riesgo Asignado',
+    description: 'Descripción',
+  },
+  en: {
+    noFindings: 'No findings were identified during this inspection.',
+    generalComments: 'General Comments',
+    none: 'None',
+    endOfFindings: 'End of findings',
+    footnote: (total) =>
+      `Note: of the ${total} total questions in the protocol used for this inspection, ` +
+      `those not listed above were answered satisfactorily.`,
+    signatureInspector: 'Inspector on duty',
+    signatureCounterpart: 'Inspected counterpart',
+    entityHeaderLine1: 'DIRECTORATE OF OPERATIONAL SAFETY OVERSIGHT',
+    entityHeaderLine2: 'SNA/AGA OVERSIGHT DEPARTMENT',
+    reportTitle: 'Findings Report',
+    version: (v) => `Version: ${v}`,
+    issued: (date) => `Issued: ${date}`,
+    page: (current, total) => `Page ${current} of ${total}`,
+    inspection: 'Inspection',
+    date: 'Date',
+    location: 'Location',
+    specialty: 'Specialty',
+    tableReference: 'Reference',
+    tableCode: 'Code',
+    tableQuestion: 'Question',
+    tableNonConformity: 'Non-conformity',
+    tableComment: 'Comment',
+    nominalRisk: 'Nominal Risk',
+    assignedRisk: 'Assigned Risk',
+    description: 'Description',
+  },
+}
+
+function resolveLabels(locale) {
+  return LABELS[locale] || LABELS.es
+}
+
 /**
  * Generate a PDF report for findings (non-compliant items)
  * @param {Object} params - Parameters for PDF generation
@@ -8,13 +75,15 @@ import fs from 'fs'
  * @param {Object} params.session - Session responses data
  * @param {string} params.specialty - Specialty name
  * @param {string} params.outputPath - Path where to save the PDF
+ * @param {string} [params.locale] - 'en' or 'es'; defaults to 'es' (the report's original language)
  */
-export function generateFindingsReport({ checklistString, sessionString, outputPath }) {
+export function generateFindingsReport({ checklistString, sessionString, outputPath, locale }) {
     const SIDE_MARGIN = 50
     const BOTTOM_MARGIN = 40
+    const L = resolveLabels(locale)
   return new Promise((resolve, reject) => {
     try {
- 
+
       // Parse JSON strings to objects first
       const checklist = JSON.parse(checklistString)
       const session = JSON.parse(sessionString)
@@ -78,7 +147,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
             reference: referenceText,
             question: row.question || '',
             topic: row.topic || '',
-            nonConformity: `Nominal Risk: ${nominalRisk}\nAssigned Risk: ${assignedRisk}\nDescription: ${description}`,
+            nonConformity: `${L.nominalRisk}: ${nominalRisk}\n${L.assignedRisk}: ${assignedRisk}\n${L.description}: ${description}`,
             comments: sessionData.comments || '',
           })
         }
@@ -86,7 +155,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
 
       // If no findings, add note
       if (findings.length === 0) {
-        doc.fontSize(11).font('Helvetica').text('No se encontraron hallazgos durante esta inspección.')
+        doc.fontSize(11).font('Helvetica').text(L.noFindings)
         doc.moveDown(2)
       } else {
         // Table rows
@@ -97,15 +166,15 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
             x.nonConformity,
             x.comments
         ])
- 
+
         doc.font('Times-Roman').fontSize(10)
         doc.table({
             position: {x: SIDE_MARGIN, y: doc.y},
             columnStyles : [
-                { width : 120 }, 
-                { width: 40, align : 'center' }, 
-                { width: 140 }, 
-                { width: '*' }, 
+                { width : 120 },
+                { width: 40, align : 'center' },
+                { width: 140 },
+                { width: '*' },
                 { width: '*' }
             ],
             data : tableData
@@ -117,21 +186,18 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
       doc.moveDown(1)
       doc.font('Times-Roman')
       doc.fontSize(12).text(
-        `Comentarios Generales: *** ${session.summary.generalComments || 'Ninguno'} ***`
-      )      
-      
+        `${L.generalComments}: *** ${session.summary.generalComments || L.none} ***`
+      )
+
       // End of findings note
       doc.font('Helvetica-Bold')
       doc.fontSize(10).text('________________________________________________________________', {align : 'center'})
-      doc.fontSize(10).text('Fin de los hallazgos', {align : 'center'})
+      doc.fontSize(10).text(L.endOfFindings, {align : 'center'})
       doc.moveDown(0.5)
       doc.font('Helvetica')
 
       doc.font('Helvetica')
-      doc.fontSize(10).text(
-        `Nota: del total de ${checklist.questions.length} preguntas del protocolo utilizado en la inspección, ` +
-          `aquellas que no aparecen en la relación anterior fueron respondidas de manera satisfactoria.`
-      )
+      doc.fontSize(10).text(L.footnote(checklist.questions.length))
 
       // Signature section on new page if there are findings
       if (findings.length > 0) {
@@ -155,9 +221,9 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
                 rowStyles: { height : 50, align : { y : 'top' } }
             }
         )
-          .row(['', 'Inspector actuante', '', 'Inspector actuante' ,''])
-          .row(['', 'Contraparte inspeccionada', '', 'Contraparte inspeccionada' ,''])
-          .row(['', 'Contraparte inspeccionada', '', 'Contraparte inspeccionada' ,''])
+          .row(['', L.signatureInspector, '', L.signatureInspector ,''])
+          .row(['', L.signatureCounterpart, '', L.signatureCounterpart ,''])
+          .row(['', L.signatureCounterpart, '', L.signatureCounterpart ,''])
       }
 
       // --- THE HEADER/FOOTER LOOP ---
@@ -174,46 +240,46 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         doc.image('./public/images/compliance-logo.png', SIDE_MARGIN, 40, { fit : [80,110] })
         doc.fontSize(10).font('Helvetica')
         doc.table(
-          { 
+          {
               position : { x: SIDE_MARGIN, y: 40 },
               columnStyles : [
-                  { border : true}, 
-                  { border : false, width : 320}, 
+                  { border : true},
+                  { border : false, width : 320},
                   { border : true }
-              ] 
+              ]
           },
         )
           .row([{
                 rowSpan : 3,
                 border : 1
-              }, 
-              { 
-                align: { x: 'center', y : 'top'},
-                border : { top : 1 },  
-                text: 'DIRECCIÓN DE VIGILANCIA DE LA SEGURIDAD OPERACIONAL'
               },
               {
-                text : 'Version: 1.0',
+                align: { x: 'center', y : 'top'},
+                border : { top : 1 },
+                text: L.entityHeaderLine1
+              },
+              {
+                text : L.version('1.0'),
                 border : { top : 1 },
                 align: { x: 'right', y : 'top'}
               }
             ])
           .row([{
-            align: { x: 'center', y : 'top'}, 
-            text: 'DEPARTAMENTO DE VIGILANCIA SNA/AGA'
+            align: { x: 'center', y : 'top'},
+            text: L.entityHeaderLine2
           },
           {
-            text : `Emisión: ${new Date().toISOString().split('T')[0]}`,
+            text : L.issued(new Date().toISOString().split('T')[0]),
             font : { size: 9 },
             align: { x: 'right', y : 'top'}
           }])
           .row([{
-            align: { x: 'center', y : 'top'}, 
-            text: 'Reporte de Hallazgos',
+            align: { x: 'center', y : 'top'},
+            text: L.reportTitle,
             border : { bottom : 1 },
             font : {size: 14}
           },{
-            text : `Página ${i + 1} de ${range.count}`,
+            text : L.page(i + 1, range.count),
             border : { bottom : 1 },
             align: { x: 'right', y : 'top'}
           }])
@@ -224,22 +290,22 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         // Row 1: Inspección and Fecha
         doc
           .font('Times-Bold')
-          .text('Inspección', SIDE_MARGIN, doc.y)
+          .text(L.inspection, SIDE_MARGIN, doc.y)
           .moveUp()
-          .text('Fecha', 340, doc.y)
+          .text(L.date, 340, doc.y)
         doc
           .font('Times-Roman')
           .moveUp()
           .text(`: ${checklist.inspection.trim() || ''}`, 140, doc.y)
           .moveUp()
           .text(`: ${checklist.startDate.trim()}`, 440, doc.y)
-      
+
         // Row 2: Localidad and Especialidad
         doc
           .font('Times-Bold')
-          .text('Localidad', SIDE_MARGIN, doc.y)
+          .text(L.location, SIDE_MARGIN, doc.y)
           .moveUp()
-          .text('Especialidad', 340, doc.y)
+          .text(L.specialty, 340, doc.y)
         doc
           .font('Times-Roman')
           .moveUp()
@@ -254,7 +320,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
           columnStyles : [120,40,140,'*','*'],
           rowStyles: { align: 'center', font : { src : 'Times-Bold'} },
           data : [
-              ['Referencia', 'Codigo', 'Pregunta', 'No conformidad', 'Comentario']
+              [L.tableReference, L.tableCode, L.tableQuestion, L.tableNonConformity, L.tableComment]
           ]
         })
 

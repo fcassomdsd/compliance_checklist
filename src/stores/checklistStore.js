@@ -4,6 +4,9 @@ import { useToast } from 'vue-toastification'
 import { createFileService } from '../utils/fileServices.js'
 import { useSessionStore } from './sessionStore.js'
 import { useFollowUpStore } from './followUpStore.js'
+import i18n from '../i18n/index.js'
+
+const t = (key, params) => i18n.global.t(key, params)
 
 export const useChecklistStore = defineStore('checklist', () => {
   const toast = useToast()
@@ -35,18 +38,10 @@ export const useChecklistStore = defineStore('checklist', () => {
   const apiKeyPromptVisible = ref(false)
   const apiKeyInput = ref('')
 
-  // modal window data
-  const modalFinalizeTitle = 'Finalize Checklist'
-  const modalFinalizeExplanation =
-    'Finalizing the checklist will prevent further changes, and cannot be undone'
-  const modalFinalizeAction = 'finalize the current checklist'
-  const finalizeSuccess = 'Checklist finalized successfully!'
-
-  const modalCreateDPTitle = 'Create default path'
-  const modalCreateDPExplanation =
-    'The default path for inspection data does not exist.  I can create it for you.'
-  const modalCreateDPAction = 'create the default path'
-  const createDPSuccess = 'Default path created successfully!'
+  // modal window data — the display strings are translated; `activeModalKey`
+  // is the stable (non-translated) identifier the confirm handler switches on,
+  // so a locale change never affects which action actually runs.
+  const activeModalKey = ref('')
 
   // specialty data - will be loaded from file
   const specialtyList = ref([])
@@ -97,7 +92,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
     }
 
-    throw new Error('Imported inspection did not include a resolvable location identifier')
+    throw new Error(t('toast.unresolvableLocation'))
   }
 
   // Actions
@@ -105,7 +100,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     try {
       specialtyList.value = await fs.loadSpecialties()
     } catch (error) {
-      toast.error(`Failed to load specialties: ${error.message}`)
+      toast.error(t('toast.specialtiesLoadFailed', { message: error.message }))
       // Provide empty array fallback
       specialtyList.value = []
     }
@@ -115,7 +110,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     try {
       locationList.value = await fs.loadLocations()
     } catch (error) {
-      toast.error(`Failed to load locations: ${error.message}`)
+      toast.error(t('toast.locationsLoadFailed', { message: error.message }))
       locationList.value = []
     }
   }
@@ -136,8 +131,10 @@ export const useChecklistStore = defineStore('checklist', () => {
   }
 
   const getWorkspaceDisplayName = (workspace) => {
-    const statusLabel = workspace?.draftStatus == 'finalized' ? 'Finalized' : 'Draft'
-    return `${workspace?.locationId || workspace?.locationName || 'Unknown location'} - ${workspace?.specialtyCode || workspace?.specialtyName || 'Unknown specialty'} (${statusLabel})`
+    const statusLabel = workspace?.draftStatus == 'finalized' ? t('workspacePicker.finalized') : t('workspacePicker.draft')
+    const location = workspace?.locationId || workspace?.locationName || t('workspacePicker.unknownLocation')
+    const specialty = workspace?.specialtyCode || workspace?.specialtyName || t('workspacePicker.unknownSpecialty')
+    return `${location} - ${specialty} (${statusLabel})`
   }
 
   const loadWorkspaces = async () => {
@@ -157,7 +154,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
     } catch (error) {
       workspaceList.value = []
-      toast.error(`Failed to load workspaces: ${error.message}`)
+      toast.error(t('toast.workspacesLoadFailed', { message: error.message }))
     }
   }
 
@@ -174,7 +171,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         checklistLoaded.value = true
 
         currentPath.value = await fs.setSavePath(specialty.value, locationId)
-        toast.success('Checklist loaded')
+        toast.success(t('toast.checklistLoaded'))
       }
     } catch (error) {
       toast.error(error.message)
@@ -202,26 +199,28 @@ export const useChecklistStore = defineStore('checklist', () => {
   }
 
   const showFinalize = () => {
-    tituloModal.value = modalFinalizeTitle
-    explanationModal.value = modalFinalizeExplanation
-    accionModal.value = modalFinalizeAction
+    activeModalKey.value = 'finalize'
+    tituloModal.value = t('modal.finalizeTitle')
+    explanationModal.value = t('modal.finalizeExplanation')
+    accionModal.value = t('modal.finalizeAction')
     showModal.value = true
   }
   const confirmModal = async () => {
+    const titleForErrors = tituloModal.value
     try {
       showModal.value = false
-      switch (tituloModal.value) {
-        case modalFinalizeTitle: {
+      switch (activeModalKey.value) {
+        case 'finalize': {
           await sessionStore.finalize(specialty.value, activeWorkspace.value?.locationId)
-          toast.success(finalizeSuccess)
+          toast.success(t('toast.finalizeSuccess'))
           break
         }
-        case modalCreateDPTitle: {
+        case 'createDefaultPath': {
           // Call the IPC handler to create the default root with user.config.json
           await fs.createDefaultRoot()
           // Reload specialties after creating the default root
           await loadSpecialties()
-          toast.success(createDPSuccess)
+          toast.success(t('toast.createDefaultPathSuccess'))
           break
         }
         default: {
@@ -230,15 +229,18 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
     } catch (error) {
       console.log(error)
-      toast.error(`Error in ${tituloModal.value} : ${error.message}`)
+      toast.error(t('toast.modalActionFailed', { titulo: titleForErrors, message: error.message }))
+    } finally {
+      activeModalKey.value = ''
     }
   }
   const checkDefaultPath = async () => {
     try {
       if (!(await fs.defaultPathExists())) {
-        tituloModal.value = modalCreateDPTitle
-        explanationModal.value = modalCreateDPExplanation
-        accionModal.value = modalCreateDPAction
+        activeModalKey.value = 'createDefaultPath'
+        tituloModal.value = t('modal.createDefaultPathTitle')
+        explanationModal.value = t('modal.createDefaultPathExplanation')
+        accionModal.value = t('modal.createDefaultPathAction')
         showModal.value = true
       }
     } catch (error) {
@@ -249,15 +251,21 @@ export const useChecklistStore = defineStore('checklist', () => {
   const exportChecklist = async () => {
     try {
       if (checklist.value.questions.length == 0) {
-        throw new Error('Empty checklist not exported')
+        throw new Error(t('toast.emptyChecklistNotExported'))
       }
 
       // Generate PDF report of findings
       const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
       const locationId = activeWorkspace.value?.locationId || null
-      const reportPath = await fs.saveFindingsReport(checklist.value, sessionObj, specialty.value, locationId)
+      const reportPath = await fs.saveFindingsReport(
+        checklist.value,
+        sessionObj,
+        specialty.value,
+        locationId,
+        sessionStore.locale
+      )
       generatedReportPath.value = reportPath
-      toast.success('Report generated successfully')
+      toast.success(t('toast.reportGenerated'))
     } catch (error) {
       generatedReportPath.value = ''
       toast.error(error.message)
@@ -304,7 +312,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   const exportUploadPayload = async () => {
     try {
       if (!uploadServiceOnline.value) {
-        throw new Error('Upload service offline (localhost:8000)')
+        throw new Error(t('toast.uploadServiceOffline'))
       }
 
       const apiKey = await ensureApiKey()
@@ -316,7 +324,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       if (uiMode.value == 'followUp') {
         if (!Array.isArray(findings.value) || findings.value.length == 0) {
-          throw new Error('Empty follow-up not exported')
+          throw new Error(t('toast.emptyFollowUpNotExported'))
         }
 
         const followUpSessionObj = {
@@ -330,10 +338,10 @@ export const useChecklistStore = defineStore('checklist', () => {
           activeWorkspace.value?.locationId || null
         )
         await loadWorkspaces()
-        toast.success('Follow-up payload exported and uploaded successfully')
+        toast.success(t('toast.followUpPayloadUploaded'))
       } else {
         if (checklist.value.questions.length == 0) {
-          throw new Error('Empty checklist not exported')
+          throw new Error(t('toast.emptyChecklistNotExported'))
         }
 
         const sessionObj = { summary: sessionStore.summary, responses: sessionStore.responses }
@@ -352,7 +360,7 @@ export const useChecklistStore = defineStore('checklist', () => {
           }
         )
         await loadWorkspaces()
-        toast.success('Payload exported and uploaded successfully')
+        toast.success(t('toast.payloadUploaded'))
       }
     } catch (error) {
       toast.error(error.message)
@@ -364,12 +372,12 @@ export const useChecklistStore = defineStore('checklist', () => {
   const importChecklist = async (inspectionId, specialtyCode, ids = {}) => {
     try {
       if (!inspectionId || !specialtyCode) {
-        throw new Error('Inspection and specialty are required')
+        throw new Error(t('toast.inspectionSpecialtyRequiredShort'))
       }
       importIds.value = ids
 
       if (!importServiceOnline.value) {
-        throw new Error('Import service offline (localhost:1880)')
+        throw new Error(t('toast.importServiceOffline'))
       }
 
       isImporting.value = true
@@ -383,12 +391,12 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)
       if (touchedState.checklistTouched) {
-        throw new Error('Cannot import checklist because local checklist edits already exist')
+        throw new Error(t('toast.cannotImportChecklistTouched'))
       }
 
       const importState = await fs.getChecklistImportState(specialtyCode, locationId)
       if (importState.hasChecklist && importState.hasSession && importState.sessionFinalized === false) {
-        throw new Error('Cannot import checklist while an active session is in progress')
+        throw new Error(t('toast.cannotImportChecklistActiveSession'))
       }
       await fs.ensureSpecialtyEntry(specialtyCode, specialtyName)
       await fs.saveChecklist(specialtyCode, importedChecklist, locationId)
@@ -432,7 +440,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
       await loadFindings()
 
-      toast.success('Checklist imported successfully')
+      toast.success(t('toast.checklistImported'))
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -444,7 +452,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     try {
       const targetWorkspace = workspaceList.value.find((workspace) => workspace.workspaceKey == workspaceKey)
       if (!targetWorkspace) {
-        throw new Error('Workspace not found')
+        throw new Error(t('toast.workspaceNotFound'))
       }
 
       activeWorkspaceKey.value = workspaceKey
@@ -500,25 +508,25 @@ export const useChecklistStore = defineStore('checklist', () => {
       }
       await loadFindings()
     } catch (error) {
-      toast.error(`Could not switch workspace: ${error.message}`)
+      toast.error(t('toast.switchWorkspaceFailed', { message: error.message }))
     }
   }
 
   const importFindings = async (specialtyCode, locationId, inspection = null) => {
     try {
       if (!locationId || !specialtyCode) {
-        throw new Error('Location and specialty are required')
+        throw new Error(t('toast.locationSpecialtyRequiredShort'))
       }
 
       if (!importServiceOnline.value) {
-        throw new Error('Import service offline (localhost:1880)')
+        throw new Error(t('toast.importServiceOffline'))
       }
 
       isImportingFindings.value = true
 
       const importedFindings = await fs.fetchFindingsFromApi(specialtyCode, locationId, inspection)
       if (!Array.isArray(importedFindings) || importedFindings.length == 0) {
-        throw new Error('No findings were returned for this location and specialty')
+        throw new Error(t('toast.noFindingsReturned'))
       }
 
       const locationName =
@@ -530,7 +538,7 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       const touchedState = await fs.getWorkspaceTouchedState(specialtyCode, locationId)
       if (touchedState.followUpTouched) {
-        throw new Error('Cannot import findings because local follow-up edits already exist')
+        throw new Error(t('toast.cannotImportFindingsTouched'))
       }
 
       await fs.saveFindings(specialtyCode, importedFindings, locationId)
@@ -571,7 +579,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       await loadFindings()
       uiMode.value = 'followUp'
 
-      toast.success('Findings imported successfully')
+      toast.success(t('toast.findingsImported'))
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -587,18 +595,18 @@ export const useChecklistStore = defineStore('checklist', () => {
   const viewGeneratedReport = async () => {
     try {
       if (!generatedReportPath.value) {
-        throw new Error('No report has been generated yet')
+        throw new Error(t('toast.noReportGenerated'))
       }
       await window.electronAPI.openFile(generatedReportPath.value)
     } catch (error) {
-      toast.error('Could not open report: ' + error.message)
+      toast.error(t('toast.openReportFailed', { message: error.message }))
     }
   }
 
   const removeInspectionSession = async () => {
     try {
       if (!activeWorkspace.value?.locationId || !specialty.value || specialty.value == 'NONE') {
-        throw new Error('No active workspace selected')
+        throw new Error(t('toast.noActiveWorkspace'))
       }
 
       const result = await fs.removeInspectionSession(specialty.value, activeWorkspace.value.locationId)
@@ -613,7 +621,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         findingsLoaded.value = false
         specialty.value = 'NONE'
         currentPath.value = ''
-        toast.success('Inspection session removed and workspace deleted')
+        toast.success(t('toast.inspectionSessionRemovedAndDeleted'))
         return result
       }
 
@@ -622,7 +630,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       findings.value = []
       findingsLoaded.value = false
       sessionStore.reset(false)
-      toast.success('Inspection session removed')
+      toast.success(t('toast.inspectionSessionRemoved'))
       return result
     } catch (error) {
       toast.error(error.message)
@@ -633,7 +641,7 @@ export const useChecklistStore = defineStore('checklist', () => {
   const removeFollowUpSession = async () => {
     try {
       if (!activeWorkspace.value?.locationId || !specialty.value || specialty.value == 'NONE') {
-        throw new Error('No active workspace selected')
+        throw new Error(t('toast.noActiveWorkspace'))
       }
 
       const result = await fs.removeFollowUpSession(specialty.value, activeWorkspace.value.locationId)
@@ -648,7 +656,7 @@ export const useChecklistStore = defineStore('checklist', () => {
         findingsLoaded.value = false
         specialty.value = 'NONE'
         currentPath.value = ''
-        toast.success('Follow-up session removed and workspace deleted')
+        toast.success(t('toast.followUpSessionRemovedAndDeleted'))
         return result
       }
 
@@ -657,7 +665,7 @@ export const useChecklistStore = defineStore('checklist', () => {
       findings.value = []
       findingsLoaded.value = false
       followUpStore.reset(false)
-      toast.success('Follow-up session removed')
+      toast.success(t('toast.followUpSessionRemoved'))
       return result
     } catch (error) {
       toast.error(error.message)
