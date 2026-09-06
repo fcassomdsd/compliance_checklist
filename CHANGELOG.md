@@ -7,6 +7,7 @@
 
 ### Fixed
 - **Modal dispatch bug**: `checklistStore.js`'s modal logic switched on the *translated* modal title string, which would have silently broken once that string changed by locale. Now switches on a stable `activeModalKey`.
+- **CI lint crash**: `eslint-plugin-vue`'s `flat/essential` config carries rule sets with no `files` restriction, so adding the new `src/i18n/locales/*.json` resources took down the whole lint stage (`vue-eslint-parser` has no script-setup context for JSON). Scoped every `flat/essential` sub-config to `*.vue`; also added a proper Node-globals block for `electron/**` (main-process code), surfacing and fixing a real `process is not defined` error the crash had been masking.
 
 ## 2026-08-02 (Release 1.1.0-alpha)
 
