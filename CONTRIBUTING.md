@@ -1,98 +1,165 @@
----
-
-# 🤝 **2. CONTRIBUTING.md**
-
-```markdown
 # Contributing Guide
 
-Thank you for considering contributing to the Compliance Checklist App! 🎉
-We welcome all contributions, from small documentation fixes to major feature improvements.
+Thank you for contributing to **Compliance Checklist**. Contributions of all sizes are welcome — documentation, bug fixes, refactors, tests, and new features.
 
-Please ensure you have read the **CODE_OF_CONDUCT.md** before starting.
+Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before participating.
 
 ---
 
-## 🧭 1. Branch Workflow
+## 1. Branch workflow
 
-We follow a **main / develop** branching model:
+This repository follows a **main / develop** model:
 
-- **`main`** → always stable and production-ready.
-- **`develop`** → active development branch. **All Merge Requests (MRs) should target this branch.**
-- **`feature/`** → New features (`feature/add-logging-module`).
-- **`fix/`** → Bug fixes (`fix/ui-freeze`).
-- **`hotfix/`** → Urgent fixes to main (`hotfix/crash-fix`).
+- `main` — stable and production-ready.
+- `develop` — active integration branch. **All merge requests target `develop`** unless maintainers specify otherwise.
+- `feature/*` — new features, for example `feature/add-logging-module`.
+- `fix/*` — bug fixes, for example `fix/ui-freeze`.
+- `hotfix/*` — urgent fixes to `main`, for example `hotfix/crash-fix`.
 
-### Example Feature Workflow
+### Example workflow
 
 ```bash
-# 1. Start on develop and pull latest changes
+# 1. Start from develop and pull the latest changes
 git checkout develop
 git pull
 
-# 2. Create a new branch for your feature
+# 2. Create a branch from develop
 git checkout -b feature/awesome-improvement
 
-# 3. Work and commit using Conventional Commits
-# work...
+# 3. Commit with Conventional Commits
+git add .
 git commit -m "feat: add awesome improvement"
 
-# 4. Push your branch
+# 4. Push the branch
 git push origin feature/awesome-improvement
-
-# 5. Create a Merge Request (MR) targeting the 'develop' branch.
-
-2. Code Style & Tooling
-
-Consistency is key. We rely on standard tooling for quality control.
-
-Linting and Formatting
-
-All code must pass checks enforced by ESLint and formatted by Prettier. The configuration files (.eslintrc.* and .prettierrc.*) are included in the repository.
-
-Conventional Commits
-
-We use Conventional Commits for clear, standardized commit history. Use the following prefixes in your commit messages:
-Type	When to Use	Example
-feat:	A new feature	feat: introduce dynamic checklist loading
-fix:	A bug fix	fix: correct schema validation error
-chore:	Maintenance, build process, or tooling changes	chore: update dependencies
-docs:	Documentation only changes	docs: clarify installation steps in README
-test:	Adding or correcting tests	test: add unit test for fileServices
-refactor:	Code change that neither fixes a bug nor adds a feature	refactor: simplify Pinia store setup
-
-Write meaningful commit messages:
-
-    ✅ fix: correct schema validation error
-
-    ❌ update stuff
-
-🧪 3. Testing
-
-You must run tests locally and ensure they pass before submitting a Merge Request.
-Bash
-
-# Run all unit and integration tests
-npm test
-
-📬 4. Merge Request (MR) Checklist
-
-To ensure a smooth review process, please include the following in your Merge Request description:
-
-    Summary: A brief description of the change and its scope.
-
-    Type: (e.g., feat, fix, refactor)
-
-    Testing: Detail how you tested the changes (e.g., tested on Windows 10, all unit tests passed).
-
-    Checklist:
-
-        [ ] My code follows the project's Code Style and formatting rules.
-
-        [ ] I have performed a self-review of my own code.
-
-        [ ] I have updated documentation where necessary.
-
-        [ ] New and existing tests pass (npm test).
-
-        [ ] My commit messages use Conventional Commits.
 ```
+
+Then open a merge request targeting `develop`.
+
+> Never commit directly to `develop` or `main`.
+
+---
+
+## 2. Commit convention
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit message.
+
+| Type | When to use | Example |
+|---|---|---|
+| `feat:` | A new feature | `feat: add awesome improvement` |
+| `fix:` | A bug fix | `fix: correct null handling` |
+| `chore:` | Maintenance, tooling, or dependency updates | `chore: update dependencies` |
+| `docs:` | Documentation-only changes | `docs: clarify setup instructions` |
+| `test:` | Tests added or updated | `test: add unit test for new behavior` |
+| `refactor:` | Internal change with no behavior change | `refactor: simplify initialization` |
+
+Write meaningful messages:
+
+- Good: `fix: correct null handling in diagnostics route`
+- Poor: `update stuff`
+
+---
+
+## 3. Code style and tooling
+
+These principles apply to every repository in this platform:
+
+- Follow the conventions of the files you touch; keep diffs focused and readable.
+- Avoid unrelated reformatting or refactoring in the same merge request.
+- Update documentation when behavior, contracts, or configuration change.
+- Add or update tests when changing logic.
+- Never commit secrets, tokens, credentials, or private keys.
+- Do not commit generated artifacts or local environment directories (`node_modules/`, `venv/`, `dist/`, database dumps, editor backups).
+
+### Repository-specific tooling
+
+- The Vue renderer lives in `src/`; the Electron main process, preload script, and IPC handlers live in `electron/`. Keep main-process and renderer concerns separate.
+- ESLint uses the flat configuration in `eslint.config.mjs`. Prettier is used for formatting; run it rather than hand-formatting:
+
+```bash
+npm run lint
+npm run lint:fix
+npm run format
+```
+
+- `app.config.json` at the project root is required at runtime and at package time. `e2e/global-setup.mjs` temporarily rewrites it during end-to-end runs, so do not commit an e2e-modified copy.
+
+---
+
+## 4. Testing
+
+Run the relevant checks locally before opening a merge request, and include the exact commands and their outcomes in the merge request description.
+
+### Repository-specific checks
+
+```bash
+# Unit tests, run once (`npm test` alone starts Vitest in watch mode)
+npx vitest run
+
+# Unit tests with coverage
+npm run test:coverage
+
+# End-to-end: install browsers once, then build before running
+npm run e2e:setup
+npm run build && npm run e2e
+```
+
+End-to-end tests require a fresh build first. Include the commands you ran and their results in the merge request description.
+
+---
+
+## 5. Merge request checklist
+
+Include the following in your merge request description:
+
+- **Summary** — what changed and why.
+- **Type** — `feat`, `fix`, `docs`, `refactor`, `test`, or `chore`.
+- **Testing** — exact commands run and their outcomes.
+- **Scope** — affected modules, APIs, contracts, and documentation.
+
+Checklist:
+
+- [ ] My change follows this repository's style and tooling rules.
+- [ ] I performed a self-review before requesting review.
+- [ ] I updated or added documentation where needed.
+- [ ] Relevant tests and checks pass locally.
+- [ ] My commit messages follow Conventional Commits.
+- [ ] I did not commit secrets, credentials, or generated artifacts.
+
+---
+
+## 6. Documentation and compatibility
+
+- Update the README, `docs/`, and `example/` payloads whenever a contract changes — API routes, payload fields, schemas, document ID formats, or Alfresco folder paths.
+- Keep identifiers and payload aliases backward compatible where practical, and call out breaking changes explicitly in the merge request.
+- When a change spans more than one repository in this platform, open one merge request per repository and link them to each other.
+
+---
+
+## 7. Security and secrets
+
+- Never commit secrets, tokens, credentials, or private keys.
+- Configure sensitive values through environment variables or the repository's documented secret mechanism.
+- Call out security impact explicitly in the merge request when a change touches authentication, authorization, or data access.
+
+---
+
+## 8. Licensing and notices
+
+This repository is licensed under the **Apache License 2.0** — see [LICENSE](LICENSE).
+
+- Do not add third-party code or assets without preserving the required license notices.
+- Keep existing third-party and upstream copyright headers intact.
+
+---
+
+## 9. Reporting issues and proposing changes
+
+For large or cross-cutting changes, open an issue first to align on scope and approach before implementing.
+
+When reporting a bug, include:
+
+- Steps to reproduce
+- Expected behavior
+- Actual behavior
+- Environment details (OS, runtime and tool versions)
