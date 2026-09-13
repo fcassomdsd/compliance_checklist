@@ -84,7 +84,7 @@ build:portable:windows:
 
 e2e:smoke:
   stage: test
-  image: mcr.microsoft.com/playwright:v1.52.0-jammy
+  image: mcr.microsoft.com/playwright:v1.59.1-jammy
   before_script:
     - npm ci
     - npm run e2e:setup
@@ -104,7 +104,7 @@ e2e:smoke:
 
 e2e:full:
   stage: test
-  image: mcr.microsoft.com/playwright:v1.52.0-jammy
+  image: mcr.microsoft.com/playwright:v1.59.1-jammy
   before_script:
     - npm ci
     - npm run e2e:setup
@@ -119,7 +119,9 @@ e2e:full:
       - test-results/
     expire_in: 7 days
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH == "develop"'
 
 # Release stage - creates a GitLab Release tagged with the current date
 # whenever a pipeline runs on main (i.e. on every merge to main).
