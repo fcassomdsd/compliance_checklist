@@ -1,8 +1,6 @@
 import { app } from 'electron'
-import { shell } from 'electron'
+import { shell, safeStorage } from 'electron'
 import path from 'node:path'
-import { dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import fs from 'node:fs/promises'
 import { Buffer } from 'node:buffer'
 import JSZip from 'jszip'
@@ -19,6 +17,7 @@ import {
   hashFile,
 } from '../utils/fileOps.js'
 import { safeJoin } from '../utils/fileSec.js'
+import { resolveReadableAppConfigPath, writableAppConfigPath } from '../utils/appConfig.js'
 import { logger } from '../utils/logger.js'
 import { generateFindingsReport } from '../utils/pdfGenerator.js'
 import { getLocale, setLocale } from '../utils/userSettings.js'
@@ -407,10 +406,88 @@ const buildWorkspaceFolderName = (locationId, specialty) => {
 }
 
 const readAppConfig = async () => {
-  const appDir = dirname(fileURLToPath(import.meta.url))
-  const configPath = path.join(appDir, '..', '..', 'app.config.json')
+  const configPath = await resolveReadableAppConfigPath()
   const raw = await fs.readFile(configPath, 'utf-8')
   return JSON.parse(raw)
+}
+
+// Every file operation is confined to the workspace root. The renderer supplies
+// the base path, and `safeJoin` alone cannot contain it because a caller-chosen
+// base makes the prefix check meaningless — so a base (or an absolute file path)
+// outside the workspace is rejected instead of trusted.
+const WORKSPACE_ROOT = path.resolve(defaultSavePath)
+
+const assertInsideWorkspace = (target, label = 'path') => {
+  if (typeof target !== 'string' || target.length === 0) {
+    throw new Error(`${label} must be a non-empty string`)
+  }
+
+  const resolved = path.resolve(target)
+  if (resolved !== WORKSPACE_ROOT && !resolved.startsWith(WORKSPACE_ROOT + path.sep)) {
+    throw new Error(`${label} is outside the workspace root`)
+  }
+
+  return resolved
+}
+
+const workspaceBase = (filePath) => {
+  const base = filePath === null || filePath === undefined || filePath === '' ? WORKSPACE_ROOT : filePath
+  return assertInsideWorkspace(base, 'workspaceBase')
+}
+
+const CREDENTIAL_ENVELOPE_VERSION = 1
+const API_KEY_FILE = 'api-key.json'
+const ALFRESCO_CREDENTIAL_FILE = 'alfresco-cred.json'
+
+// Credentials are sealed with the OS keychain (DPAPI / Keychain / libsecret)
+// instead of being written as plain JSON. Where the OS cannot provide
+// encryption the value is still written, but unencrypted and flagged as such.
+const writeCredentialFile = async (fileName, payload) => {
+  const serialized = JSON.stringify(payload)
+  let envelope
+
+  if (safeStorage.isEncryptionAvailable()) {
+    envelope = {
+      v: CREDENTIAL_ENVELOPE_VERSION,
+      encrypted: true,
+      payload: safeStorage.encryptString(serialized).toString('base64'),
+    }
+  } else {
+    logger.warn(`Credentials: OS encryption unavailable, writing ${fileName} unencrypted`)
+    envelope = { v: CREDENTIAL_ENVELOPE_VERSION, encrypted: false, payload: serialized }
+  }
+
+  await ensureDir(WORKSPACE_ROOT)
+  await saveFile(path.join(WORKSPACE_ROOT, fileName), JSON.stringify(envelope, null, 2))
+  return true
+}
+
+const readCredentialFile = async (fileName) => {
+  let raw
+
+  try {
+    raw = await fs.readFile(path.join(WORKSPACE_ROOT, fileName), 'utf-8')
+  } catch {
+    return null
+  }
+
+  const parsed = JSON.parse(raw)
+
+  // Legacy plaintext format written before encryption was introduced.
+  if (parsed === null || typeof parsed !== 'object' || parsed.v === undefined) {
+    return parsed
+  }
+
+  if (!parsed.encrypted) {
+    return JSON.parse(parsed.payload)
+  }
+
+  if (!safeStorage.isEncryptionAvailable()) {
+    logger.warn(`Credentials: cannot decrypt ${fileName} because OS encryption is unavailable`)
+    return null
+  }
+
+  return JSON.parse(safeStorage.decryptString(Buffer.from(parsed.payload, 'base64')))
 }
 
 const asDateOnly = (value) => {
@@ -1034,7 +1111,7 @@ export function setupIpcHandles(ipcMain) {
     */
   ipcMain.handle('check-path', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath !== null ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = safeJoin(dirPath, pathLegs)
       return await fileExists(toFilePath)
     } catch (err) {
@@ -1047,7 +1124,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('get-path', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       return safeJoin(dirPath, pathLegs)
     } catch (err) {
       logger.error(
@@ -1059,7 +1136,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('get-full-path', async (event, filePath, pathLegs, fileName) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const dirPathWithLegs = safeJoin(dirPath, pathLegs)
       return safeJoin(dirPathWithLegs, fileName)
     } catch (err) {
@@ -1072,7 +1149,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('get-stats', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = safeJoin(dirPath, pathLegs)
       const fileStats = await getFileStats(toFilePath)
       return fileStats
@@ -1084,7 +1161,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('create-dir', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = pathLegs ? safeJoin(dirPath, pathLegs) : dirPath
       await ensureDir(toFilePath)
     } catch (err) {
@@ -1097,7 +1174,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('list-path', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = pathLegs ? safeJoin(dirPath, pathLegs) : dirPath
       const dirList = await listDir(toFilePath)
       return dirList
@@ -1109,7 +1186,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('read-file', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = safeJoin(dirPath, pathLegs)
       const fileContent = await readFile(toFilePath)
       return fileContent
@@ -1130,7 +1207,7 @@ export function setupIpcHandles(ipcMain) {
         throw new Error('Buffer is empty')
       }
 
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = safeJoin(dirPath, pathLegs)
       const dataToSave = typeof fileData === 'string' ? fileData : Buffer.from(fileData)
       const saved = await saveFile(toFilePath, dataToSave)
@@ -1145,7 +1222,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('delete-file', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const toFilePath = safeJoin(dirPath, pathLegs)
       const deleted = await deleteFile(toFilePath)
       return deleted
@@ -1157,7 +1234,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('delete-path', async (event, filePath, pathLegs) => {
     try {
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       if (!Array.isArray(pathLegs) || pathLegs.length == 0) {
         throw new Error('Missing required path segments for delete-path')
       }
@@ -1175,7 +1252,13 @@ export function setupIpcHandles(ipcMain) {
       if (!checklistString || !sessionString || !specialty || !outputPath) {
         throw new Error('Missing required parameters: checklistString, sessionString, specialty, outputPath')
       }
-      const result = await generateFindingsReport({ checklistString, sessionString, specialty, outputPath, locale })
+      const result = await generateFindingsReport({
+        checklistString,
+        sessionString,
+        specialty,
+        outputPath: assertInsideWorkspace(outputPath, 'generate-pdf: outputPath'),
+        locale,
+      })
       return result
     } catch (err) {
       logger.error(`generate-pdf: Could not generate PDF: ${err.message}`)
@@ -1207,31 +1290,34 @@ export function setupIpcHandles(ipcMain) {
       throw new Error('Missing required parameter: filePath')
     }
 
-    logger.info(`open-file: Opening file ${filePath}`)
-    
+    // Only files inside the workspace may be handed to the operating system.
+    const safeFilePath = assertInsideWorkspace(filePath, 'open-file: filePath')
+
+    logger.info(`open-file: Opening file ${safeFilePath}`)
+
     try {
       // Fire-and-forget: shell.openPath() may not resolve until the application exits,
       // so we initiate the open but don't wait for it to complete.
       // Any errors opening the file will be handled by the OS.
-      shell.openPath(filePath).then(
+      shell.openPath(safeFilePath).then(
         (errorMsg) => {
           if (errorMsg) {
-            logger.error(`open-file: OS error opening ${filePath}: ${errorMsg}`)
+            logger.error(`open-file: OS error opening ${safeFilePath}: ${errorMsg}`)
           } else {
-            logger.info(`open-file: OS successfully opened ${filePath}`)
+            logger.info(`open-file: OS successfully opened ${safeFilePath}`)
           }
         },
         (err) => {
-          logger.error(`open-file: Failed to open ${filePath}: ${err?.message || String(err)}`)
+          logger.error(`open-file: Failed to open ${safeFilePath}: ${err?.message || String(err)}`)
         }
       )
-      
-      logger.info(`open-file: File open initiated for ${filePath}`)
+
+      logger.info(`open-file: File open initiated for ${safeFilePath}`)
       return { success: true }
     } catch (err) {
       // Catch any synchronous errors (e.g., invalid path)
       const errMsg = err?.message || String(err)
-      logger.error(`open-file: Error initiating file open for ${filePath}: ${errMsg}`)
+      logger.error(`open-file: Error initiating file open for ${safeFilePath}: ${errMsg}`)
       throw new Error(`Could not open file: ${errMsg}`)
     }
   })
@@ -1247,8 +1333,7 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('write-app-config', async (event, config) => {
     try {
-      const appDir = dirname(fileURLToPath(import.meta.url))
-      const configPath = path.join(appDir, '..', '..', 'app.config.json')
+      const configPath = writableAppConfigPath()
       const existing = await readAppConfig().catch(() => ({}))
       const merged = { ...existing, ...config }
       await saveFile(configPath, JSON.stringify(merged, null, 2))
@@ -1272,7 +1357,7 @@ export function setupIpcHandles(ipcMain) {
     if (!Array.isArray(filePaths)) {
       throw new Error('hash-evidence-files: filePaths must be an array')
     }
-    const dirPath = filePath ? filePath : defaultSavePath
+    const dirPath = workspaceBase(filePath)
     const parentDir = safeJoin(dirPath, pathLegs)
 
     const resultObj = {}
@@ -1328,47 +1413,24 @@ export function setupIpcHandles(ipcMain) {
   })
 
   ipcMain.handle('read-api-key', async () => {
-    try {
-      const appDir = app.getPath('documents')
-      const keyPath = path.join(appDir, 'Current_inspection', 'api-key.json')
-      await fs.access(keyPath)
-      const raw = await fs.readFile(keyPath, 'utf-8')
-      const data = JSON.parse(raw)
-      return typeof data?.key === 'string' ? data.key : null
-    } catch {
-      return null
-    }
+    const data = await readCredentialFile(API_KEY_FILE).catch(() => null)
+    return typeof data?.key === 'string' ? data.key : null
   })
 
   ipcMain.handle('save-api-key', async (event, key) => {
-    const appDir = app.getPath('documents')
-    const dirPath = path.join(appDir, 'Current_inspection')
-    await ensureDir(dirPath)
-    const keyPath = path.join(dirPath, 'api-key.json')
-    await saveFile(keyPath, JSON.stringify({ key: String(key || '').trim() }, null, 2))
-    return true
+    return writeCredentialFile(API_KEY_FILE, { key: String(key || '').trim() })
   })
 
   ipcMain.handle('read-alfresco-cred', async () => {
-    try {
-      const appDir = app.getPath('documents')
-      const credPath = path.join(appDir, 'Current_inspection', 'alfresco-cred.json')
-      await fs.access(credPath)
-      const raw = await fs.readFile(credPath, 'utf-8')
-      const data = JSON.parse(raw)
-      return { username: data?.username || null, password: data?.password || null }
-    } catch {
-      return { username: null, password: null }
-    }
+    const data = await readCredentialFile(ALFRESCO_CREDENTIAL_FILE).catch(() => null)
+    return { username: data?.username || null, password: data?.password || null }
   })
 
   ipcMain.handle('save-alfresco-cred', async (event, username, password) => {
-    const appDir = app.getPath('documents')
-    const dirPath = path.join(appDir, 'Current_inspection')
-    await ensureDir(dirPath)
-    const credPath = path.join(dirPath, 'alfresco-cred.json')
-    await saveFile(credPath, JSON.stringify({ username: String(username || '').trim(), password: String(password || '') }, null, 2))
-    return true
+    return writeCredentialFile(ALFRESCO_CREDENTIAL_FILE, {
+      username: String(username || '').trim(),
+      password: String(password || ''),
+    })
   })
 
   ipcMain.handle('export-inspection-payload', async (event, payload) => {
@@ -1405,7 +1467,7 @@ export function setupIpcHandles(ipcMain) {
         }
       })
 
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const resolvedLocationId =
         locationId || checklistObj?.locationId || checklistObj?.location || checklistPayload?.checklist?.locationId
       const workspaceFolder = resolvedLocationId
@@ -1513,7 +1575,7 @@ export function setupIpcHandles(ipcMain) {
         }
       })
 
-      const dirPath = filePath ? filePath : defaultSavePath
+      const dirPath = workspaceBase(filePath)
       const workspaceFolder = locationId
         ? buildWorkspaceFolderName(locationId, specialty)
         : sanitizeWorkspaceLeg(String(specialty).toUpperCase())
