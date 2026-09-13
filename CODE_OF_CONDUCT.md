@@ -1,8 +1,3 @@
----
-
-# 🌈 **3. CODE_OF_CONDUCT.md**
-
-```markdown
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -31,4 +26,3 @@ Instances of abusive behavior may be reported to:
 All complaints will be reviewed fairly and confidentially.
 
 This Code of Conduct is adapted from the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html).
-```
