@@ -419,6 +419,31 @@ describe('ipcHandles', () => {
       vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/payload.zip')
     })
 
+    it('rejects a synthetic offline specialty id instead of exporting it', async () => {
+      globalThis.fetch = vi.fn()
+
+      const checklist = {
+        inspection: '0224',
+        providerId: 'provider-1',
+        specialtyId: 'sp-sur',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
+      }
+      const session = { summary: { specialty: 'SUR' }, responses: {} }
+
+      await expect(
+        handles['export-inspection-payload']({}, {
+          checklistString: JSON.stringify(checklist),
+          sessionString: JSON.stringify(session),
+          specialty: 'SUR',
+        })
+      ).rejects.toThrow('no resolved backend id')
+
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    })
+
     it('creates zip and posts payload to API', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -429,6 +454,7 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: '0224',
         providerId: 'provider-1',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
@@ -479,6 +505,7 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: '0224',
         providerId: 'provider-1',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
@@ -517,6 +544,7 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: '0224',
         providerId: 'provider-1',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
@@ -555,6 +583,7 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: '0224',
         providerId: 'provider-1',
+        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',

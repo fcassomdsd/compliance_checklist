@@ -26,13 +26,20 @@ export const createFileService = () => {
 
   const sanitizeWorkspaceLeg = (value) => value.replace(/[^A-Za-z0-9_-]/g, '_')
 
+  // AtroCore ids are long lowercase alphanumerics (e.g. a01k5qjgpcwe3sv2tgsekfr54qp).
+  // Bundled fallback entries carry synthetic ids such as "sp-apr"; exporting one
+  // of those produced a payload the backend cannot resolve, so an unresolved id
+  // is reported as null and the export path rejects it explicitly.
+  const isResolvedBackendId = (value) =>
+    typeof value === 'string' && /^[a-z0-9]{20,}$/.test(value)
+
   const normalizeSpecialty = (entry) => {
     if (!entry || typeof entry != 'object') {
       return null
     }
     const code = ensureWorkspaceLeg(String(entry.code || ''), 'specialty.code').toUpperCase()
     return {
-      id: entry.id || code,
+      id: isResolvedBackendId(entry.id) ? entry.id : null,
       code,
       name: entry.name || code,
     }
