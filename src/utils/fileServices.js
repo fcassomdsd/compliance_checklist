@@ -720,6 +720,25 @@ export const createFileService = () => {
     }
   }
 
+  // Resolve the AtroCore specialty id for a code from the same catalog the app
+  // loads (API first, bundled fallback second). The bundled fallback carries no
+  // real ids, so an offline inspection resolves to null and the export is
+  // rejected rather than sending an id the backend cannot resolve.
+  const resolveSpecialtyId = async (specialtyCode) => {
+    const normalizedCode = String(specialtyCode || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return null
+    }
+
+    try {
+      const specialties = await loadSpecialties()
+      const match = specialties.find((entry) => entry.code === normalizedCode)
+      return match?.id || null
+    } catch {
+      return null
+    }
+  }
+
   const loadLocations = async () => {
     const parseLocations = (entries) => {
       if (!Array.isArray(entries)) {
@@ -1048,8 +1067,20 @@ export const createFileService = () => {
 
       const resolvedLocationId = locationId || checklist?.locationId || checklist?.location || null
       const apiKey = await window.electronAPI.readApiKey()
+
+      // The workspace checklist carries no specialty id, so resolve it from the
+      // catalog before exporting instead of letting the payload fall back to the
+      // specialty code (which the backend cannot resolve).
+      const checklistForExport = { ...checklist }
+      if (!checklistForExport.specialtyId) {
+        const resolvedSpecialtyId = await resolveSpecialtyId(specialty)
+        if (resolvedSpecialtyId) {
+          checklistForExport.specialtyId = resolvedSpecialtyId
+        }
+      }
+
       const payload = {
-        checklistString: JSON.stringify(checklist),
+        checklistString: JSON.stringify(checklistForExport),
         sessionString: JSON.stringify(session),
         specialty,
       }
