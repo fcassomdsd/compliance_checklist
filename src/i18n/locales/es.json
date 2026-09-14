@@ -42,6 +42,15 @@
     "cancel": "Cancelar",
     "saveAndUpload": "Guardar y Cargar"
   },
+  "operatorModal": {
+    "title": "Confirmar el Operador",
+    "explanation": "Inicie sesión con la cuenta de Alfresco del inspector que completó esta lista de verificación. La carga queda registrada a nombre de esa cuenta y la contraseña no se almacena.",
+    "operatorLabel": "Operador",
+    "passwordPlaceholder": "Contraseña de Alfresco",
+    "cancel": "Cancelar",
+    "signInAndUpload": "Iniciar sesión y Cargar",
+    "noOperators": "Ningún inspector con cuenta de Alfresco está vinculado a esta especialidad. Solicite a un administrador que vincule uno."
+  },
   "importModal": {
     "titleInspection": "Importar Datos de Inspección",
     "titleFollowUp": "Importar Datos de Seguimiento",

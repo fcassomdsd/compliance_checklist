@@ -9,9 +9,16 @@
     "importHost": "http://localhost:1880",
     "_comment_uploadHost": "compliance_import ZIP upload service — provides /inspection-import, /followup-import",
     "uploadHost": "http://localhost:8000",
+    "_comment_alfrescoHost": "Alfresco Content Services — used at sync time to sign the operator in and verify the ticket before an upload",
+    "alfrescoHost": "http://localhost:8080",
     "importCanonicalDelay": 3000,
     "importCanonicalRetries": 3,
     "serviceStatusTimeoutMs": 2500
+  },
+  "identity": {
+    "_comment": "Operator identity is confirmed per workspace from /inspectors and verified with a sync-time Alfresco login; the ticket is never stored",
+    "requireOperator": true,
+    "inspectorsPath": "/inspectors"
   },
   "fallback": {
     "specialties": [

@@ -99,6 +99,8 @@ const checklistSchema = {
           items: { type: 'string' },
         },
         interviewee: { type: 'string' },
+        declaredBy: { type: 'string' },
+        inspectorId: { type: 'string' },
       },
     },
     items: {
@@ -238,6 +240,8 @@ const findingSchema = {
           ],
           default: 'Open',
         },
+        declaredBy: { type: 'string' },
+        inspectorId: { type: 'string' },
         submissionDeadline: { type: 'string', format: 'date' },
         findingClosureDate: { type: 'string', format: 'date' },
         lastStatusChange: { type: 'string', format: 'date' },
@@ -340,6 +344,8 @@ const followUpReportSchema = {
         locationId: { type: 'string' },
         locationCode: { type: 'string' },
         locationName: { type: 'string' },
+        declaredBy: { type: 'string' },
+        inspectorId: { type: 'string' },
         followUpDate: { type: 'string', format: 'date-time' },
         percentComplete: { type: 'integer', minimum: 0, maximum: 100 },
         followUpType: {
@@ -407,6 +413,55 @@ const readAppConfig = async () => {
   const configPath = await resolveReadableAppConfigPath()
   const raw = await fs.readFile(configPath, 'utf-8')
   return JSON.parse(raw)
+}
+
+const ALFRESCO_TICKETS_PATH = '/alfresco/api/-default-/public/authentication/versions/1/tickets'
+const ALFRESCO_PEOPLE_ME_PATH = '/alfresco/api/-default-/public/alfresco/versions/1/people/-me-'
+
+// Sync-time operator sign-in. Called once per upload: the password is used to
+// obtain a ticket and is never written to disk, and the ticket lives only for
+// the request that triggered the prompt. `expectedUserName` is the operator
+// confirmed for the workspace; a sign-in as anybody else is rejected.
+const authenticateOperator = async ({ username, password, expectedUserName } = {}) => {
+  const normalizedUser = String(username || '').trim()
+  if (!normalizedUser || typeof password !== 'string' || password.length === 0) {
+    throw new Error('Operator username and password are required')
+  }
+
+  const appConfig = await readAppConfig().catch(() => ({}))
+  const host = String(appConfig?.api?.alfrescoHost || 'http://localhost:8080').replace(/\/+$/, '')
+
+  const loginResponse = await fetch(`${host}${ALFRESCO_TICKETS_PATH}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ userId: normalizedUser, password }),
+  })
+
+  if (!loginResponse.ok) {
+    throw new Error(`Operator sign-in failed with status ${loginResponse.status}`)
+  }
+
+  const loginBody = await loginResponse.json().catch(() => null)
+  const ticket = loginBody?.entry?.id
+  if (!ticket) {
+    throw new Error('Operator sign-in returned no ticket')
+  }
+
+  const meResponse = await fetch(`${host}${ALFRESCO_PEOPLE_ME_PATH}?alf_ticket=${encodeURIComponent(ticket)}`)
+  const meBody = meResponse.ok ? await meResponse.json().catch(() => null) : null
+  const entry = meBody?.entry || {}
+  const userName = String(entry.userName || entry.id || normalizedUser)
+  const displayName = [entry.firstName, entry.lastName].filter(Boolean).join(' ').trim() || userName
+
+  const expected = String(expectedUserName || '').trim()
+  if (expected && expected.toLowerCase() !== userName.toLowerCase()) {
+    throw new Error(
+      `Signed in as "${userName}", but this workspace is assigned to "${expected}". ` +
+        'Confirm the operator or sign in with the assigned account.'
+    )
+  }
+
+  return { ticket, userName, displayName }
 }
 
 // Every file operation is confined to the workspace root. The renderer supplies
@@ -649,7 +704,7 @@ const normalizeEvidenceEntry = (entry) => {
   }
 }
 
-const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
+const mapChecklistPayload = ({ checklistObj, sessionObj, specialty, operator }) => {
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
   const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
@@ -688,6 +743,16 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
     specialtyCode,
     specialtyName,
     providerId: safeString(checklistObj?.providerId),
+  }
+
+  // Pre-verification attribution: the operator confirmed for this workspace.
+  // compliance_import replaces/augments it with the identity it verifies from
+  // the ticket (enteredBy/enteredAt) and keeps this for mismatch auditing.
+  if (operator?.userName) {
+    checklistSection.declaredBy = operator.userName
+  }
+  if (operator?.inspectorId) {
+    checklistSection.inspectorId = operator.inspectorId
   }
 
   const optionalChecklistFields = {
@@ -806,7 +871,7 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   }
 }
 
-const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specialty }) => {
+const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specialty, operator }) => {
   const questions = Array.isArray(checklistObj?.questions) ? checklistObj.questions : []
   const responses = sessionObj?.responses || {}
   const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
@@ -844,6 +909,13 @@ const mapFindingsPayload = ({ checklistPayload, checklistObj, sessionObj, specia
         ),
         findingStatus: 'Open',
       },
+    }
+
+    if (operator?.userName) {
+      finding.finding.declaredBy = operator.userName
+    }
+    if (operator?.inspectorId) {
+      finding.finding.inspectorId = operator.inspectorId
     }
 
     const reglamento = safeString(row?.reference?.normativa?.reglamento, '')
@@ -904,7 +976,7 @@ const resolveResidualRisk = (response, finding) => {
   return 'Low'
 }
 
-const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
+const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj, operator }) => {
   const findings = Array.isArray(findingsObj) ? findingsObj : []
   const responses = followUpSessionObj?.responses || {}
 
@@ -975,6 +1047,14 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
     const specialtyName = safeString(finding?.specialtyName)
     if (specialtyName) {
       report.followUpReport.specialtyName = specialtyName
+    }
+
+    // Pre-verification attribution, as in mapChecklistPayload.
+    if (operator?.userName) {
+      report.followUpReport.declaredBy = operator.userName
+    }
+    if (operator?.inspectorId) {
+      report.followUpReport.inspectorId = operator.inspectorId
     }
 
     const closureVerificationMethod = safeString(response?.closureVerificationMethod)
@@ -1456,12 +1536,27 @@ export function setupIpcHandles(ipcMain) {
         typeof checklistString === 'string' ? JSON.parse(checklistString) : checklistString
       const sessionObj = typeof sessionString === 'string' ? JSON.parse(sessionString) : sessionString
 
-      const checklistPayload = mapChecklistPayload({ checklistObj, sessionObj, specialty })
+      // Sync-time operator sign-in: the workspace's confirmed operator signs in
+      // here, the ticket authenticates the Alfresco writes and the identity is
+      // carried on the payload. Nothing is persisted.
+      const operatorInput = payload?.operator || null
+      const operator = operatorInput ? await authenticateOperator(operatorInput) : null
+      const attributedOperator = operator
+        ? { ...operator, inspectorId: safeString(operatorInput?.inspectorId) }
+        : null
+
+      const checklistPayload = mapChecklistPayload({
+        checklistObj,
+        sessionObj,
+        specialty,
+        operator: attributedOperator,
+      })
       const findingsPayload = mapFindingsPayload({
         checklistPayload,
         checklistObj,
         sessionObj,
         specialty,
+        operator: attributedOperator,
       })
 
       const validateChecklist = ajv.compile(checklistSchema)
@@ -1516,6 +1611,9 @@ export function setupIpcHandles(ipcMain) {
       if (payload?.apiKey) {
         headers['X-API-Key'] = payload.apiKey
       }
+      if (operator?.ticket) {
+        headers['X-Alfresco-Ticket'] = operator.ticket
+      }
       const response = await fetch(targetUrl, {
         method: 'POST',
         body: form,
@@ -1563,9 +1661,17 @@ export function setupIpcHandles(ipcMain) {
         ? findingsObj.map((entry) => normalizeFindingForFollowUpExport(entry))
         : []
 
+      // Sync-time operator sign-in (see export-inspection-payload).
+      const operatorInput = payload?.operator || null
+      const operator = operatorInput ? await authenticateOperator(operatorInput) : null
+      const attributedOperator = operator
+        ? { ...operator, inspectorId: safeString(operatorInput?.inspectorId) }
+        : null
+
       const followUpReportsPayload = mapFollowUpReportsPayload({
         findingsObj: normalizedFindingsObj,
         followUpSessionObj,
+        operator: attributedOperator,
       })
 
       const validateFinding = ajv.compile(sourceFindingSchema)
@@ -1621,6 +1727,9 @@ export function setupIpcHandles(ipcMain) {
       const headers = {}
       if (payload?.apiKey) {
         headers['X-API-Key'] = payload.apiKey
+      }
+      if (operator?.ticket) {
+        headers['X-Alfresco-Ticket'] = operator.ticket
       }
       const response = await fetch(targetUrl, {
         method: 'POST',

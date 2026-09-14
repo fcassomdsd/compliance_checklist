@@ -1690,3 +1690,62 @@ describe('loadSpecialties specialty-id resolution', () => {
     expect(specialties[0].id).toBeNull()
   })
 })
+
+describe('loadOperators', () => {
+  const fs = createFileService()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.electronAPI.getAppConfig.mockResolvedValue(mockAppConfig)
+  })
+
+  it('returns the inspectors linked to the specialty with their Alfresco account', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 'insp-1', name: 'Fernando Casso', externalUserID: 'fernando.casso' },
+        { id: 'insp-2', name: 'Other Inspector', externalUserID: 'other.user' },
+      ],
+    })
+
+    const operators = await fs.loadOperators('sur')
+
+    expect(operators).toEqual([
+      { id: 'insp-1', name: 'Fernando Casso', username: 'fernando.casso' },
+      { id: 'insp-2', name: 'Other Inspector', username: 'other.user' },
+    ])
+
+    const requested = String(globalThis.fetch.mock.calls[0][0])
+    expect(requested).toContain('/inspectors')
+    expect(requested).toContain('specialty=SUR')
+  })
+
+  it('drops entries without an Alfresco account so an unverifiable operator cannot be confirmed', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 'insp-1', name: 'No Account', externalUserID: '' },
+        { id: 'insp-2', name: 'Has Account', externalUserID: 'has.account' },
+      ],
+    })
+
+    const operators = await fs.loadOperators('SUR')
+
+    expect(operators).toEqual([{ id: 'insp-2', name: 'Has Account', username: 'has.account' }])
+  })
+
+  it('returns an empty list without calling the API when no specialty is given', async () => {
+    globalThis.fetch = vi.fn()
+
+    const operators = await fs.loadOperators('')
+
+    expect(operators).toEqual([])
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it('throws an actionable error when the inspectors API fails', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
+
+    await expect(fs.loadOperators('SUR')).rejects.toThrow('loadOperators: could not load inspectors')
+  })
+})

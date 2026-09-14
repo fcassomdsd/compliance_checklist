@@ -154,6 +154,37 @@
         </div>
       </div>
     </div>
+    <div v-if="store.operatorPromptVisible" class="modal-overlay">
+      <div class="modal-container">
+        <h2>{{ t('operatorModal.title') }}</h2>
+        <p class="modal-explanation">
+          {{ t('operatorModal.explanation') }}
+        </p>
+        <div class="modal-form-row">
+          <label for="operatorSelect">{{ t('operatorModal.operatorLabel') }}</label>
+          <select id="operatorSelect" v-model="store.operatorSelectedUsername">
+            <option
+              v-for="operator in store.operatorList"
+              :key="operator.username"
+              :value="operator.username"
+            >
+              {{ operator.name }} ({{ operator.username }})
+            </option>
+          </select>
+        </div>
+        <input
+          v-model="store.operatorPasswordInput"
+          type="password"
+          class="api-key-input"
+          :placeholder="t('operatorModal.passwordPlaceholder')"
+          @keyup.enter="store.submitOperatorPrompt"
+        />
+        <div class="modal-actions">
+          <button @click="store.cancelOperatorPrompt" class="btn-cancel">{{ t('operatorModal.cancel') }}</button>
+          <button @click="store.submitOperatorPrompt" class="btn-confirm">{{ t('operatorModal.signInAndUpload') }}</button>
+        </div>
+      </div>
+    </div>
     <div v-if="showImportModal" class="modal-overlay">
       <div class="modal-container import-modal">
         <h2>{{ store.uiMode == 'inspection' ? t('importModal.titleInspection') : t('importModal.titleFollowUp') }}</h2>

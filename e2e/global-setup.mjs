@@ -103,6 +103,9 @@ export default async function globalSetup() {
   appConfig.api.host = `http://127.0.0.1:${e2eImportPort}`
   appConfig.api.importHost = `http://127.0.0.1:${e2eImportPort}`
   appConfig.api.uploadHost = `http://127.0.0.1:${e2eUploadPort}`
+  // The mock stack has no Alfresco to sign the operator in against, so the
+  // operator prompt is disabled for e2e; the real app config requires it.
+  appConfig.identity = { ...(appConfig.identity || {}), requireOperator: false }
   await writeFile(appConfigPath, JSON.stringify(appConfig, null, 2), 'utf8')
 
   const child = spawn('node', ['e2e/mock-server.mjs'], {
