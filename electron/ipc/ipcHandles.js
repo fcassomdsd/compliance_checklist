@@ -85,6 +85,11 @@ const checklistSchema = {
         locationCode: { type: 'string' },
         locationName: { type: 'string' },
         completionDate: { type: 'string', format: 'date' },
+        // The field-recorded inspection window, exported so Alfresco can date
+        // the inspection folder (and, through it, every checklist item filed
+        // under it). Mirrors compliance_import's checklist.schema.json.
+        startDate: { type: 'string', format: 'date' },
+        endDate: { type: 'string', format: 'date' },
         specialtyId: { type: 'string' },
         specialtyCode: { type: 'string' },
         specialtyName: { type: 'string' },
@@ -760,6 +765,15 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty, operator }) 
     locationId: safeString(checklistObj?.locationId),
     locationCode,
     locationName: safeString(checklistObj?.locationName, safeString(checklistObj?.location)),
+    // The field-recorded inspection window. "completionDate" stays for
+    // compatibility (it is what the CMIS model stores on the checklist
+    // document itself), while startDate/endDate carry the same window
+    // explicitly so Alfresco can date the inspection folder - and therefore
+    // every checklist item filed under it, none of which has a date of its
+    // own (see compliance_cmis's canonical-model-import and the provider
+    // history / CE evidence reports).
+    startDate: safeString(checklistObj?.startDate),
+    endDate: safeString(checklistObj?.endDate),
     completionDate: safeString(checklistObj?.endDate),
     checklistId: inferChecklistId(inspectionCode, specialtyCode),
     providerName: safeString(checklistObj?.providerName),

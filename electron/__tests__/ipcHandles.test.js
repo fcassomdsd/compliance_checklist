@@ -517,6 +517,8 @@ describe('ipcHandles', () => {
       const zipBuffer = fileOps.saveFile.mock.calls.at(-1)[1]
       const zip = await JSZip.loadAsync(zipBuffer)
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
+      expect(checklistJson.checklist.startDate).toBe('2026-03-20')
+      expect(checklistJson.checklist.endDate).toBe('2026-03-22')
       expect(checklistJson.checklist.completionDate).toBe('2026-03-22')
       expect(result).toEqual(
         expect.objectContaining({
