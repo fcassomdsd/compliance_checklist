@@ -427,13 +427,12 @@ describe('ipcHandles', () => {
       vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/payload.zip')
     })
 
-    it('rejects a synthetic offline specialty id instead of exporting it', async () => {
+    it('rejects an unresolved specialty id instead of exporting it', async () => {
       globalThis.fetch = vi.fn()
 
       const checklist = {
         inspection: '0224',
         providerId: 'provider-1',
-        specialtyId: 'sp-sur',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
@@ -452,6 +451,29 @@ describe('ipcHandles', () => {
       expect(globalThis.fetch).not.toHaveBeenCalled()
     })
 
+    it('rejects an id that is only the specialty code', async () => {
+      globalThis.fetch = vi.fn()
+
+      const checklist = {
+        inspection: '0224',
+        providerId: 'provider-1',
+        specialtyId: 'SUR',
+        locationId: 'loc-1',
+        location: 'Test Location',
+        startDate: '2026-03-20',
+        questions: [{ id: 'q1', question: 'Question?', verification: 'Verify', sequence: '0010' }],
+      }
+      const session = { summary: { specialty: 'SUR' }, responses: {} }
+
+      await expect(
+        handles['export-inspection-payload']({}, {
+          checklistString: JSON.stringify(checklist),
+          sessionString: JSON.stringify(session),
+          specialty: 'SUR',
+        })
+      ).rejects.toThrow('no resolved backend id')
+    })
+
     it('creates zip and posts payload to API', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -462,7 +484,8 @@ describe('ipcHandles', () => {
       const checklist = {
         inspection: '0224',
         providerId: 'provider-1',
-        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
+        // Real ids in this deployment are short ("spec_sur"), not 26-char.
+        specialtyId: 'spec_sur',
         locationId: 'loc-1',
         location: 'Test Location',
         startDate: '2026-03-20',
@@ -626,7 +649,7 @@ describe('ipcHandles', () => {
 
       const checklist = {
         inspection: 'MDPP-2026-01',
-        specialtyId: 'a01k0f67dskef2a475yzd8a5dxd',
+        specialtyId: 'spec_sur',
         specialtyCode: 'SUR',
         specialtyName: 'Vigilancia (radar)',
         providerId: 'provider-1',
@@ -663,7 +686,7 @@ describe('ipcHandles', () => {
       const zip = await JSZip.loadAsync(zipBuffer)
       const checklistJson = JSON.parse(await zip.file('checklist.json').async('string'))
 
-      expect(checklistJson.checklist.specialtyId).toBe('a01k0f67dskef2a475yzd8a5dxd')
+      expect(checklistJson.checklist.specialtyId).toBe('spec_sur')
       expect(checklistJson.checklist.specialtyCode).toBe('SUR')
       expect(checklistJson.checklist.specialtyName).toBe('Vigilancia (radar)')
       expect(checklistJson.items[0].evidenceItems).toEqual([
