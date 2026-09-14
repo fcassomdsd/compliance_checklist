@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, ipcMain, systemPreferences,  } from 'electron/main';
 import * as fs from 'node:fs/promises';
 import { setupIpcHandles } from './ipc/ipcHandles.js';
+import { bundledAppConfigPath, writableAppConfigPath } from './utils/appConfig.js';
 
 const isMac = os.platform() === "darwin";
 const isLinux = os.platform() === "linux";
@@ -33,43 +34,51 @@ async function requestCamera() {
 }
 
 async function initializeAppConfig() {
+  const writablePath = writableAppConfigPath();
+
   try {
-    const appDir = dirname(fileURLToPath(import.meta.url));
-    const configPath = join(appDir, '..', 'app.config.json');
-    
-    // Check if app.config.json already exists
+    await fs.access(writablePath);
+    return;
+  } catch {
+    // Not present yet: seed it below.
+  }
+
+  try {
+    await fs.mkdir(dirname(writablePath), { recursive: true });
+
+    // Prefer the config shipped with the app (extraResources), so a packaged
+    // build keeps its real API hosts instead of falling back to localhost.
     try {
-      await fs.access(configPath);
+      await fs.copyFile(bundledAppConfigPath(), writablePath);
+      return;
     } catch {
-      // File doesn't exist, create it with default values
-      const defaultConfig = {
-        "app": {
-          "name": "Compliance Checklist",
-          "version": "1.0.0"
-        },
-        "api": {
-          "host": "http://localhost:1880",
-          "importHost": "http://localhost:1880",
-          "uploadHost": "http://localhost:8000",
-          "importCanonicalDelay": 3000,
-          "importCanonicalRetries": 3,
-          "serviceStatusTimeoutMs": 2500
-        },
-        "fallback": {
-          "specialties": [],
-          "locations": []
-        }
-      };
-      await fs.writeFile(configPath, JSON.stringify(defaultConfig, null, 2), 'utf-8');
+      // No bundled copy available: write a minimal default.
     }
+
+    const defaultConfig = {
+      app: { name: 'Compliance Checklist', version: '1.0.0' },
+      api: {
+        host: 'http://localhost:1880',
+        importHost: 'http://localhost:1880',
+        uploadHost: 'http://localhost:8000',
+        importCanonicalDelay: 3000,
+        importCanonicalRetries: 3,
+        serviceStatusTimeoutMs: 2500,
+      },
+      fallback: { specialties: [], locations: [] },
+    };
+
+    await fs.writeFile(writablePath, JSON.stringify(defaultConfig, null, 2), 'utf-8');
   } catch (err) {
     console.warn('Warning: Could not initialize app.config.json:', err.message);
   }
 }
 
 app.whenReady().then(async () => {
-  createWindow();
+  // The renderer reads the config on mount, so it must exist before the window
+  // is created (this used to run after createWindow and race the first render).
   await initializeAppConfig();
+  createWindow();
   setupIpcHandles(ipcMain);
   // Request camera access after app is ready (but not on Linux)
   if (!isLinux) {

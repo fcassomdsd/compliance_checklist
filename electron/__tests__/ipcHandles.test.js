@@ -11,12 +11,17 @@ import JSZip from 'jszip'
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/mocked/documents') },
   ipcMain: { handle: vi.fn() },
+  safeStorage: {
+    isEncryptionAvailable: vi.fn(() => true),
+    encryptString: vi.fn((value) => Buffer.from(`sealed:${value}`, 'utf-8')),
+    decryptString: vi.fn((buffer) => buffer.toString('utf-8').replace(/^sealed:/, '')),
+  },
 }))
 vi.mock('../utils/fileOps', { spy: true })
 vi.mock('../utils/logger')
 vi.mock('node:fs/promises')
 vi.mock('../utils/pdfGenerator', () => ({
-  generateFindingsReport: vi.fn().mockResolvedValue('/path/to/report.pdf'),
+  generateFindingsReport: vi.fn().mockResolvedValue('/mocked/documents/Current_inspection/report.pdf'),
 }))
 
 // Mock safeJoin to return a proper path
@@ -54,9 +59,9 @@ describe('ipcHandles', () => {
   describe('check-path', () => {
     it('calls fileExists with correct path', async () => {
       vi.spyOn(fileOps, 'fileExists').mockResolvedValue(true)
-      const result = await handles['check-path']({}, '/mocked/path', ['sub', 'file.txt'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['sub', 'file.txt'])
-      expect(fileOps.fileExists).toHaveBeenCalledWith('/mocked/path/sub/file.txt')
+      const result = await handles['check-path']({}, '/mocked/documents/Current_inspection/WS', ['sub', 'file.txt'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['sub', 'file.txt'])
+      expect(fileOps.fileExists).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/sub/file.txt')
       expect(result).toBe(true)
     })
 
@@ -69,50 +74,53 @@ describe('ipcHandles', () => {
 
     it('handles ENOENT error', async () => {
       vi.spyOn(fileOps, 'fileExists').mockResolvedValue(false) // ENOENT case
-      const result = await handles['check-path']({}, '/mocked/path', ['file.txt'])
+      const result = await handles['check-path']({}, '/mocked/documents/Current_inspection/WS', ['file.txt'])
       expect(result).toBe(false)
     })
 
     it('handles invalid path with ..', async () => {
-      await expect(handles['check-path']({}, '/mocked/path', ['../file.txt'])).rejects.toThrow(
+      await expect(handles['check-path']({}, '/mocked/documents/Current_inspection/WS', ['../file.txt'])).rejects.toThrow(
         'Illegal path name'
       )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining(
-          'check-path: Could not assess presence of file /mocked/path ../file.txt: safeJoin: Illegal path name:'
+          'check-path: Could not assess presence of file /mocked/documents/Current_inspection/WS ../file.txt: safeJoin: Illegal path name:'
         )
       )
     })
 
-    it('handles non-string filePath', async () => {
+    it('rejects a non-string filePath', async () => {
       await expect(handles['check-path']({}, 123, ['file.txt'])).rejects.toThrow(
-        'safeJoin: Illegal path name: 123'
+        'workspaceBase must be a non-empty string'
       )
-      expect(safeJoin).toHaveBeenCalledWith(123, ['file.txt'])
-      expect(safeJoin).toThrow('safeJoin: Illegal path name:')
-      //expect(fileOps.fileExists).toHaveBeenCalledWith('/mocked/path/sub/file.txt');
+    })
+
+    it('rejects a base path outside the workspace root', async () => {
+      await expect(handles['check-path']({}, '/etc', ['passwd'])).rejects.toThrow(
+        'outside the workspace root'
+      )
     })
   })
 
   describe('get-path', () => {
     it('returns constructed path', async () => {
-      const result = await handles['get-path']({}, '/mocked/path', ['sub', 'file.txt'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['sub', 'file.txt'])
-      expect(result).toBe('/mocked/path/sub/file.txt')
+      const result = await handles['get-path']({}, '/mocked/documents/Current_inspection/WS', ['sub', 'file.txt'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['sub', 'file.txt'])
+      expect(result).toBe('/mocked/documents/Current_inspection/WS/sub/file.txt')
     })
 
     it('handles empty pathLegs', async () => {
-      const result = await handles['get-path']({}, '/mocked/path', [])
-      expect(result).toBe('/mocked/path')
+      const result = await handles['get-path']({}, '/mocked/documents/Current_inspection/WS', [])
+      expect(result).toBe('/mocked/documents/Current_inspection/WS')
     })
 
     it('handles path traversal', async () => {
-      await expect(handles['get-path']({}, '/mocked/path', ['../file.txt'])).rejects.toThrow(
+      await expect(handles['get-path']({}, '/mocked/documents/Current_inspection/WS', ['../file.txt'])).rejects.toThrow(
         'safeJoin: Illegal path name:'
       )
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining(
-          'create-dir: Could not create directory /mocked/path ../file.txt : safeJoin: Illegal path name:'
+          'create-dir: Could not create directory /mocked/documents/Current_inspection/WS ../file.txt : safeJoin: Illegal path name:'
         )
       )
     })
@@ -122,9 +130,9 @@ describe('ipcHandles', () => {
     it('returns file stats', async () => {
       const stats = { size: 1024, mtime: new Date() }
       vi.spyOn(fileOps, 'getFileStats').mockResolvedValue(stats)
-      const result = await handles['get-stats']({}, '/mocked/path', ['file.txt'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['file.txt'])
-      expect(fileOps.getFileStats).toHaveBeenCalledWith('/mocked/path/file.txt')
+      const result = await handles['get-stats']({}, '/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(fileOps.getFileStats).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/file.txt')
       expect(result).toBe(stats)
     })
 
@@ -141,66 +149,66 @@ describe('ipcHandles', () => {
 
     it('returns null for ENOENT', async () => {
       vi.spyOn(fileOps, 'getFileStats').mockResolvedValue(null)
-      const result = await handles['get-stats']({}, '/mocked/path', ['file.txt'])
+      const result = await handles['get-stats']({}, '/mocked/documents/Current_inspection/WS', ['file.txt'])
       expect(result).toBe(null)
     })
 
     it('handles errors', async () => {
       vi.spyOn(fileOps, 'getFileStats').mockRejectedValue(new Error('Permission denied'))
-      await expect(handles['get-stats']({}, '/mocked/path', ['file.txt'])).rejects.toThrow(
+      await expect(handles['get-stats']({}, '/mocked/documents/Current_inspection/WS', ['file.txt'])).rejects.toThrow(
         'Permission denied'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'get-stats: Could not stat file /mocked/path file.txt : Permission denied'
+        'get-stats: Could not stat file /mocked/documents/Current_inspection/WS file.txt : Permission denied'
       )
     })
   })
 
   describe('create-dir', () => {
     it('creates directory', async () => {
-      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue('/mocked/path/sub')
-      await handles['create-dir']({}, '/mocked/path', ['sub'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['sub'])
-      expect(fileOps.ensureDir).toHaveBeenCalledWith('/mocked/path/sub')
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue('/mocked/documents/Current_inspection/WS/sub')
+      await handles['create-dir']({}, '/mocked/documents/Current_inspection/WS', ['sub'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['sub'])
+      expect(fileOps.ensureDir).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/sub')
     })
 
     it('handles existing directory', async () => {
       vi.spyOn(fileOps, 'fileExists').mockResolvedValue(true)
       vi.spyOn(fs, 'mkdir').mockResolvedValue(undefined)
-      await handles['create-dir']({}, '/mocked/path', ['sub'])
+      await handles['create-dir']({}, '/mocked/documents/Current_inspection/WS', ['sub'])
       expect(fs.mkdir).not.toHaveBeenCalled()
     })
 
     it('handles errors', async () => {
       vi.spyOn(fileOps, 'ensureDir').mockRejectedValue(new Error('Dir creation failed'))
-      await expect(handles['create-dir']({}, '/mocked/path', ['sub'])).rejects.toThrow(
+      await expect(handles['create-dir']({}, '/mocked/documents/Current_inspection/WS', ['sub'])).rejects.toThrow(
         'Dir creation failed'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'create-dir: Could not create directory /mocked/path sub : Dir creation failed'
+        'create-dir: Could not create directory /mocked/documents/Current_inspection/WS sub : Dir creation failed'
       )
     })
   })
 
   describe('list-path', () => {
     it('lists directory contents', async () => {
-      const files = [{ name: 'file.txt', URL: '/mocked/path/sub/file.txt', count: 0 }]
+      const files = [{ name: 'file.txt', URL: '/mocked/documents/Current_inspection/WS/sub/file.txt', count: 0 }]
       vi.spyOn(fileOps, 'listDir').mockResolvedValue(files)
-      const result = await handles['list-path']({}, '/mocked/path', ['sub'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['sub'])
-      expect(fileOps.listDir).toHaveBeenCalledWith('/mocked/path/sub')
+      const result = await handles['list-path']({}, '/mocked/documents/Current_inspection/WS', ['sub'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['sub'])
+      expect(fileOps.listDir).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/sub')
       expect(result).toEqual(files)
     })
 
     it('handles non-existent directory', async () => {
       vi.spyOn(fileOps, 'listDir').mockRejectedValue(
-        new Error('readDir: Directory does not exist: /mocked/path/sub')
+        new Error('readDir: Directory does not exist: /mocked/documents/Current_inspection/WS/sub')
       )
-      await expect(handles['list-path']({}, '/mocked/path', ['sub'])).rejects.toThrow(
+      await expect(handles['list-path']({}, '/mocked/documents/Current_inspection/WS', ['sub'])).rejects.toThrow(
         'Directory does not exist'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'list-file: Could not read directory /mocked/path sub : readDir: Directory does not exist: /mocked/path/sub'
+        'list-file: Could not read directory /mocked/documents/Current_inspection/WS sub : readDir: Directory does not exist: /mocked/documents/Current_inspection/WS/sub'
       )
     })
   })
@@ -209,21 +217,21 @@ describe('ipcHandles', () => {
     it('reads file content', async () => {
       const content = '{"key": "value"}'
       vi.spyOn(fileOps, 'readFile').mockResolvedValue(content)
-      const result = await handles['read-file']({}, '/mocked/path', ['file.json'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['file.json'])
-      expect(fileOps.readFile).toHaveBeenCalledWith('/mocked/path/file.json')
+      const result = await handles['read-file']({}, '/mocked/documents/Current_inspection/WS', ['file.json'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['file.json'])
+      expect(fileOps.readFile).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/file.json')
       expect(result).toBe(content)
     })
 
     it('handles non-existent file', async () => {
       vi.spyOn(fileOps, 'readFile').mockRejectedValue(
-        new Error('readFile: File does not exist: /mocked/path/file.json')
+        new Error('readFile: File does not exist: /mocked/documents/Current_inspection/WS/file.json')
       )
-      await expect(handles['read-file']({}, '/mocked/path', ['file.json'])).rejects.toThrow(
+      await expect(handles['read-file']({}, '/mocked/documents/Current_inspection/WS', ['file.json'])).rejects.toThrow(
         'File does not exist'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'read-file: Could not read file /mocked/path file.json : readFile: File does not exist: /mocked/path/file.json'
+        'read-file: Could not read file /mocked/documents/Current_inspection/WS file.json : readFile: File does not exist: /mocked/documents/Current_inspection/WS/file.json'
       )
     })
   })
@@ -231,45 +239,45 @@ describe('ipcHandles', () => {
   describe('save-file', () => {
     it('throws error on empty file', async () => {
       const errorMessage =
-        'ipcHandles.save-file: Could not save file /mocked/path file.txt : Buffer is empty'
-      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt')
-      await expect(handles['save-file']({}, '', '/mocked/path', ['file.txt'])).rejects.toThrowError(
+        'ipcHandles.save-file: Could not save file /mocked/documents/Current_inspection/WS file.txt : Buffer is empty'
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/file.txt')
+      await expect(handles['save-file']({}, '', '/mocked/documents/Current_inspection/WS', ['file.txt'])).rejects.toThrowError(
         errorMessage
       )
     })
 
     it('throws error on undefined file data', async () => {
       const errorMessage =
-        'ipcHandles.save-file: Could not save file /mocked/path file.txt : Invalid buffer'
-      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt')
+        'ipcHandles.save-file: Could not save file /mocked/documents/Current_inspection/WS file.txt : Invalid buffer'
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/file.txt')
       await expect(
-        handles['save-file']({}, undefined, '/mocked/path', ['file.txt'])
+        handles['save-file']({}, undefined, '/mocked/documents/Current_inspection/WS', ['file.txt'])
       ).rejects.toThrowError(errorMessage)
     })
 
     it('saves string data', async () => {
-      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt')
-      const result = await handles['save-file']({}, 'test data', '/mocked/path', ['file.txt'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['file.txt'])
-      expect(fileOps.saveFile).toHaveBeenCalledWith('/mocked/path/file.txt', 'test data')
-      expect(result).toBe('/mocked/path/file.txt')
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/file.txt')
+      const result = await handles['save-file']({}, 'test data', '/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(fileOps.saveFile).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/file.txt', 'test data')
+      expect(result).toBe('/mocked/documents/Current_inspection/WS/file.txt')
     })
 
     it('saves Buffer data', async () => {
       const buffer = Buffer.from([0x74, 0x65, 0x73, 0x74]) // 'test'
-      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/file.txt')
-      const result = await handles['save-file']({}, buffer, '/mocked/path', ['file.txt'])
-      expect(fileOps.saveFile).toHaveBeenCalledWith('/mocked/path/file.txt', buffer)
-      expect(result).toBe('/mocked/path/file.txt')
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/file.txt')
+      const result = await handles['save-file']({}, buffer, '/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(fileOps.saveFile).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/file.txt', buffer)
+      expect(result).toBe('/mocked/documents/Current_inspection/WS/file.txt')
     })
 
     it('handles invalid data', async () => {
       vi.spyOn(fileOps, 'saveFile').mockRejectedValue(new Error('Invalid buffer'))
-      await expect(handles['save-file']({}, {}, '/mocked/path', ['file.txt'])).rejects.toThrow(
+      await expect(handles['save-file']({}, {}, '/mocked/documents/Current_inspection/WS', ['file.txt'])).rejects.toThrow(
         'Invalid buffer'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'save-file: Could not save file /mocked/path file.txt : Invalid buffer'
+        'save-file: Could not save file /mocked/documents/Current_inspection/WS file.txt : Invalid buffer'
       )
     })
   })
@@ -277,45 +285,45 @@ describe('ipcHandles', () => {
   describe('delete-file', () => {
     it('deletes file', async () => {
       vi.spyOn(fileOps, 'deleteFile').mockResolvedValue(true)
-      const result = await handles['delete-file']({}, '/mocked/path', ['file.txt'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['file.txt'])
-      expect(fileOps.deleteFile).toHaveBeenCalledWith('/mocked/path/file.txt')
+      const result = await handles['delete-file']({}, '/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['file.txt'])
+      expect(fileOps.deleteFile).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS/file.txt')
       expect(result).toBe(true)
     })
 
     it('handles errors', async () => {
       vi.spyOn(fileOps, 'deleteFile').mockRejectedValue(new Error('Delete failed'))
-      await expect(handles['delete-file']({}, '/mocked/path', ['file.txt'])).rejects.toThrow(
+      await expect(handles['delete-file']({}, '/mocked/documents/Current_inspection/WS', ['file.txt'])).rejects.toThrow(
         'Delete failed'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        'delete-file: Could not delete file /mocked/path file.txt : Delete failed'
+        'delete-file: Could not delete file /mocked/documents/Current_inspection/WS file.txt : Delete failed'
       )
     })
   })
 
   describe('delete-path', () => {
     it('deletes directory recursively', async () => {
-      const result = await handles['delete-path']({}, '/mocked/path', ['workspace', 'Evidence'])
-      expect(safeJoin).toHaveBeenCalledWith('/mocked/path', ['workspace', 'Evidence'])
+      const result = await handles['delete-path']({}, '/mocked/documents/Current_inspection/WS', ['workspace', 'Evidence'])
+      expect(safeJoin).toHaveBeenCalledWith('/mocked/documents/Current_inspection/WS', ['workspace', 'Evidence'])
       expect(result).toBe(true)
     })
 
     it('rejects when path segments are missing', async () => {
-      await expect(handles['delete-path']({}, '/mocked/path', [])).rejects.toThrow(
+      await expect(handles['delete-path']({}, '/mocked/documents/Current_inspection/WS', [])).rejects.toThrow(
         'Missing required path segments for delete-path'
       )
       expect(logger.error).toHaveBeenCalledWith(
-        expect.stringContaining('delete-path: Could not delete path /mocked/path')
+        expect.stringContaining('delete-path: Could not delete path /mocked/documents/Current_inspection/WS')
       )
     })
   })
 
   describe('get-full-path', () => {
     it('returns full path with all components', async () => {
-      const result = await handles['get-full-path']({}, '/mocked/path', ['subdir'], 'file.pdf')
+      const result = await handles['get-full-path']({}, '/mocked/documents/Current_inspection/WS', ['subdir'], 'file.pdf')
       expect(safeJoin).toHaveBeenCalledTimes(2)
-      expect(result).toBe('/mocked/path/subdir/file.pdf')
+      expect(result).toBe('/mocked/documents/Current_inspection/WS/subdir/file.pdf')
     })
 
     it('uses defaultSavePath when filePath is null', async () => {
@@ -325,13 +333,13 @@ describe('ipcHandles', () => {
     })
 
     it('handles empty pathLegs', async () => {
-      const result = await handles['get-full-path']({}, '/mocked/path', [], 'file.pdf')
-      expect(result).toBe('/mocked/path/file.pdf')
+      const result = await handles['get-full-path']({}, '/mocked/documents/Current_inspection/WS', [], 'file.pdf')
+      expect(result).toBe('/mocked/documents/Current_inspection/WS/file.pdf')
     })
 
     it('handles path traversal attempts', async () => {
       await expect(
-        handles['get-full-path']({}, '/mocked/path', ['../illegal'], 'file.pdf')
+        handles['get-full-path']({}, '/mocked/documents/Current_inspection/WS', ['../illegal'], 'file.pdf')
       ).rejects.toThrow('safeJoin: Illegal path name')
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('get-full-path'))
     })
@@ -347,12 +355,12 @@ describe('ipcHandles', () => {
         checklistString: JSON.stringify({ inspection: '1125', questions: [] }),
         sessionString: JSON.stringify({ responses: {} }),
         specialty: 'Vigilancia',
-        outputPath: '/path/to/report.pdf',
+        outputPath: '/mocked/documents/Current_inspection/report.pdf',
       }
 
       const result = await handles['generate-pdf']({}, params)
 
-      expect(result).toBe('/path/to/report.pdf')
+      expect(result).toBe('/mocked/documents/Current_inspection/report.pdf')
     })
 
     it('handles missing parameters', async () => {
@@ -375,7 +383,7 @@ describe('ipcHandles', () => {
         checklistString: JSON.stringify({ inspection: '1125', questions: [] }),
         sessionString: JSON.stringify({ responses: {} }),
         specialty: 'Vigilancia',
-        outputPath: '/path/to/report.pdf',
+        outputPath: '/mocked/documents/Current_inspection/report.pdf',
       }
 
       // This should work with mocked pdfkit, just verify no error
@@ -391,7 +399,7 @@ describe('ipcHandles', () => {
             checklist: { questions: [] },
             session: null,
             specialty: 'Test',
-            outputPath: '/path/to/report.pdf',
+            outputPath: '/mocked/documents/Current_inspection/report.pdf',
           }
         )
       ).rejects.toThrow('Missing required parameters')
@@ -416,7 +424,7 @@ describe('ipcHandles', () => {
     beforeEach(() => {
       vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
       vi.spyOn(fileOps, 'fileExists').mockResolvedValue(false)
-      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/payload.zip')
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/payload.zip')
     })
 
     it('creates zip and posts payload to API', async () => {
@@ -725,7 +733,7 @@ describe('ipcHandles', () => {
     beforeEach(() => {
       vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
       vi.spyOn(fileOps, 'fileExists').mockResolvedValue(false)
-      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/path/followup.zip')
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue('/mocked/documents/Current_inspection/WS/followup.zip')
     })
 
     it('creates zip and posts follow-up payload to API', async () => {
@@ -972,5 +980,48 @@ describe('ipcHandles', () => {
       )
     })
 
+  })
+
+  describe('credential storage', () => {
+    it('seals the API key with OS encryption and reads it back', async () => {
+      const saveFileSpy = vi.spyOn(fileOps, 'saveFile').mockResolvedValue(true)
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
+
+      await handles['save-api-key']({}, '  secret-key  ')
+
+      const envelope = JSON.parse(saveFileSpy.mock.calls[0][1])
+      expect(envelope.encrypted).toBe(true)
+      expect(envelope.payload).not.toContain('secret-key')
+
+      fs.readFile.mockResolvedValue(JSON.stringify(envelope))
+      await expect(handles['read-api-key']({})).resolves.toBe('secret-key')
+    })
+
+    it('reads a legacy plaintext credential file', async () => {
+      fs.readFile.mockResolvedValue(JSON.stringify({ key: 'legacy-key' }))
+      await expect(handles['read-api-key']({})).resolves.toBe('legacy-key')
+    })
+
+    it('returns null when no credential file exists', async () => {
+      fs.readFile.mockRejectedValue(new Error('ENOENT'))
+      await expect(handles['read-api-key']({})).resolves.toBeNull()
+    })
+
+    it('encrypts the Alfresco credentials', async () => {
+      const saveFileSpy = vi.spyOn(fileOps, 'saveFile').mockResolvedValue(true)
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
+
+      await handles['save-alfresco-cred']({}, 'alice', 'hunter2')
+
+      const envelope = JSON.parse(saveFileSpy.mock.calls[0][1])
+      expect(envelope.encrypted).toBe(true)
+      expect(envelope.payload).not.toContain('hunter2')
+
+      fs.readFile.mockResolvedValue(JSON.stringify(envelope))
+      await expect(handles['read-alfresco-cred']({})).resolves.toEqual({
+        username: 'alice',
+        password: 'hunter2',
+      })
+    })
   })
 })
