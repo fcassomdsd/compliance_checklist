@@ -1,11 +1,11 @@
 [
   {
-    "id": "a01k0f67dskef2a475yzd8a5dxd",
+    "id": "spec_sur",
     "code": "SUR",
     "name": "Vigilancia (radar)"
   },
   {
-    "id": "a01k0f67dskef2a475yzd8a5dxe",
+    "id": "spec_com",
     "code": "COM",
     "name": "Comunicaciones"
   }

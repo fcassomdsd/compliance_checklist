@@ -16,8 +16,8 @@ const mockAppConfig = {
   },
   fallback: {
     specialties: [
-      { code: 'SUR', name: 'Vigilancia (radar)' },
-      { code: 'COM', name: 'Comunicaciones de Radio' },
+      { id: 'sp-sur', code: 'SUR', name: 'Vigilancia (radar)' },
+      { id: 'sp-com', code: 'COM', name: 'Comunicaciones de Radio' },
     ],
   },
 }
@@ -332,6 +332,19 @@ describe('fileServices', () => {
   })
 
   describe('exportInspectionPayload', () => {
+    beforeEach(() => {
+      // Deterministic specialty catalog: the renderer resolves the AtroCore
+      // specialty id from it before handing the payload to the main process.
+      // (Real ids in this deployment are short, e.g. "spec_sur".)
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => [{ id: 'spec_sur', code: 'SUR', name: 'Vigilancia (radar)' }],
+        })
+      )
+    })
+
     it('calls electron exportInspectionPayload with stringified data', async () => {
       const checklist = { questions: [] }
       const session = { summary: { specialty: 'SUR' }, responses: {} }
@@ -340,11 +353,13 @@ describe('fileServices', () => {
 
       const result = await fs.exportInspectionPayload(checklist, session, 'SUR')
 
-      expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
-        checklistString: JSON.stringify(checklist),
-        sessionString: JSON.stringify(session),
-        specialty: 'SUR',
+      const payloadArg = mockElectronAPI.exportInspectionPayload.mock.calls[0][0]
+      expect(JSON.parse(payloadArg.checklistString)).toEqual({
+        questions: [],
+        specialtyId: 'spec_sur',
       })
+      expect(payloadArg.sessionString).toBe(JSON.stringify(session))
+      expect(payloadArg.specialty).toBe('SUR')
       expect(result).toEqual(expectedResult)
     })
 
@@ -355,12 +370,15 @@ describe('fileServices', () => {
 
       await fs.exportInspectionPayload(checklist, session, 'SUR', 'MDPP')
 
-      expect(mockElectronAPI.exportInspectionPayload).toHaveBeenCalledWith({
-        checklistString: JSON.stringify(checklist),
-        sessionString: JSON.stringify(session),
-        specialty: 'SUR',
-        locationId: 'MDPP',
+      const payloadArg = mockElectronAPI.exportInspectionPayload.mock.calls[0][0]
+      expect(JSON.parse(payloadArg.checklistString)).toEqual({
+        locationId: 'A01K5QC0YXTE2XTS3R9BTK77FT6',
+        questions: [],
+        specialtyId: 'spec_sur',
       })
+      expect(payloadArg.sessionString).toBe(JSON.stringify(session))
+      expect(payloadArg.specialty).toBe('SUR')
+      expect(payloadArg.locationId).toBe('MDPP')
     })
 
     it('throws for missing parameters', async () => {
@@ -1629,7 +1647,7 @@ describe('loadSpecialties specialty-id resolution', () => {
     const specialties = await fs.loadSpecialties()
 
     expect(specialties.map((specialty) => specialty.code)).toEqual(['SUR', 'COM'])
-    // A synthetic id (or the bare code) would be rejected by the backend.
+    // Fallback ids are placeholders; they are dropped by source, not by shape.
     expect(specialties.every((specialty) => specialty.id === null)).toBe(true)
   })
 
@@ -1648,10 +1666,23 @@ describe('loadSpecialties specialty-id resolution', () => {
     ])
   })
 
-  it('drops a synthetic sp-* id even when it comes from the API payload', async () => {
+  it('keeps short API ids such as spec_sur instead of guessing from their shape', async () => {
+    // Regression: this deployment's real AtroCore Specialty ids are short and
+    // contain underscores ("spec_apr"), which a shape-based guard rejected.
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => [{ id: 'sp-sur', code: 'SUR', name: 'Vigilancia' }],
+      json: async () => [{ id: 'spec_sur', code: 'SUR', name: 'Vigilancia' }],
+    })
+
+    const specialties = await fs.loadSpecialties()
+
+    expect(specialties).toEqual([{ id: 'spec_sur', code: 'SUR', name: 'Vigilancia' }])
+  })
+
+  it('treats an API entry without an id as unresolved', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ code: 'SUR', name: 'Vigilancia' }],
     })
 
     const specialties = await fs.loadSpecialties()

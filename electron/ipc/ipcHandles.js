@@ -654,14 +654,19 @@ const mapChecklistPayload = ({ checklistObj, sessionObj, specialty }) => {
   const responses = sessionObj?.responses || {}
   const specialtyCode = inferSpecialtyCode(checklistObj, specialty)
   const specialtyName = inferDomainName(checklistObj, specialty, specialtyCode)
-  // Never fall back to the specialty code: a code is not an AtroCore id, and the
-  // bundled offline catalog carries synthetic ids (sp-*). Either way the backend
-  // cannot resolve it, so fail loudly instead of exporting a bogus id.
+  // The renderer resolves this from the API specialty catalog before export
+  // (the bundled offline catalog never supplies an id), so accept whatever
+  // AtroCore returned: real ids are not guaranteed to be long — this deployment
+  // uses short ids such as "spec_apr". Never fall back to the specialty code,
+  // which is not an id, and fail loudly when there is no id at all.
   const candidateSpecialtyId = safeString(
     checklistObj?.specialtyId,
     safeString(sessionObj?.summary?.specialtyId)
   )
-  const specialtyId = /^[a-z0-9]{20,}$/.test(candidateSpecialtyId) ? candidateSpecialtyId : ''
+  const specialtyId =
+    candidateSpecialtyId && candidateSpecialtyId.toUpperCase() !== specialtyCode.toUpperCase()
+      ? candidateSpecialtyId
+      : ''
   if (!specialtyId) {
     throw new Error(
       `Specialty "${specialtyCode}" has no resolved backend id. Reconnect so the specialty catalog ` +

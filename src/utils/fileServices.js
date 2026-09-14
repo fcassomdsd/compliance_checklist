@@ -26,20 +26,18 @@ export const createFileService = () => {
 
   const sanitizeWorkspaceLeg = (value) => value.replace(/[^A-Za-z0-9_-]/g, '_')
 
-  // AtroCore ids are long lowercase alphanumerics (e.g. a01k5qjgpcwe3sv2tgsekfr54qp).
-  // Bundled fallback entries carry synthetic ids such as "sp-apr"; exporting one
-  // of those produced a payload the backend cannot resolve, so an unresolved id
-  // is reported as null and the export path rejects it explicitly.
-  const isResolvedBackendId = (value) =>
-    typeof value === 'string' && /^[a-z0-9]{20,}$/.test(value)
-
-  const normalizeSpecialty = (entry) => {
+  // Only the API catalog carries real AtroCore specialty ids; the bundled
+  // fallback config ships synthetic placeholders ("sp-apr"). Which one an entry
+  // came from is the only reliable signal — the id's shape is not: this
+  // deployment's real Specialty records are short ids such as "spec_apr".
+  const normalizeSpecialty = (entry, { fromApi = false } = {}) => {
     if (!entry || typeof entry != 'object') {
       return null
     }
     const code = ensureWorkspaceLeg(String(entry.code || ''), 'specialty.code').toUpperCase()
+    const rawId = typeof entry.id === 'string' ? entry.id.trim() : ''
     return {
-      id: isResolvedBackendId(entry.id) ? entry.id : null,
+      id: fromApi && rawId ? rawId : null,
       code,
       name: entry.name || code,
     }
@@ -671,7 +669,7 @@ export const createFileService = () => {
   }
 
   const loadSpecialties = async () => {
-    const parseSpecialties = (entries) => {
+    const parseSpecialties = (entries, options = {}) => {
       if (!Array.isArray(entries)) {
         return []
       }
@@ -679,7 +677,7 @@ export const createFileService = () => {
       const normalized = []
       entries.forEach((entry) => {
         try {
-          const specialty = normalizeSpecialty(entry)
+          const specialty = normalizeSpecialty(entry, options)
           if (specialty && !seen.has(specialty.code)) {
             seen.add(specialty.code)
             normalized.push(specialty)
@@ -700,7 +698,7 @@ export const createFileService = () => {
         url.searchParams.set('option', 'leaf')
         const response = await fetch(url.toString())
         if (response.ok) {
-          const specialties = parseSpecialties(await response.json())
+          const specialties = parseSpecialties(await response.json(), { fromApi: true })
           if (specialties.length > 0) {
             return specialties
           }
@@ -1070,13 +1068,12 @@ export const createFileService = () => {
 
       // The workspace checklist carries no specialty id, so resolve it from the
       // catalog before exporting instead of letting the payload fall back to the
-      // specialty code (which the backend cannot resolve).
+      // specialty code (which the backend cannot resolve). The API-resolved id
+      // wins over anything already stored.
       const checklistForExport = { ...checklist }
-      if (!checklistForExport.specialtyId) {
-        const resolvedSpecialtyId = await resolveSpecialtyId(specialty)
-        if (resolvedSpecialtyId) {
-          checklistForExport.specialtyId = resolvedSpecialtyId
-        }
+      const resolvedSpecialtyId = await resolveSpecialtyId(specialty)
+      if (resolvedSpecialtyId) {
+        checklistForExport.specialtyId = resolvedSpecialtyId
       }
 
       const payload = {
