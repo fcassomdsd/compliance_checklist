@@ -2,6 +2,7 @@ import { ref, reactive } from 'vue'
 import { useToast } from 'vue-toastification'
 import { defineStore } from 'pinia'
 import { createFileService } from '../utils/fileServices.js'
+import { CLOSURE_FOLLOW_UP_TYPE, normalizeFollowUpType } from '../utils/domainRules.js'
 import { useEvidenceStore } from './evidenceStore.js'
 import i18n from '../i18n/index.js'
 
@@ -43,13 +44,7 @@ export const useFollowUpStore = defineStore('followUp', () => {
   }
 
   const normalizeResponse = (findingId, rawEntry) => {
-    const allowedFollowUpTypes = [
-      'Progress Verification',
-      'Progress Review',
-      'CAP Verification',
-      'Closure Verification',
-      'Ad-hoc Inquiry',
-    ]
+    const followUpType = normalizeFollowUpType(rawEntry?.followUpType)
 
     const nextEntry = {
       findingId:
@@ -59,11 +54,9 @@ export const useFollowUpStore = defineStore('followUp', () => {
       percentComplete: Number.isFinite(Number(rawEntry?.percentComplete))
         ? Math.max(0, Math.min(100, Number(rawEntry.percentComplete)))
         : 0,
-      followUpType: allowedFollowUpTypes.includes(rawEntry?.followUpType)
-        ? rawEntry.followUpType
-        : 'Progress Verification',
+      followUpType,
       effectivenessConfirmed:
-        rawEntry?.followUpType === 'Closure Verification'
+        followUpType === CLOSURE_FOLLOW_UP_TYPE
           ? (typeof rawEntry?.effectivenessConfirmed === 'boolean' ? rawEntry.effectivenessConfirmed : null)
           : null,
     }

@@ -99,7 +99,7 @@
     "critical": "Critical"
   },
   "followUpType": {
-    "progressVerification": "Progress Verification",
+    "progressReview": "Progress Review",
     "capVerification": "CAP Verification",
     "closureVerification": "Closure Verification"
   },

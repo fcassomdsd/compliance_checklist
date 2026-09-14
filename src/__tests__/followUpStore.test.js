@@ -110,7 +110,7 @@ describe('Follow Up Store', () => {
     expect(store.responses.responses).toBeUndefined()
     expect(store.responses.F1).toEqual({
       findingId: 'F1',
-      followUpType: 'Progress Verification',
+      followUpType: 'Progress Review',
       percentComplete: 50,
       effectivenessConfirmed: null,
       evidence: [{ name: 'proof.jpg', hashValue: '', immutable: false, sealedDate: '' }],

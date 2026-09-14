@@ -287,6 +287,7 @@
   import { useSessionStore } from '../stores/sessionStore'
   import { useEvidenceStore } from '../stores/evidenceStore'
   import { useAudioStore } from '../stores/audioStore'
+  import { DEFAULT_SEVERITY_ID, SEVERITY_LEVELS } from '../utils/domainRules.js'
   import { useToast } from 'vue-toastification'
   import trash from '../assets/images/trash.png'
   import cameraIcon from '../assets/images/camera.png'
@@ -334,17 +335,13 @@
   const validFindingLevels = ['Non-Compliance', 'Observation', 'Recommendation']
   const findingLevels = ref(validFindingLevels)
 
-  const severityLevels = ref([
-    { id: 'A', name: 'A', daysToSolution: 7 },
-    { id: 'B', name: 'B', daysToSolution: 30 },
-    { id: 'C', name: 'C', daysToSolution: 90 },
-  ])
+  const severityLevels = ref(SEVERITY_LEVELS.map((level) => ({ ...level })))
 
   const normalizeSeverity = (value) => {
     if (typeof value == 'string') {
-      return severityLevels.value.find((level) => level.id === value) ? value : 'C'
+      return severityLevels.value.find((level) => level.id === value) ? value : DEFAULT_SEVERITY_ID
     }
-    return 'C'
+    return DEFAULT_SEVERITY_ID
   }
 
   const normalizeFindingLevel = (value) =>
