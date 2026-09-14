@@ -856,8 +856,8 @@ describe('fileServices', () => {
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
       expect(result).toEqual([
-        { id: 'SUR', code: 'SUR', name: 'Vigilancia (radar)' },
-        { id: 'COM', code: 'COM', name: 'Comunicaciones de Radio' },
+        { id: null, code: 'SUR', name: 'Vigilancia (radar)' },
+        { id: null, code: 'COM', name: 'Comunicaciones de Radio' },
       ])
       expect(result[0]).toHaveProperty('code')
       expect(result[0]).toHaveProperty('name')
@@ -873,8 +873,8 @@ describe('fileServices', () => {
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
       expect(result).toEqual([
-        { id: 'SUR', code: 'SUR', name: 'Vigilancia (radar)' },
-        { id: 'COM', code: 'COM', name: 'Comunicaciones de Radio' },
+        { id: null, code: 'SUR', name: 'Vigilancia (radar)' },
+        { id: null, code: 'COM', name: 'Comunicaciones de Radio' },
       ])
     })
 
@@ -1612,5 +1612,50 @@ describe('fileServices', () => {
       expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_SUR', 'FollowUpEvidence')
       expect(window.electronAPI.deletePath).toHaveBeenCalledWith(null, 'LOC-001_SUR')
     })
+  })
+})
+
+describe('loadSpecialties specialty-id resolution', () => {
+  const fs = createFileService()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.electronAPI.getAppConfig.mockResolvedValue(mockAppConfig)
+  })
+
+  it('leaves the id unresolved for offline fallback entries so sp-* cannot be exported', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('offline'))
+
+    const specialties = await fs.loadSpecialties()
+
+    expect(specialties.map((specialty) => specialty.code)).toEqual(['SUR', 'COM'])
+    // A synthetic id (or the bare code) would be rejected by the backend.
+    expect(specialties.every((specialty) => specialty.id === null)).toBe(true)
+  })
+
+  it('keeps the backend id returned by the API', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { id: 'a01k0f67dskef2a475yzd8a5dxd', code: 'SUR', name: 'Vigilancia' },
+      ],
+    })
+
+    const specialties = await fs.loadSpecialties()
+
+    expect(specialties).toEqual([
+      { id: 'a01k0f67dskef2a475yzd8a5dxd', code: 'SUR', name: 'Vigilancia' },
+    ])
+  })
+
+  it('drops a synthetic sp-* id even when it comes from the API payload', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: 'sp-sur', code: 'SUR', name: 'Vigilancia' }],
+    })
+
+    const specialties = await fs.loadSpecialties()
+
+    expect(specialties[0].id).toBeNull()
   })
 })
