@@ -718,6 +718,52 @@ export const createFileService = () => {
     }
   }
 
+  // Inspectors linked to a specialty, used to confirm the operator of a
+  // workspace. Only entries with an Alfresco account (externalUserID) can be
+  // confirmed: the operator signs in at sync time and the identity is checked
+  // against that account.
+  const loadOperators = async (specialtyCode) => {
+    const normalizedCode = String(specialtyCode || '').trim().toUpperCase()
+    if (!normalizedCode) {
+      return []
+    }
+
+    try {
+      const appConfig = await window.electronAPI.getAppConfig()
+      const host = appConfig?.api?.importHost || appConfig?.api?.host || 'http://localhost:1880'
+      const inspectorsPath = appConfig?.identity?.inspectorsPath || '/inspectors'
+      const url = new URL(`${host}${inspectorsPath}`)
+      url.searchParams.set('specialty', normalizedCode)
+
+      const response = await fetch(url.toString())
+      if (!response.ok) {
+        throw new Error(`inspectors API failed with status ${response.status}`)
+      }
+
+      const payload = await response.json()
+      if (!Array.isArray(payload)) {
+        return []
+      }
+
+      return payload
+        .filter(
+          (entry) =>
+            entry &&
+            typeof entry.id === 'string' &&
+            entry.id.trim() &&
+            typeof entry.externalUserID === 'string' &&
+            entry.externalUserID.trim()
+        )
+        .map((entry) => ({
+          id: entry.id.trim(),
+          name: typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : entry.id.trim(),
+          username: entry.externalUserID.trim(),
+        }))
+    } catch (error) {
+      throw new Error(`loadOperators: could not load inspectors : ${error.message}`)
+    }
+  }
+
   // Resolve the AtroCore specialty id for a code from the same catalog the app
   // loads (API first, bundled fallback second). The bundled fallback carries no
   // real ids, so an offline inspection resolves to null and the export is
@@ -1057,7 +1103,7 @@ export const createFileService = () => {
     }
   }
 
-  const exportInspectionPayload = async (checklist, session, specialty, locationId = null) => {
+  const exportInspectionPayload = async (checklist, session, specialty, locationId = null, operator = null) => {
     try {
       if (!checklist || !session || !specialty) {
         throw new Error('Missing required parameters: checklist, session, specialty')
@@ -1086,6 +1132,9 @@ export const createFileService = () => {
       }
       if (apiKey) {
         payload.apiKey = apiKey
+      }
+      if (operator) {
+        payload.operator = operator
       }
 
       const result = await window.electronAPI.exportInspectionPayload(payload)
@@ -1128,7 +1177,7 @@ export const createFileService = () => {
     }
   }
 
-  const exportFollowUpPayload = async (findings, followUpSession, specialty, locationId = null) => {
+  const exportFollowUpPayload = async (findings, followUpSession, specialty, locationId = null, operator = null) => {
     try {
       if (!findings || !followUpSession || !specialty) {
         throw new Error('Missing required parameters: findings, followUpSession, specialty')
@@ -1145,6 +1194,9 @@ export const createFileService = () => {
       }
       if (apiKey) {
         payloadData.apiKey = apiKey
+      }
+      if (operator) {
+        payloadData.operator = operator
       }
       const result = await window.electronAPI.exportFollowUpPayload(payloadData)
 
@@ -1607,6 +1659,7 @@ export const createFileService = () => {
     saveFollowUpSession,
     loadSpecialties,
     loadLocations,
+    loadOperators,
     saveAudio,
     deleteAudio,
     readAudio,

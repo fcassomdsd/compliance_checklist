@@ -37,6 +37,15 @@ export const useChecklistStore = defineStore('checklist', () => {
   const followUpFocusFindingId = ref('')
   const apiKeyPromptVisible = ref(false)
   const apiKeyInput = ref('')
+  // Operator identity: confirmed per workspace (from /inspectors filtered by
+  // the workspace specialty) and signed in at sync time. The password is only
+  // held in memory for the duration of the upload.
+  const operatorPromptVisible = ref(false)
+  const operatorPasswordInput = ref('')
+  const operatorList = ref([])
+  const operatorSelectedUsername = ref('')
+  const operatorLoading = ref(false)
+  let _operatorResolver = null
 
   // modal window data — the display strings are translated; `activeModalKey`
   // is the stable (non-translated) identifier the confirm handler switches on,
@@ -309,6 +318,94 @@ export const useChecklistStore = defineStore('checklist', () => {
 
   let _apiKeyResolver = null
 
+  // Confirm the workspace operator and collect the sync-time password.
+  // Returns { cancelled, operator }: `cancelled` aborts the upload, `operator`
+  // is null when the build does not require an operator (identity.requireOperator
+  // is false), otherwise { username, password, expectedUserName, inspectorId }.
+  const ensureOperator = async () => {
+    const appConfig = await window.electronAPI.getAppConfig().catch(() => ({}))
+    if (appConfig?.identity?.requireOperator === false) {
+      return { cancelled: false, operator: null }
+    }
+
+    const specialtyCode = specialty.value
+    const locationId = activeWorkspace.value?.locationId || null
+
+    let metadata = {}
+    try {
+      metadata = (await fs.loadWorkspaceMetadata(specialtyCode, locationId)) || {}
+    } catch {
+      metadata = {}
+    }
+
+    operatorLoading.value = true
+    try {
+      operatorList.value = await fs.loadOperators(specialtyCode)
+    } finally {
+      operatorLoading.value = false
+    }
+
+    if (operatorList.value.length === 0) {
+      throw new Error(t('operatorModal.noOperators'))
+    }
+
+    const confirmed = operatorList.value.find((entry) => entry.username === metadata.operatorUsername)
+    operatorSelectedUsername.value = confirmed ? confirmed.username : operatorList.value[0].username
+    operatorPasswordInput.value = ''
+    operatorPromptVisible.value = true
+
+    const result = await new Promise((resolve) => {
+      _operatorResolver = resolve
+    })
+
+    if (!result) {
+      return { cancelled: true, operator: null }
+    }
+
+    const chosen = operatorList.value.find((entry) => entry.username === result.username)
+    if (!chosen) {
+      return { cancelled: true, operator: null }
+    }
+
+    if (metadata.operatorUsername !== chosen.username || metadata.operatorId !== chosen.id) {
+      metadata.operatorId = chosen.id
+      metadata.operatorName = chosen.name
+      metadata.operatorUsername = chosen.username
+      await fs.saveWorkspaceMetadata(specialtyCode, locationId, metadata)
+    }
+
+    return {
+      cancelled: false,
+      operator: {
+        username: chosen.username,
+        password: result.password,
+        expectedUserName: chosen.username,
+        inspectorId: chosen.id,
+      },
+    }
+  }
+
+  const submitOperatorPrompt = () => {
+    const password = operatorPasswordInput.value
+    if (!operatorSelectedUsername.value || !password) {
+      return
+    }
+
+    operatorPromptVisible.value = false
+    if (_operatorResolver) {
+      _operatorResolver({ username: operatorSelectedUsername.value, password })
+      _operatorResolver = null
+    }
+  }
+
+  const cancelOperatorPrompt = () => {
+    if (_operatorResolver) {
+      _operatorResolver(null)
+      _operatorResolver = null
+    }
+    operatorPromptVisible.value = false
+  }
+
   const exportUploadPayload = async () => {
     try {
       if (!uploadServiceOnline.value) {
@@ -317,6 +414,11 @@ export const useChecklistStore = defineStore('checklist', () => {
 
       const apiKey = await ensureApiKey()
       if (!apiKey) {
+        return
+      }
+
+      const { cancelled, operator } = await ensureOperator()
+      if (cancelled) {
         return
       }
 
@@ -335,7 +437,8 @@ export const useChecklistStore = defineStore('checklist', () => {
           findings.value,
           followUpSessionObj,
           specialty.value,
-          activeWorkspace.value?.locationId || null
+          activeWorkspace.value?.locationId || null,
+          operator
         )
         await loadWorkspaces()
         toast.success(t('toast.followUpPayloadUploaded'))
@@ -349,7 +452,8 @@ export const useChecklistStore = defineStore('checklist', () => {
           checklist.value,
           sessionObj,
           specialty.value,
-          activeWorkspace.value?.locationId || null
+          activeWorkspace.value?.locationId || null,
+          operator
         )
         await fs.notifyImportCanonical(
           checklist.value.inspectionId || checklist.value.inspection,
@@ -699,6 +803,11 @@ export const useChecklistStore = defineStore('checklist', () => {
     followUpFocusFindingId,
     apiKeyPromptVisible,
     apiKeyInput,
+    operatorPromptVisible,
+    operatorPasswordInput,
+    operatorList,
+    operatorSelectedUsername,
+    operatorLoading,
     loadChecklist,
     loadFindings,
     loadSpecialties,
@@ -720,5 +829,7 @@ export const useChecklistStore = defineStore('checklist', () => {
     ensureApiKey,
     submitApiKey,
     cancelApiKeyPrompt,
+    submitOperatorPrompt,
+    cancelOperatorPrompt,
   }
 })

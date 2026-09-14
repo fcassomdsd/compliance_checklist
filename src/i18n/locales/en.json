@@ -42,6 +42,15 @@
     "cancel": "Cancel",
     "saveAndUpload": "Save and Upload"
   },
+  "operatorModal": {
+    "title": "Confirm the Operator",
+    "explanation": "Sign in with the Alfresco account of the inspector who completed this checklist. The upload is recorded against that account and the password is not stored.",
+    "operatorLabel": "Operator",
+    "passwordPlaceholder": "Alfresco password",
+    "cancel": "Cancel",
+    "signInAndUpload": "Sign in and Upload",
+    "noOperators": "No inspector with an Alfresco account is linked to this specialty. Ask an administrator to link one."
+  },
   "importModal": {
     "titleInspection": "Import Inspection Data",
     "titleFollowUp": "Import Follow-up Data",

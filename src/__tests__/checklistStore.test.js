@@ -78,6 +78,10 @@ describe('Checklist Store', () => {
         followUpTouched: false,
       }),
       saveWorkspaceMetadata: vi.fn().mockResolvedValue(undefined),
+      loadWorkspaceMetadata: vi.fn().mockResolvedValue({}),
+      loadOperators: vi.fn().mockResolvedValue([
+        { id: 'insp-1', name: 'Fernando Casso', username: 'fernando.casso' },
+      ]),
       removeInspectionSession: vi.fn().mockResolvedValue({ removed: true, workspaceDeleted: false }),
       removeFollowUpSession: vi.fn().mockResolvedValue({ removed: true, workspaceDeleted: false }),
     }
@@ -109,6 +113,9 @@ describe('Checklist Store', () => {
       openFile: vi.fn(),
       readApiKey: vi.fn().mockResolvedValue(null),
       saveApiKey: vi.fn().mockResolvedValue(true),
+      // Operator identity is opt-out here; the operator-flow tests below turn
+      // it on explicitly.
+      getAppConfig: vi.fn().mockResolvedValue({ identity: { requireOperator: false } }),
     }
   })
 
@@ -463,6 +470,7 @@ describe('Checklist Store', () => {
         store.checklist.value,
         expectedSessionObj,
         'SUR',
+        null,
         null
       )
       expect(mockToast.success).toHaveBeenCalledWith('Payload exported and uploaded successfully')
@@ -486,10 +494,97 @@ describe('Checklist Store', () => {
           responses: mockFollowUp.responses,
         },
         'SUR',
-        'loc-1'
+        'loc-1',
+        null
       )
       expect(mockFs.notifyImportCanonical).not.toHaveBeenCalled()
       expect(mockToast.success).toHaveBeenCalledWith('Follow-up payload exported and uploaded successfully')
+    })
+
+    it('confirms the operator per workspace and passes it to the export', async () => {
+      window.electronAPI.getAppConfig = vi.fn().mockResolvedValue({ identity: { requireOperator: true } })
+      store.activeWorkspace.value = { locationId: 'loc-1' }
+      mockFs.loadWorkspaceMetadata = vi.fn().mockResolvedValue({})
+      mockFs.loadOperators = vi.fn().mockResolvedValue([
+        { id: 'insp-1', name: 'Fernando Casso', username: 'fernando.casso' },
+        { id: 'insp-2', name: 'Other Inspector', username: 'other.user' },
+      ])
+
+      const upload = store.exportUploadPayload()
+
+      await vi.waitFor(() => expect(store.operatorPromptVisible.value).toBe(true))
+      expect(mockFs.loadOperators).toHaveBeenCalledWith('SUR')
+      store.operatorSelectedUsername.value = 'fernando.casso'
+      store.operatorPasswordInput.value = 'secret'
+      store.submitOperatorPrompt()
+
+      await upload
+
+      expect(mockFs.exportInspectionPayload).toHaveBeenCalledWith(
+        store.checklist.value,
+        { summary: mockSession.summary, responses: mockSession.responses },
+        'SUR',
+        'loc-1',
+        {
+          username: 'fernando.casso',
+          password: 'secret',
+          expectedUserName: 'fernando.casso',
+          inspectorId: 'insp-1',
+        }
+      )
+      expect(mockFs.saveWorkspaceMetadata).toHaveBeenCalledWith(
+        'SUR',
+        'loc-1',
+        expect.objectContaining({ operatorId: 'insp-1', operatorUsername: 'fernando.casso' })
+      )
+    })
+
+    it('pre-selects the operator already confirmed for the workspace', async () => {
+      window.electronAPI.getAppConfig = vi.fn().mockResolvedValue({ identity: { requireOperator: true } })
+      store.activeWorkspace.value = { locationId: 'loc-1' }
+      mockFs.loadWorkspaceMetadata = vi.fn().mockResolvedValue({
+        operatorId: 'insp-2',
+        operatorName: 'Other Inspector',
+        operatorUsername: 'other.user',
+      })
+      mockFs.loadOperators = vi.fn().mockResolvedValue([
+        { id: 'insp-1', name: 'Fernando Casso', username: 'fernando.casso' },
+        { id: 'insp-2', name: 'Other Inspector', username: 'other.user' },
+      ])
+
+      const upload = store.exportUploadPayload()
+
+      await vi.waitFor(() => expect(store.operatorPromptVisible.value).toBe(true))
+      expect(store.operatorSelectedUsername.value).toBe('other.user')
+      store.operatorPasswordInput.value = 'secret'
+      store.submitOperatorPrompt()
+
+      await upload
+
+      // Already confirmed: no metadata rewrite needed.
+      expect(mockFs.saveWorkspaceMetadata).not.toHaveBeenCalled()
+      expect(mockFs.exportInspectionPayload).toHaveBeenCalledWith(
+        store.checklist.value,
+        expect.anything(),
+        'SUR',
+        'loc-1',
+        expect.objectContaining({ username: 'other.user', inspectorId: 'insp-2' })
+      )
+    })
+
+    it('aborts the upload when the operator prompt is cancelled', async () => {
+      window.electronAPI.getAppConfig = vi.fn().mockResolvedValue({ identity: { requireOperator: true } })
+      store.activeWorkspace.value = { locationId: 'loc-1' }
+
+      const upload = store.exportUploadPayload()
+
+      await vi.waitFor(() => expect(store.operatorPromptVisible.value).toBe(true))
+      store.cancelOperatorPrompt()
+
+      await upload
+
+      expect(mockFs.exportInspectionPayload).not.toHaveBeenCalled()
+      expect(store.isUploading.value).toBe(false)
     })
   })
 
