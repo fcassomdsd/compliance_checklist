@@ -56,13 +56,13 @@
             :value="getField(entry, 'followUpType')"
             @change="onFieldChange(entry, 'followUpType', $event.target.value)"
           >
-            <option value="Progress Verification">{{ t('followUpType.progressVerification') }}</option>
+            <option value="Progress Review">{{ t('followUpType.progressReview') }}</option>
             <option v-if="hasCorrectiveAction(entry)" value="CAP Verification">{{ t('followUpType.capVerification') }}</option>
             <option value="Closure Verification">{{ t('followUpType.closureVerification') }}</option>
           </select>
         </td>
         <td>
-          <template v-if="getField(entry, 'followUpType') === 'Closure Verification'">
+          <template v-if="getField(entry, 'followUpType') === CLOSURE_FOLLOW_UP_TYPE">
             <select
               :disabled="isRowReadOnly(entry)"
               :value="effectivenessValue(getField(entry, 'effectivenessConfirmed'))"
@@ -161,6 +161,7 @@
   import { useChecklistStore } from '../stores/checklistStore'
   import { useFollowUpStore } from '../stores/followUpStore'
   import { useEvidenceStore } from '../stores/evidenceStore'
+  import { CLOSURE_FOLLOW_UP_TYPE, DEFAULT_FOLLOW_UP_TYPE } from '../utils/domainRules.js'
   import trash from '../assets/images/trash.png'
 
   const { t } = useI18n()
@@ -311,7 +312,7 @@
       return 0
     }
     if (field == 'followUpType') {
-      return 'Progress Verification'
+      return DEFAULT_FOLLOW_UP_TYPE
     }
     if (field == 'effectivenessConfirmed') {
       return null
@@ -327,7 +328,7 @@
     if (typeof existingType == 'string' && existingType.trim().length > 0) {
       return existingType
     }
-    return 'Progress Verification'
+    return DEFAULT_FOLLOW_UP_TYPE
   }
 
   const ensureFollowUpTypeStored = (entry) => {

@@ -17,6 +17,14 @@ import {
   hashFile,
 } from '../utils/fileOps.js'
 import { safeJoin } from '../utils/fileSec.js'
+import {
+  CLOSURE_FOLLOW_UP_TYPE,
+  DEFAULT_FOLLOW_UP_TYPE,
+  EVIDENCE_ROLES,
+  FOLLOW_UP_TYPES,
+  allowedFollowUpTypes,
+  normalizeFollowUpType,
+} from '../utils/domainRules.mjs'
 import { resolveReadableAppConfigPath, writableAppConfigPath } from '../utils/appConfig.js'
 import { logger } from '../utils/logger.js'
 import { generateFindingsReport } from '../utils/pdfGenerator.js'
@@ -39,12 +47,7 @@ const evidenceItemSchema = {
     sealedDate: { type: 'string', format: 'date-time' },
     evidenceRole: {
       type: 'string',
-      enum: [
-        'Compliance Evidence',
-        'Finding Support',
-        'Progress Evidence',
-        'Closure Evidence',
-      ],
+      enum: [...EVIDENCE_ROLES],
     },
   },
 }
@@ -341,12 +344,7 @@ const followUpReportSchema = {
         percentComplete: { type: 'integer', minimum: 0, maximum: 100 },
         followUpType: {
           type: 'string',
-          enum: [
-            'Progress Review',
-            'CAP Verification',
-            'Closure Verification',
-            'Ad-hoc Inquiry',
-          ],
+          enum: [...FOLLOW_UP_TYPES],
         },
         followUpClosureDate: { type: 'string', format: 'date' },
         closureVerificationMethod: { type: 'string' },
@@ -920,18 +918,17 @@ const mapFollowUpReportsPayload = ({ findingsObj, followUpSessionObj }) => {
 
     const correctiveAction = finding?.correctiveAction
 
-    // Compose followUpType and CAP logic
-    const followUpType = response?.followUpType || 'Progress Review'
+    // Compose followUpType and CAP logic. The vocabulary and the legacy
+    // "Progress Verification" alias come from the shared domain-rule spec.
+    const followUpType = normalizeFollowUpType(response?.followUpType)
     const capId = correctiveAction?.capId || null
     // Only allow CAP Verification if capId exists
-    const allowedTypes = capId
-      ? ['Progress Review', 'CAP Verification', 'Closure Verification', 'Ad-hoc Inquiry']
-      : ['Progress Review', 'Closure Verification', 'Ad-hoc Inquiry']
-    const type = allowedTypes.includes(followUpType) ? followUpType : 'Progress Review'
+    const allowedTypes = allowedFollowUpTypes({ hasCorrectiveAction: Boolean(capId) })
+    const type = allowedTypes.includes(followUpType) ? followUpType : DEFAULT_FOLLOW_UP_TYPE
 
     // Effectiveness logic
     let effectivenessConfirmed = null
-    if (type === 'Closure Verification') {
+    if (type === CLOSURE_FOLLOW_UP_TYPE) {
       if (typeof response?.effectivenessConfirmed === 'boolean') {
         effectivenessConfirmed = response.effectivenessConfirmed
       } else {

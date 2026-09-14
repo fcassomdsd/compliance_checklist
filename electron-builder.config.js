@@ -11,6 +11,9 @@ module.exports = {
     'electron/preload.cjs',
     'electron/ipc/**/*',
     'electron/utils/**/*',
+    // The shared domain-rule spec (vendored from compliance_cmis) is required
+    // at runtime by electron/utils/domainRules.mjs.
+    'domain-rules/**/*',
   ],
   extraResources: [
     {

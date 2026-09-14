@@ -1,6 +1,12 @@
 import Ajv from 'ajv'
+import { FOLLOW_UP_TYPES, FOLLOW_UP_TYPE_ALIASES } from './domainRules.js'
 
 const ajv = new Ajv({ allErrors: true, verbose: true })
+
+// The canonical types come from the shared domain-rule spec; the legacy alias
+// keys stay accepted so sessions written by older builds still parse (the
+// stores normalize them to the canonical value on load).
+const FOLLOW_UP_TYPE_ENUM = [...FOLLOW_UP_TYPES, ...Object.keys(FOLLOW_UP_TYPE_ALIASES)]
 
 const followUpSessionSchema = {
   type: 'object',
@@ -27,13 +33,7 @@ const followUpSessionSchema = {
             percentComplete: { type: 'number', minimum: 0, maximum: 100 },
             followUpType: {
               type: 'string',
-              enum: [
-                'Progress Verification',
-                'Progress Review',
-                'CAP Verification',
-                'Closure Verification',
-                'Ad-hoc Inquiry',
-              ],
+              enum: FOLLOW_UP_TYPE_ENUM,
             },
             effectivenessConfirmed: { anyOf: [ { type: 'boolean' }, { type: 'null' } ] },
             comments: { type: 'string' },

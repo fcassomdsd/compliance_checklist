@@ -85,7 +85,7 @@ describe('FollowUpTable.vue', () => {
     const numberInput = wrapper.find('input[type="number"]')
     await numberInput.setValue('25')
 
-    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'followUpType', 'Progress Verification')
+    expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'followUpType', 'Progress Review')
     expect(mockFollowUpStore.updateFollowUp).toHaveBeenCalledWith('F-1', 'percentComplete', 25)
   })
 
