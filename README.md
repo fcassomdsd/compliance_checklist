@@ -145,6 +145,8 @@ npm run build:mac-portable
 
 Output is placed in `dist-portable/`. The `productName` is **Aviation Safety Oversight Checklist** as defined in `electron-builder.config.js`.
 
+**Version identity:** the artifact version comes from `package.json` (`version: "1.0.0a"`), which electron-builder stamps into the packaged bundle filename and metadata. The `app.name`/`app.version` keys in `app.config.json` are display-only runtime values (shown in the UI), not the artifact version — do not read the packaged version from them. Releases themselves are CalVer-dated tags (see CONTRIBUTING.md, "Versioning and releases"); the `x.y.z` labels in the historical CHANGELOG headings (`1.2.0-alpha`, `1.0.0a candidate`, …) predate that scheme and are not the current package version.
+
 ---
 
 ## ⚙️ Configuration
