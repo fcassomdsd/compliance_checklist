@@ -149,6 +149,20 @@ Output is placed in `dist-portable/`. The `productName` is **Aviation Safety Ove
 
 ---
 
+## 🌐 Whole-Platform Demo Quickstart
+
+This app is offline-first and falls back to bundled data, so it runs without a
+backend — but to see uploads land in Alfresco and travel through the full
+finding-closure workflow, bring up the platform first. The canonical
+clean-clone-to-demonstrable sequence lives in the `atrocore-docker` repository:
+§7 of `../atrocore-docker/docs/COMPLIANCE_INTEGRATION_RUNBOOK.md`
+("Demo Quickstart — clean clone to a demonstrable system"), executable as
+`atrocore-docker/scripts/demo-quickstart.sh`. Point this app's
+`app.config.json` at the Node-RED (`:1880`) and import (`:8000`) endpoints it
+prints.
+
+---
+
 ## ⚙️ Configuration
 
 Runtime settings are read from **`app.config.json`** in the project root. This file must be present when running or packaging the app.
