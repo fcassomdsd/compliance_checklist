@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file. Releases are da
 
 ### Changed
 
+- **README points at the whole-platform demo quickstart, which lives in `atrocore-docker`.** The app is offline-first and runs without a backend, but exercising an upload end to end needs the platform: §7 of `atrocore-docker/docs/COMPLIANCE_INTEGRATION_RUNBOOK.md` — executable as `atrocore-docker/scripts/demo-quickstart.sh` — is now the single documented clean-clone-to-demonstrable sequence, and the README says where to find it and which endpoints to point `app.config.json` at. No code changed.
 - **Versioning and tagging standardised across the platform.** Releases are tagged `YYYY-MM-DD` (CalVer) after the date of the newest `## [YYYY-MM-DD]` CHANGELOG section, with `YYYY-MM-DD.2` for a second release on the same day. The release jobs now run `scripts/release-tag.sh`, which fails when that section is missing, when `CHANGELOG.md` is unchanged since the previous release, or when the tag already exists; `scripts/release-tag.test.sh` is its self-test. See CONTRIBUTING.md, "Versioning and releases".
 - **README clarifies version identity.** Documented that the artifact version is `package.json`'s `version` (`1.0.0a`, stamped by electron-builder), `app.config.json`'s `app.name`/`app.version` are display-only, `productName` is `Aviation Safety Oversight Checklist`, and the historical `x.y.z` CHANGELOG labels predate the CalVer scheme.
 
