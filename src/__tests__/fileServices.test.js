@@ -870,7 +870,7 @@ describe('fileServices', () => {
 
       const result = await fs.loadSpecialties()
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/specialties?option=leaf')
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/specialties?option=leaf', { headers: {} })
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
       expect(result).toEqual([
@@ -887,7 +887,7 @@ describe('fileServices', () => {
 
       const result = await fs.loadSpecialties()
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/specialties?option=leaf')
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/specialties?option=leaf', { headers: {} })
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThan(0)
       expect(result).toEqual([
@@ -1077,7 +1077,7 @@ describe('fileServices', () => {
 
       const result = await fs.fetchChecklistFromApi('INS1', 'SUR', {})
 
-      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspectionId=INS1&specialty=SUR')
+      expect(fetch).toHaveBeenCalledWith('http://localhost:1880/checklist?inspectionId=INS1&specialty=SUR', { headers: {} })
       expect(result).toEqual(mockChecklist)
     })
 
@@ -1117,6 +1117,7 @@ describe('fileServices', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         'http://localhost:1880/checklist?inspectionId=INS1&specialty=SUR&siteVisitId=SV1&inspectedProviderId=SP1',
+        { headers: {} },
       )
     })
 
@@ -1130,6 +1131,7 @@ describe('fileServices', () => {
 
       expect(fetch).toHaveBeenCalledWith(
         'http://localhost:1880/inspectionProvider?status=Uploaded',
+        { headers: {} },
       )
     })
 
@@ -1221,7 +1223,8 @@ describe('fileServices', () => {
       const result = await fs.fetchFindingsFromApi('SUR', 'loc-001', '0224')
 
       expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:1880/findings/open?specialtyCode=SUR&locationCode=loc-001&inspection=0224'
+        'http://localhost:1880/findings/open?specialtyCode=SUR&locationCode=loc-001&inspection=0224',
+        { headers: {} }
       )
       expect(result).toEqual(mockFindings)
     })
