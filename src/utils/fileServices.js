@@ -3,6 +3,20 @@ import { parseFindings } from './findings.js'
 import { parseSession } from './session.js'
 import { parseFollowUpSession } from './followUpSession.js'
 
+// Node-RED gates every endpoint with `X-API-Key` when its `API_KEY` is set. The checklist stores a
+// single key — prompted for on the first upload — so the same header serves both the flow and the
+// upload service; the deployment must set compliance_flow's `API_KEY` and compliance_import's
+// `IMPORT_API_KEY` to the same value. Reading it is best-effort: with no key stored the request
+// goes out bare, which is what an unguarded development stack expects.
+async function flowApiKeyHeaders() {
+  try {
+    const key = await window.electronAPI?.readApiKey?.()
+    return key ? { 'X-API-Key': key } : {}
+  } catch {
+    return {}
+  }
+}
+
 export const createFileService = () => {
   // Default maximum file upload size
   const EVIDENCE_MAX_SIZE = getSizeAndSuffix('10MB')
@@ -298,7 +312,7 @@ export const createFileService = () => {
         url.searchParams.set('inspectedProviderId', ids.inspectedProviderId)
       }
 
-      const response = await fetch(url.toString())
+      const response = await fetch(url.toString(), { headers: await flowApiKeyHeaders() })
       if (!response.ok) {
         throw new Error(`Import failed with status ${response.status}`)
       }
@@ -348,7 +362,7 @@ export const createFileService = () => {
         url.searchParams.set('provider', provider)
       }
 
-      const response = await fetch(url.toString())
+      const response = await fetch(url.toString(), { headers: await flowApiKeyHeaders() })
       if (!response.ok) {
         throw new Error(`Findings import failed with status ${response.status}`)
       }
@@ -367,7 +381,7 @@ export const createFileService = () => {
 
       const url = new URL(`${host}/inspectionProvider`)
       url.searchParams.set('status', 'Uploaded')
-      const response = await fetch(url.toString())
+      const response = await fetch(url.toString(), { headers: await flowApiKeyHeaders() })
       if (!response.ok) {
         throw new Error(`Inspection providers fetch failed with status ${response.status}`)
       }
@@ -696,7 +710,7 @@ export const createFileService = () => {
       try {
         const url = new URL(`${host}/specialties`)
         url.searchParams.set('option', 'leaf')
-        const response = await fetch(url.toString())
+        const response = await fetch(url.toString(), { headers: await flowApiKeyHeaders() })
         if (response.ok) {
           const specialties = parseSpecialties(await response.json(), { fromApi: true })
           if (specialties.length > 0) {
@@ -735,7 +749,7 @@ export const createFileService = () => {
       const url = new URL(`${host}${inspectorsPath}`)
       url.searchParams.set('specialty', normalizedCode)
 
-      const response = await fetch(url.toString())
+      const response = await fetch(url.toString(), { headers: await flowApiKeyHeaders() })
       if (!response.ok) {
         throw new Error(`inspectors API failed with status ${response.status}`)
       }
@@ -809,7 +823,7 @@ export const createFileService = () => {
       const host = appConfig?.api?.importHost || appConfig?.api?.host || 'http://localhost:1880'
 
       try {
-        const response = await fetch(`${host}/location`)
+        const response = await fetch(`${host}/location`, { headers: await flowApiKeyHeaders() })
         if (response.ok) {
           const locations = parseLocations(await response.json())
           if (locations.length > 0) {
@@ -1266,6 +1280,7 @@ export const createFileService = () => {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
+          ...(await flowApiKeyHeaders()),
         },
         body: JSON.stringify({
           specialtyName,
@@ -1341,7 +1356,7 @@ export const createFileService = () => {
     let lastError
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const response = await fetch(url.toString())
+        const response = await fetch(url.toString(), { headers: await flowApiKeyHeaders() })
         if (!response.ok) {
           throw new Error(`importCanonical API failed with status ${response.status}`)
         }
