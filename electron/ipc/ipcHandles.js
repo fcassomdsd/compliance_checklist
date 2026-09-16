@@ -240,7 +240,10 @@ const findingSchema = {
             'In Progress',
             'Pending Closure Review',
             'Verifying Effective Closure',
+            'Pending Closure Approval',
             'Closed',
+            'CAP Overdue',
+            'Solution Overdue',
             'Overdue',
           ],
           default: 'Open',
@@ -395,7 +398,6 @@ const followUpReportSchema = {
 }
 
 // Moved outside the setup function as it's a constant
-//const defaultSavePath = '/home/fernando/Documents/Current_inspection'; //path.join(app.getPath('documents'), 'Current_inspection');
 const defaultSavePath = path.join(app.getPath('documents'), 'Current_inspection')
 
 const sanitizeUpperAlnum = (value = '') =>
