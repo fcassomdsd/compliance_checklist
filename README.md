@@ -151,6 +151,10 @@ Output is placed in `dist-portable/`. The `productName` is **Aviation Safety Ove
 
 ## 🌐 Whole-Platform Demo Quickstart
 
+First time running this platform? See the root-level
+[`GETTING_STARTED_FOR_ADOPTERS.md`](../GETTING_STARTED_FOR_ADOPTERS.md) for hardware
+requirements, timing expectations, and what the demo dataset actually is before diving in.
+
 This app is offline-first and falls back to bundled data, so it runs without a
 backend — but to see uploads land in Alfresco and travel through the full
 finding-closure workflow, bring up the platform first. The canonical
