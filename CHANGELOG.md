@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. Releases are da
 
 ## [Unreleased]
 
+### Added
+
+- **`THIRD_PARTY_LICENSES.md`, backed by a `license-checker --production` scan (98 packages).** No unconditional copyleft dependencies found. One dual-licensed package, `jszip@3.10.1` `(MIT OR GPL-3.0-or-later)`, is used under its MIT option, so no GPL obligation attaches.
+
 ### Changed
 
 - **README's API-key documentation corrected — the stored key now covers every request, not just uploads.** The old "API Key for Uploads" section predated the change below that made the checklist send `X-API-Key` on all eight flow call sites; it still described the key as upload-only. Rewritten to say plainly: `compliance_flow` and `compliance_import` both ship gateway auth **on by default** now (a placeholder value each deployment must rotate), the app stores one key and sends it to both, and an empty prompt is only correct against an unguarded dev stack.
