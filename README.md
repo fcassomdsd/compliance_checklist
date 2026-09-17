@@ -190,9 +190,17 @@ Runtime settings are read from **`app.config.json`** in the project root. This f
 }
 ```
 
-### API Key for Uploads
+### API Key
 
-The upload service (`uploadHost`) may require an API key. On first upload, the app prompts for the key and stores it locally in `~/Documents/Current_inspection/api-key.json`. The key is sent as an `X-API-Key` header on all upload requests. If the upload service does not require a key, simply leave the prompt empty and click Cancel.
+`compliance_flow` (checklist reads, entity CRUD) and `compliance_import` (ZIP uploads) both gate
+their REST endpoints with an `X-API-Key` header when their `API_KEY`/`IMPORT_API_KEY` env vars are
+set — which they are by default in the current `.env.example` templates (a demo placeholder value
+that must be rotated before any real deployment, and must be identical across both services). The
+app stores a **single** key, prompted for on first upload, locally in
+`~/Documents/Current_inspection/api-key.json`, and sends it as `X-API-Key` on every request to both
+services (`src/utils/fileServices.js`'s `flowApiKeyHeaders()`) — not just uploads. If the deployment
+does not require a key (gateway auth disabled for local development), leave the prompt empty and
+click Cancel; every request then goes out bare, matching an unguarded dev stack.
 
 When running E2E tests, `global-setup.mjs` temporarily rewrites `app.config.json` to point to isolated local test ports and restores it on teardown.
 
