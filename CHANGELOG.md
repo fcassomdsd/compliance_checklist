@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. Releases are da
 
 ## [Unreleased]
 
+### Fixed
+
+- **Removed the dormant `read-alfresco-cred` / `save-alfresco-cred` IPC channels and their preload bridge.** Nothing has consumed them since operator login moved to an in-memory, sync-time Alfresco sign-in, so they were a dead-but-live surface that persisted an Alfresco username and password under `~/Documents/Current_inspection/alfresco-cred.json` (sealed with `safeStorage` where available, plaintext otherwise). The API-key credential path is unchanged.
+
+### Documentation
+
+- **Finding-status enum now documents *why* it carries both `Pending Closure Review` and `Pending Closure Approval`.** Both are legitimate values of `vso:findingStatusList` in the Alfresco model; the note records that a `Closure Verification` follow-up lands on `Pending Closure Approval` and that a `closure_reviewer` (not the field app) performs the separate approval that reaches `Closed`. No value changed.
+- **Removed a hard-coded developer path** (`/home/fernando/...`) from `src/__tests__/main.test.js`, the last one left after the earlier credential/IPC cleanup.
+
+## [2026-09-18]
+
 ### Added
 
 - **`THIRD_PARTY_LICENSES.md`, backed by a `license-checker --production` scan (98 packages).** No unconditional copyleft dependencies found. One dual-licensed package, `jszip@3.10.1` `(MIT OR GPL-3.0-or-later)`, is used under its MIT option, so no GPL obligation attaches.

@@ -29,7 +29,7 @@ vi.mock('vue-toastification/dist/index.css', () => ({}))
 
 vi.mock('./App.vue', () => ({
   default: {
-    __file: '/home/fernando/git/compliance_repo/compliance_checklist/src/App.vue',
+    __file: 'src/App.vue',
     __name: 'App',
     render: () => {},
     setup: () => {},

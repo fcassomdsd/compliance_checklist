@@ -231,6 +231,11 @@ const findingSchema = {
           default: 'C',
         },
         description: { type: 'string', maxLength: 2000 },
+        // Mirrors vso:findingStatusList in compliance_cmis/configs/model/vsoModel.xml
+        // (11 values). Both closure states are legitimate: a Closure Verification
+        // follow-up that confirms effectiveness lands on 'Pending Closure Approval'
+        // (never 'Closed' directly - a closure_reviewer approves that separately),
+        // while 'Pending Closure Review' is the earlier review stage.
         findingStatus: {
           type: 'string',
           enum: [
@@ -497,7 +502,6 @@ const workspaceBase = (filePath) => {
 
 const CREDENTIAL_ENVELOPE_VERSION = 1
 const API_KEY_FILE = 'api-key.json'
-const ALFRESCO_CREDENTIAL_FILE = 'alfresco-cred.json'
 
 // Credentials are sealed with the OS keychain (DPAPI / Keychain / libsecret)
 // instead of being written as plain JSON. Where the OS cannot provide
@@ -1527,18 +1531,6 @@ export function setupIpcHandles(ipcMain) {
 
   ipcMain.handle('save-api-key', async (event, key) => {
     return writeCredentialFile(API_KEY_FILE, { key: String(key || '').trim() })
-  })
-
-  ipcMain.handle('read-alfresco-cred', async () => {
-    const data = await readCredentialFile(ALFRESCO_CREDENTIAL_FILE).catch(() => null)
-    return { username: data?.username || null, password: data?.password || null }
-  })
-
-  ipcMain.handle('save-alfresco-cred', async (event, username, password) => {
-    return writeCredentialFile(ALFRESCO_CREDENTIAL_FILE, {
-      username: String(username || '').trim(),
-      password: String(password || ''),
-    })
   })
 
   ipcMain.handle('export-inspection-payload', async (event, payload) => {
