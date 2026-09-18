@@ -1,5 +1,7 @@
 # Compliance Checklist App
 
+[![CI](https://github.com/fcassomdsd/compliance_checklist/actions/workflows/ci.yml/badge.svg)](https://github.com/fcassomdsd/compliance_checklist/actions/workflows/ci.yml)
+
 **The Cross-Platform Desktop Solution for Field Compliance Inspections.**
 
 Maximize efficiency and ensure data integrity for your operational safety inspectors with a dedicated, offline-capable desktop application. Built with **Electron**, **Vue 3**, and a **Node.js** backend.
