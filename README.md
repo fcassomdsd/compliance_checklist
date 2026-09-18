@@ -83,8 +83,8 @@ The project follows a modular approach for clear separation of concerns:
 
 ```bash
 # Clone the repository
-git clone https://gitlab.com/fksomdsd/compliance_app.git
-cd compliance_app
+git clone https://gitlab.com/safety-app2/compliance_checklist.git
+cd compliance_checklist
 
 # Install dependencies
 npm install
