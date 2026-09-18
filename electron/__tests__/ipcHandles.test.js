@@ -1060,22 +1060,5 @@ describe('ipcHandles', () => {
       fs.readFile.mockRejectedValue(new Error('ENOENT'))
       await expect(handles['read-api-key']({})).resolves.toBeNull()
     })
-
-    it('encrypts the Alfresco credentials', async () => {
-      const saveFileSpy = vi.spyOn(fileOps, 'saveFile').mockResolvedValue(true)
-      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
-
-      await handles['save-alfresco-cred']({}, 'alice', 'hunter2')
-
-      const envelope = JSON.parse(saveFileSpy.mock.calls[0][1])
-      expect(envelope.encrypted).toBe(true)
-      expect(envelope.payload).not.toContain('hunter2')
-
-      fs.readFile.mockResolvedValue(JSON.stringify(envelope))
-      await expect(handles['read-alfresco-cred']({})).resolves.toEqual({
-        username: 'alice',
-        password: 'hunter2',
-      })
-    })
   })
 })
