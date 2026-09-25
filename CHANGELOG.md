@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file. Releases are da
 
 ## [Unreleased]
 
+### Added
+
+- **The findings report header is now parameterized from `app.config.json`.** The PDF is generated locally by `electron/utils/pdfGenerator.js` (PDFKit), so it cannot read `compliance_cmis`'s `entity-profile.json`; it now takes a `reportHeader` block from the app's own config instead of hardcoding IDAC's two entity lines. `entityName` and `entitySubtitle` are locale-keyed (the report's `locale` selects the line), `logoPath` names the image and is resolved from the app root or the packaged `assets/images/` resources folder (the old hard-coded `./public/images/...` path only worked when the process CWD happened to be the repo root), and `docControlVersion` / `docControlDate` are optional and blank by default. The `labels.en`/`labels.es` entity defaults are now generic (the same neutral wording the report templates use), and the report title stays locale-driven in that table. The header is unchanged for any deployment that sets no `reportHeader` values beyond the shipped generic defaults.
+
 ### Fixed
 
 - **Removed the dormant `read-alfresco-cred` / `save-alfresco-cred` IPC channels and their preload bridge.** Nothing has consumed them since operator login moved to an in-memory, sync-time Alfresco sign-in, so they were a dead-but-live surface that persisted an Alfresco username and password under `~/Documents/Current_inspection/alfresco-cred.json` (sealed with `safeStorage` where available, plaintext otherwise). The API-key credential path is unchanged.

@@ -1,5 +1,7 @@
 import PDFDocument from 'pdfkit'
 import fs from 'fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // English labels are authored here from scratch — the original report was
 // Spanish-only with no English baseline to translate from.
@@ -14,8 +16,8 @@ const LABELS = {
       `aquellas que no aparecen en la relación anterior fueron respondidas de manera satisfactoria.`,
     signatureInspector: 'Inspector actuante',
     signatureCounterpart: 'Contraparte inspeccionada',
-    entityHeaderLine1: 'DIRECCIÓN DE VIGILANCIA DE LA SEGURIDAD OPERACIONAL',
-    entityHeaderLine2: 'DEPARTAMENTO DE VIGILANCIA SNA/AGA',
+    entityHeaderLine1: 'AUTORIDAD DE AVIACIÓN CIVIL',
+    entityHeaderLine2: 'VIGILANCIA DE LA SEGURIDAD OPERACIONAL',
     reportTitle: 'Reporte de Hallazgos',
     version: (v) => `Versión: ${v}`,
     issued: (date) => `Emisión: ${date}`,
@@ -43,8 +45,8 @@ const LABELS = {
       `those not listed above were answered satisfactorily.`,
     signatureInspector: 'Inspector on duty',
     signatureCounterpart: 'Inspected counterpart',
-    entityHeaderLine1: 'DIRECTORATE OF OPERATIONAL SAFETY OVERSIGHT',
-    entityHeaderLine2: 'SNA/AGA OVERSIGHT DEPARTMENT',
+    entityHeaderLine1: 'CIVIL AVIATION AUTHORITY',
+    entityHeaderLine2: 'OPERATIONAL SAFETY OVERSIGHT',
     reportTitle: 'Findings Report',
     version: (v) => `Version: ${v}`,
     issued: (date) => `Issued: ${date}`,
@@ -68,6 +70,47 @@ function resolveLabels(locale) {
   return LABELS[locale] || LABELS.es
 }
 
+// reportHeader values may be a plain string or a locale-keyed object
+// ({ es, en }); resolve to the requested locale, then Spanish, then English.
+function resolveLocalized(value, locale) {
+  if (typeof value === 'string') return value
+  if (!value || typeof value !== 'object') return ''
+  for (const key of [locale, 'es', 'en']) {
+    if (typeof value[key] === 'string' && value[key].length > 0) return value[key]
+  }
+  return ''
+}
+
+// The logo ships as a file (public/images/ in development, extraResources
+// assets/images/ in a packaged build). Resolve whichever exists; fall back to
+// the configured path so pdfkit surfaces a clear error if none do.
+function resolveLogoPath(configuredPath) {
+  const relative = configuredPath || 'public/images/compliance-logo.png'
+  const candidates = [relative]
+  const baseName = path.basename(relative)
+
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'assets', 'images', baseName))
+  }
+
+  try {
+    const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+    candidates.push(path.resolve(moduleDir, '..', '..', relative))
+  } catch {
+    // import.meta.url is unavailable in some test harnesses; skip.
+  }
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) return candidate
+    } catch {
+      // fs may be partially mocked; try the next candidate.
+    }
+  }
+
+  return relative
+}
+
 /**
  * Generate a PDF report for findings (non-compliant items)
  * @param {Object} params - Parameters for PDF generation
@@ -76,11 +119,21 @@ function resolveLabels(locale) {
  * @param {string} params.specialty - Specialty name
  * @param {string} params.outputPath - Path where to save the PDF
  * @param {string} [params.locale] - 'en' or 'es'; defaults to 'es' (the report's original language)
+ * @param {Object} [params.reportHeader] - Optional header branding from app.config.json
+ *   (locale-keyed entityName/entitySubtitle, logoPath, docControlVersion, docControlDate)
  */
-export function generateFindingsReport({ checklistString, sessionString, outputPath, locale }) {
+export function generateFindingsReport({ checklistString, sessionString, outputPath, locale, reportHeader }) {
     const SIDE_MARGIN = 50
     const BOTTOM_MARGIN = 40
     const L = resolveLabels(locale)
+    const branding = reportHeader || {}
+    const entityHeaderLine1 = resolveLocalized(branding.entityName, locale) || L.entityHeaderLine1
+    const entityHeaderLine2 = resolveLocalized(branding.entitySubtitle, locale) || L.entityHeaderLine2
+    const logoPath = resolveLogoPath(branding.logoPath)
+    const docControlVersion = typeof branding.docControlVersion === 'string' ? branding.docControlVersion : ''
+    const docControlDate = typeof branding.docControlDate === 'string' ? branding.docControlDate.trim() : ''
+    const issuedDate = docControlDate || new Date().toISOString().split('T')[0]
+    const versionText = docControlVersion ? L.version(docControlVersion) : ''
   return new Promise((resolve, reject) => {
     try {
 
@@ -237,7 +290,7 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
         doc.save();
 
         // --- Header ---
-        doc.image('./public/images/compliance-logo.png', SIDE_MARGIN, 40, { fit : [80,110] })
+        doc.image(logoPath, SIDE_MARGIN, 40, { fit : [80,110] })
         doc.fontSize(10).font('Helvetica')
         doc.table(
           {
@@ -256,21 +309,21 @@ export function generateFindingsReport({ checklistString, sessionString, outputP
               {
                 align: { x: 'center', y : 'top'},
                 border : { top : 1 },
-                text: L.entityHeaderLine1
+                text: entityHeaderLine1
               },
               {
-                text : L.version('1.0'),
+                text : versionText,
                 border : { top : 1 },
                 align: { x: 'right', y : 'top'}
               }
             ])
           .row([{
             align: { x: 'center', y : 'top'},
-            text: L.entityHeaderLine2
+            text: entityHeaderLine2
           },
           {
-            text : L.issued(new Date().toISOString().split('T')[0]),
-            font : { size: 9 },
+            text : L.issued(issuedDate),
+            font : { size : 9 },
             align: { x: 'right', y : 'top'}
           }])
           .row([{

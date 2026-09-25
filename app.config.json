@@ -20,6 +20,23 @@
     "requireOperator": true,
     "inspectorsPath": "/inspectors"
   },
+  "reportHeader": {
+    "_comment": "Branding for the locally generated findings report PDF. The checklist app is offline and does not read Alfresco's entity-profile.json, so this is its own copy of the same idea. The report title comes from the app's locale labels; these values are the authority identity plus optional document-control values.",
+    "entityName": {
+      "es": "AUTORIDAD DE AVIACIÓN CIVIL",
+      "en": "CIVIL AVIATION AUTHORITY"
+    },
+    "entitySubtitle": {
+      "es": "VIGILANCIA DE LA SEGURIDAD OPERACIONAL",
+      "en": "OPERATIONAL SAFETY OVERSIGHT"
+    },
+    "_comment_logoPath": "Relative to the app root in development, or resolved from the packaged assets/ folder. Any PNG or JPEG works.",
+    "logoPath": "public/images/compliance-logo.png",
+    "_comment_docControlVersion": "Optional revision/version string shown in the header. Blank by default.",
+    "docControlVersion": "",
+    "_comment_docControlDate": "Optional override for the report's issue date (ISO YYYY-MM-DD). Blank by default, in which case the date the report was generated is used.",
+    "docControlDate": ""
+  },
   "fallback": {
     "specialties": [
       {

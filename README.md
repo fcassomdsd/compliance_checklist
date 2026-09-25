@@ -189,6 +189,17 @@ Runtime settings are read from **`app.config.json`** in the project root. This f
     "importCanonicalRetries": 3,
     "serviceStatusTimeoutMs": 2500
   },
+  "identity": {
+    "requireOperator": true,
+    "inspectorsPath": "/inspectors"
+  },
+  "reportHeader": {
+    "entityName":     { "es": "AUTORIDAD DE AVIACIÓN CIVIL", "en": "CIVIL AVIATION AUTHORITY" },
+    "entitySubtitle": { "es": "VIGILANCIA DE LA SEGURIDAD OPERACIONAL", "en": "OPERATIONAL SAFETY OVERSIGHT" },
+    "logoPath": "public/images/compliance-logo.png",
+    "docControlVersion": "",
+    "docControlDate": ""
+  },
   "fallback": {
     "specialties": [ ... ],  // Used when the import service is offline
     "locations":   [ ... ]   // Used when the import service is offline
@@ -209,6 +220,10 @@ does not require a key (gateway auth disabled for local development), leave the 
 click Cancel; every request then goes out bare, matching an unguarded dev stack.
 
 When running E2E tests, `global-setup.mjs` temporarily rewrites `app.config.json` to point to isolated local test ports and restores it on teardown.
+
+### Findings report header
+
+The PDF findings report (`electron/utils/pdfGenerator.js`) is generated locally in the Electron main process — it never talks to Alfresco — so its header branding comes from its own `app.config.json` `reportHeader` block, not from `compliance_cmis`'s `entity-profile.json`. `entityName` and `entitySubtitle` are locale-keyed (the report's `locale` selects the line, falling back to `es`/`en`); `logoPath` names the image (resolved relative to the app root, or from the packaged `assets/images/` resources folder); `docControlVersion` and `docControlDate` are optional and **blank by default** — a blank version renders nothing, and a blank date falls back to the day the report was generated. The generic logo shipped here (`public/images/compliance-logo.png`) is the same one the web app and the `compliance_cmis` report templates use, so an adopting authority can point `logoPath` at its own file. The report *title* ("Reporte de Hallazgos" / "Findings Report") lives in the `labels.en`/`labels.es` table in `pdfGenerator.js`.
 
 ### Locale Preference
 

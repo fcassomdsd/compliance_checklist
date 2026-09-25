@@ -78,6 +78,7 @@ vi.mock('pdfkit', () => ({
 vi.mock('fs', () => ({
   default: {
     createWriteStream: vi.fn(() => mockStream),
+    existsSync: vi.fn(() => false),
   },
 }))
 
@@ -331,5 +332,34 @@ describe('PDF Generator', () => {
     })
 
     expect(result).toBe('/path/to/report.pdf')
+  })
+
+  it('renders the header from reportHeader branding', async () => {
+    const checklist = {
+      inspection: '1125',
+      location: 'Airport',
+      startDate: '2025-01-26',
+      specialtyName: 'Test',
+      questions: [],
+    }
+    const session = { summary: { generalComments: 'None' }, responses: {} }
+
+    const result = await generateFindingsReport({
+      checklistString: JSON.stringify(checklist),
+      sessionString: JSON.stringify(session),
+      specialty: 'Test',
+      outputPath: '/path/to/report.pdf',
+      locale: 'en',
+      reportHeader: {
+        entityName: { en: 'CUSTOM AUTHORITY', es: 'AUTORIDAD PERSONALIZADA' },
+        entitySubtitle: { en: 'CUSTOM UNIT', es: 'UNIDAD PERSONALIZADA' },
+        logoPath: 'custom/logo.png',
+        docControlVersion: '2.1',
+        docControlDate: '2026-05-05',
+      },
+    })
+
+    expect(result).toBe('/path/to/report.pdf')
+    expect(mockDoc.image).toHaveBeenCalledWith('custom/logo.png', expect.any(Number), expect.any(Number), expect.any(Object))
   })
 })

@@ -1364,12 +1364,16 @@ export function setupIpcHandles(ipcMain) {
       if (!checklistString || !sessionString || !specialty || !outputPath) {
         throw new Error('Missing required parameters: checklistString, sessionString, specialty, outputPath')
       }
+      // Header branding lives in app.config.json (reportHeader), the checklist
+      // app's own copy of the entity-profile idea — it never reads Alfresco's.
+      const appConfig = await readAppConfig().catch(() => ({}))
       const result = await generateFindingsReport({
         checklistString,
         sessionString,
         specialty,
         outputPath: assertInsideWorkspace(outputPath, 'generate-pdf: outputPath'),
         locale,
+        reportHeader: appConfig?.reportHeader || {},
       })
       return result
     } catch (err) {
