@@ -1051,6 +1051,32 @@ describe('ipcHandles', () => {
       await expect(handles['read-api-key']({})).resolves.toBe('secret-key')
     })
 
+    it('flags the published placeholder gateway key without refusing it', async () => {
+      // This app is the only place the key is typed in by a person rather than
+      // read from a .env, so the three services' startup guards and
+      // preflight-secrets.sh cannot see it. Saving the placeholder is correct
+      // against a demo stack and a mistake against a real one, and the app
+      // cannot tell which it is pointed at -- so it warns and still saves.
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue(true)
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
+
+      const result = await handles['save-api-key'](
+        {},
+        'demo-only-CHANGE-BEFORE-ANY-PUBLIC-DEPLOYMENT'
+      )
+
+      expect(result).toEqual({ saved: true, usingPublishedPlaceholder: true })
+    })
+
+    it('does not flag a real generated key', async () => {
+      vi.spyOn(fileOps, 'saveFile').mockResolvedValue(true)
+      vi.spyOn(fileOps, 'ensureDir').mockResolvedValue(undefined)
+
+      const result = await handles['save-api-key']({}, 'f3a9c2e1b7d48056a1c3e5f7091b2d4c')
+
+      expect(result).toEqual({ saved: true, usingPublishedPlaceholder: false })
+    })
+
     it('reads a legacy plaintext credential file', async () => {
       fs.readFile.mockResolvedValue(JSON.stringify({ key: 'legacy-key' }))
       await expect(handles['read-api-key']({})).resolves.toBe('legacy-key')
