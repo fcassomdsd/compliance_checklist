@@ -6,6 +6,14 @@ All notable changes to this project are documented in this file. Releases are da
 
 ### Added
 
+- **Supply-chain scanning in CI — P3.2.** No repository in this platform had any security scanning before this. A new `security:scan` job (GitLab, mirrored to GitHub Actions) runs Trivy over the dependency tree and produces a CycloneDX SBOM as an artifact.
+
+  The gate policy was chosen from measurement, not aspiration. **CRITICAL is blocking**: measured at zero across all six repos, so the gate is green today and genuinely stops a regression rather than being red on arrival. **HIGH is reported but not blocking**: 33 findings exist today (21 in `compliance_web`, 12 in `compliance_checklist`), every one with a fix available. Blocking on HIGH immediately would red those pipelines and the gate would be switched off within a day — which is worse than no gate, because a disabled gate still reads as protection. Clear the backlog, then raise the bar.
+
+  `--ignore-unfixed` keeps the gate actionable: a CVE with no available fix is information, not a task. `--skip-dirs` excludes generated and bind-mounted runtime trees — `web-data/` in particular is the AtroCore application installed at container bootstrap, gitignored and absent from a fresh checkout, which vendors its own npm tree; scanning it reports upstream's dependencies as if they were ours. It is not clean (upstream vendors a CRITICAL prototype-pollution advisory in `swiper`), but that belongs in an upstream report and in image scanning, not a gate on tracked source.
+
+### Added
+
 - **Saving the published demo gateway key is now flagged — the last piece of P3.1 (production secrets).** This app holds the fourth copy of the gateway key, alongside `compliance_flow`'s `API_KEY`, `compliance_web`'s `NODE_RED_API_KEY` and `compliance_import`'s `IMPORT_API_KEY`, and it is the only one a person types in rather than reading from a `.env`. That makes it the one copy the platform's other guards cannot see: the three services each refuse the published placeholder at startup, and `atrocore-docker/scripts/preflight-secrets.sh --profile production` verifies the three `.env` copies match each other, but neither can reach a key stored in an inspector's installation. `save-api-key` now logs a warning when the saved value is the placeholder committed to `compliance_flow/.env.example`, and returns `{ saved, usingPublishedPlaceholder }` so the renderer can surface it. It **warns rather than refuses** deliberately: saving that key is correct against a demo stack and wrong against a real one, and the app has no way to tell which it is pointed at. The return value widens the previous bare `true`; every caller only awaits it. README now documents that rotating the key on the servers requires updating every inspector's installation too, or their uploads begin failing with `401`.
 
 ### Added
