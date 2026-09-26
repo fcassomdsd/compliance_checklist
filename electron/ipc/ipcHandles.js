@@ -503,6 +503,19 @@ const workspaceBase = (filePath) => {
 const CREDENTIAL_ENVELOPE_VERSION = 1
 const API_KEY_FILE = 'api-key.json'
 
+// The gateway API key committed to compliance_flow/.env.example, and shared
+// verbatim with compliance_web's NODE_RED_API_KEY and compliance_import's
+// IMPORT_API_KEY. It exists so a cloned demo stack is not an open gateway, but
+// it is published, so everyone who has cloned any component repository has it.
+//
+// This app is the one place the key is typed in by a person rather than read
+// from a .env, so it is the one place the platform's other guards -- the three
+// services' startup checks and preflight-secrets.sh -- cannot see. Saving it
+// is legitimate against a demo stack and a mistake against a real one, and the
+// app has no way to tell which it is pointed at, so this warns rather than
+// refuses.
+const PUBLISHED_GATEWAY_KEY = 'demo-only-CHANGE-BEFORE-ANY-PUBLIC-DEPLOYMENT'
+
 // Credentials are sealed with the OS keychain (DPAPI / Keychain / libsecret)
 // instead of being written as plain JSON. Where the OS cannot provide
 // encryption the value is still written, but unencrypted and flagged as such.
@@ -1534,7 +1547,23 @@ export function setupIpcHandles(ipcMain) {
   })
 
   ipcMain.handle('save-api-key', async (event, key) => {
-    return writeCredentialFile(API_KEY_FILE, { key: String(key || '').trim() })
+    const trimmed = String(key || '').trim()
+    const usingPublishedPlaceholder = trimmed === PUBLISHED_GATEWAY_KEY
+
+    if (usingPublishedPlaceholder) {
+      logger.warn(
+        'Credentials: the saved gateway API key is the public placeholder committed to ' +
+          'compliance_flow/.env.example. Everyone who has cloned the repositories knows it. ' +
+          'This is expected against a demo stack and must not be used against a real one.'
+      )
+    }
+
+    await writeCredentialFile(API_KEY_FILE, { key: trimmed })
+
+    // Returned so the renderer can surface the warning; the previous contract
+    // was a bare `true`, and every caller only awaits it, so an object is a
+    // safe widening.
+    return { saved: true, usingPublishedPlaceholder }
   })
 
   ipcMain.handle('export-inspection-payload', async (event, payload) => {

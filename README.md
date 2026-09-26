@@ -219,6 +219,19 @@ services (`src/utils/fileServices.js`'s `flowApiKeyHeaders()`) — not just uplo
 does not require a key (gateway auth disabled for local development), leave the prompt empty and
 click Cancel; every request then goes out bare, matching an unguarded dev stack.
 
+**Rotating the key.** This app holds the fourth copy of the gateway key, alongside
+`compliance_flow`'s `API_KEY`, `compliance_web`'s `NODE_RED_API_KEY` and `compliance_import`'s
+`IMPORT_API_KEY`. All four must be the same value. The other three live in `.env` files and are
+checked by `atrocore-docker/scripts/preflight-secrets.sh --profile production`, which verifies they
+match each other — but it **cannot see this one**, because it is typed into the app rather than
+read from a file. After rotating the key on the servers, every inspector's installation has to be
+updated too, or their uploads start failing with `401`.
+
+Saving the published demo placeholder (`demo-only-CHANGE-BEFORE-ANY-PUBLIC-DEPLOYMENT`) is allowed
+but logged as a warning: it is the right value against a demo stack and the wrong one against a
+real deployment, and the app has no way to tell which it is pointed at. The stored key is sealed
+with the OS keychain (DPAPI / Keychain / libsecret) where available.
+
 When running E2E tests, `global-setup.mjs` temporarily rewrites `app.config.json` to point to isolated local test ports and restores it on teardown.
 
 ### Findings report header
